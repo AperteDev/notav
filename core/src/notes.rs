@@ -125,6 +125,24 @@ impl Client {
         (r.dirty != DELETED).then_some(r.text)
     }
 
+    /// Notes whose title, folder or text has every word of `query` (as a word or its start),
+    /// case and diacritics ignored; by path.
+    pub fn search(&self, query: String) -> Vec<Note> {
+        // Each word quoted (FTS5 syntax stays literal) and matched as a prefix.
+        let fts: Vec<String> = query
+            .split_whitespace()
+            .map(|w| w.replace('ł', "l").replace('Ł', "L").replace('"', "\"\""))
+            .map(|w| format!("\"{w}\"*"))
+            .collect();
+        if fts.is_empty() {
+            return self.notes();
+        }
+        let db = self.db.lock().unwrap();
+        let filter = "dirty != ? AND id IN (SELECT rowid FROM notes_fts WHERE notes_fts MATCH ?)";
+        let rows = store::rows(&db, filter, params![DELETED, fts.join(" ")]).unwrap_or_default();
+        rows.iter().map(Note::from).collect()
+    }
+
     /// Folders, relative to the notes folder, by path; empty ones too.
     pub fn folders(&self) -> Vec<String> {
         let db = self.db.lock().unwrap();
@@ -310,6 +328,15 @@ mod tests {
         c.set_text(b.id, "text".into()).unwrap();
         assert_eq!(c.note_text(b.id).as_deref(), Some("text"));
         assert_eq!(c.folders(), ["Work"]);
+        let found =
+            |q: &str| -> Vec<String> { c.search(q.into()).into_iter().map(|n| n.path).collect() };
+        c.set_text(a.id, "Zażółć gęślą jaźń, \"quoted\" * NEAR".into())
+            .unwrap();
+        assert_eq!(found("zazolc GESL"), ["Work/Plan.md"]);
+        assert_eq!(found("work later"), Vec::<String>::new());
+        assert_eq!(found("\"quoted\" * NEAR("), ["Work/Plan.md"]);
+        assert_eq!(found("later text"), ["Later.md"]);
+        assert_eq!(found(" ").len(), 2);
         // Never uploaded: gone at once.
         c.delete_note(a.id).unwrap();
         assert_eq!(c.notes().len(), 1);

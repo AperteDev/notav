@@ -17,6 +17,23 @@ CREATE TABLE notes (
   modified INTEGER NOT NULL,            -- unix time of the last change, here or on the server
   dirty INTEGER NOT NULL DEFAULT 0      -- 0 clean, 1 modified, 2 deleted locally
 );
+-- Search over each note's path (its title and folders) and text, case and diacritics ignored;
+-- "ł" has no base letter in Unicode, so it is folded here (and in the query, `notes::search`).
+CREATE VIRTUAL TABLE notes_fts USING fts5(
+  path, text, content = '', contentless_delete = 1, tokenize = 'unicode61 remove_diacritics 2'
+);
+CREATE TRIGGER notes_fts_insert AFTER INSERT ON notes BEGIN
+  INSERT INTO notes_fts (rowid, path, text) VALUES (new.id,
+    replace(replace(new.path, 'ł', 'l'), 'Ł', 'L'), replace(replace(new.text, 'ł', 'l'), 'Ł', 'L'));
+END;
+CREATE TRIGGER notes_fts_delete AFTER DELETE ON notes BEGIN
+  DELETE FROM notes_fts WHERE rowid = old.id;
+END;
+CREATE TRIGGER notes_fts_update AFTER UPDATE OF path, text ON notes BEGIN
+  DELETE FROM notes_fts WHERE rowid = old.id;
+  INSERT INTO notes_fts (rowid, path, text) VALUES (new.id,
+    replace(replace(new.path, 'ł', 'l'), 'Ł', 'L'), replace(replace(new.text, 'ł', 'l'), 'Ł', 'L'));
+END;
 CREATE TABLE folders (
   path TEXT PRIMARY KEY,                -- relative, no trailing slash; '' is the notes folder
   etag TEXT,                            -- as last pulled; NULL: not pulled yet

@@ -100,7 +100,8 @@ impl Client {
         let home = self.files_home()?;
         let new = format!("{home}{folder}/");
         if new == old {
-            return Ok(());
+            // Chosen now, if it was the default so far.
+            return self.set_setting("notes_folder".into(), folder);
         }
         if new.starts_with(&old) || old.starts_with(&new) {
             return Err(Error::Invalid(folder));

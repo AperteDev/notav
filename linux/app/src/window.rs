@@ -445,6 +445,20 @@ fn connect(ui: &Rc<Ui>) {
         }
     });
     ui.window.add_action(&delete);
+    // From the tree's menus, with the folder ("": the top level).
+    for (name, f) in [
+        ("new-note-in", new_note_in as fn(&Rc<Ui>, String)),
+        ("new-folder-in", new_folder),
+    ] {
+        let a = gio::SimpleAction::new(name, Some(glib::VariantTy::STRING));
+        let weak = Rc::downgrade(ui);
+        a.connect_activate(move |_, folder| {
+            if let (Some(ui), Some(folder)) = (weak.upgrade(), folder.and_then(|f| f.str())) {
+                f(&ui, folder.to_string());
+            }
+        });
+        ui.window.add_action(&a);
+    }
     // Only while the notes are shown.
     let enable = {
         let ui = Rc::downgrade(ui);
@@ -880,10 +894,15 @@ fn rename(ui: &Rc<Ui>) {
 /// A new note in the folder last opened in the tree or the open note's (at the top if that
 /// is gone), its title selected for typing over.
 fn new_note(ui: &Rc<Ui>) {
-    save_now(ui);
     let folder = Some(ui.target_folder.borrow().clone())
         .filter(|f| core().folders().contains(f))
         .unwrap_or_default();
+    new_note_in(ui, folder);
+}
+
+/// A new note in `folder` ("": the top level), its title selected for typing over.
+fn new_note_in(ui: &Rc<Ui>, folder: String) {
+    save_now(ui);
     match core().add_note(folder, gettext("Untitled"), String::new()) {
         Ok(n) => {
             ui.search_button.set_active(false);
@@ -899,6 +918,41 @@ fn new_note(ui: &Rc<Ui>) {
         }
         Err(e) => toast(&e.to_string()),
     }
+}
+
+/// A new folder in `parent` ("": the top level), its name asked for; shown open.
+fn new_folder(ui: &Rc<Ui>, parent: String) {
+    let b = view!("new-folder");
+    let dialog: adw::AlertDialog = get(&b, "dialog");
+    let name: adw::EntryRow = get(&b, "name");
+    let d = dialog.clone();
+    name.connect_changed(move |e| d.set_response_enabled("create", !e.text().trim().is_empty()));
+    let ui = ui.clone();
+    glib::spawn_future_local(async move {
+        if dialog.choose_future(Some(&ui.window)).await != "create" {
+            return;
+        }
+        let name = name.text().trim().trim_matches('/').to_string();
+        let path = if parent.is_empty() {
+            name
+        } else {
+            format!("{parent}/{name}")
+        };
+        if core().folders().contains(&path) {
+            toast(&gettext("A folder with this name exists already"));
+            return;
+        }
+        match core().add_folder(path.clone()) {
+            Ok(()) => {
+                reveal(&ui, &path);
+                *ui.target_folder.borrow_mut() = path;
+                refresh_tree(&ui);
+                request_sync();
+            }
+            Err(notav_core::Error::Invalid(_)) => toast(&gettext("Not a folder name")),
+            Err(e) => toast(&e.to_string()),
+        }
+    });
 }
 
 /// Delete a note, after asking.
@@ -941,37 +995,53 @@ fn delete_note(ui: &Rc<Ui>, id: i64) {
     });
 }
 
-/// A note's menu in the tree, on a right click or a long press: Delete.
+/// The tree's menu, on a right click or a long press: on a folder, new notes and folders go
+/// inside it; on a note, next to it (in its folder), and it can be deleted; elsewhere, to the
+/// top level.
 fn context_menu(ui: &Rc<Ui>) {
     let weak = Rc::downgrade(ui);
     let show = Rc::new(move |x: f64, y: f64| {
         let Some(ui) = weak.upgrade() else {
             return false;
         };
-        let Some(row) = ui.tree.row_at_y(y as i32) else {
+        if !crate::ready() {
             return false;
-        };
-        let Some(Item::Note(n)) = ui.items.borrow().get(row.index() as usize).cloned() else {
-            return false;
+        }
+        // The stack holds the tree, or the "No Notes" page while there are none.
+        let row = ui
+            .tree_stack
+            .compute_point(&ui.tree, &gtk::graphene::Point::new(x as f32, y as f32))
+            .filter(|_| ui.tree.is_mapped())
+            .and_then(|at| ui.tree.row_at_y(at.y() as i32));
+        let item = row
+            .as_ref()
+            .and_then(|r| ui.items.borrow().get(r.index() as usize).cloned());
+        let folder = match &item {
+            Some(Item::Folder(f)) => f.clone(),
+            Some(Item::Note(n)) => n.folder.clone(),
+            None => String::new(),
         };
         let m = gio::Menu::new();
-        let delete = gio::Action::print_detailed_name("win.delete-note", Some(&n.id.to_variant()));
-        m.append(Some(&gettext("Delete")), Some(&delete));
-        // On the row (a list box takes no other children), gone once closed.
+        let add = gio::Menu::new();
+        let target = Some(folder.to_variant());
+        let new_note = gio::Action::print_detailed_name("win.new-note-in", target.as_ref());
+        add.append(Some(&gettext("New Note")), Some(&new_note));
+        let new_folder = gio::Action::print_detailed_name("win.new-folder-in", target.as_ref());
+        add.append(Some(&gettext("New Folder")), Some(&new_folder));
+        m.append_section(None, &add);
+        if let Some(Item::Note(n)) = &item {
+            let delete =
+                gio::Action::print_detailed_name("win.delete-note", Some(&n.id.to_variant()));
+            let note = gio::Menu::new();
+            note.append(Some(&gettext("Delete")), Some(&delete));
+            m.append_section(None, &note);
+        }
+        // Gone once closed.
         let menu = gtk::PopoverMenu::from_model(Some(&m));
-        menu.set_parent(&row);
+        menu.set_parent(&ui.tree_stack);
         menu.set_has_arrow(false);
         menu.set_halign(gtk::Align::Start);
-        let at = ui
-            .tree
-            .compute_point(&row, &gtk::graphene::Point::new(x as f32, y as f32))
-            .unwrap_or_else(|| gtk::graphene::Point::new(x as f32, 0.0));
-        menu.set_pointing_to(Some(&gtk::gdk::Rectangle::new(
-            at.x() as i32,
-            at.y() as i32,
-            1,
-            1,
-        )));
+        menu.set_pointing_to(Some(&gtk::gdk::Rectangle::new(x as i32, y as i32, 1, 1)));
         menu.connect_closed(|m| {
             let m = m.clone();
             glib::idle_add_local_once(move || m.unparent());
@@ -988,14 +1058,14 @@ fn context_menu(ui: &Rc<Ui>) {
             g.set_state(gtk::EventSequenceState::Claimed);
         }
     });
-    ui.tree.add_controller(click);
+    ui.tree_stack.add_controller(click);
     let hold = gtk::GestureLongPress::builder().touch_only(true).build();
     hold.connect_pressed(move |g, x, y| {
         if show(x, y) {
             g.set_state(gtk::EventSequenceState::Claimed);
         }
     });
-    ui.tree.add_controller(hold);
+    ui.tree_stack.add_controller(hold);
 }
 
 /// A note's row drags the note, shown as a card with its title.

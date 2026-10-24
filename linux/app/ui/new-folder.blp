@@ -1,0 +1,21 @@
+using Gtk 4.0;
+using Adw 1;
+
+// The name of a new folder (src/window.rs `new_folder`).
+Adw.AlertDialog dialog {
+  heading: _("New Folder");
+  default-response: "create";
+  close-response: "cancel";
+
+  responses [
+    cancel: _("Cancel"),
+    create: _("Create") suggested disabled,
+  ]
+
+  extra-child: Adw.PreferencesGroup {
+    Adw.EntryRow name {
+      title: _("Name");
+      activates-default: true;
+    }
+  };
+}

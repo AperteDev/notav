@@ -3,7 +3,8 @@
 use crate::Result;
 use rusqlite::{Connection, OptionalExtension};
 
-const MIGRATIONS: &[&str] = &[r#"
+const MIGRATIONS: &[&str] = &[
+    r#"
 CREATE TABLE kv (key TEXT PRIMARY KEY, value TEXT);
 CREATE TABLE notes (
   id INTEGER PRIMARY KEY,
@@ -39,7 +40,13 @@ CREATE TABLE folders (
   etag TEXT,                            -- as last pulled; NULL: not pulled yet
   dirty INTEGER NOT NULL DEFAULT 0      -- 1: created here, not on the server yet
 );
-"#];
+"#,
+    // Folders moved here, in order, until the push moves them on the server (paths relative to
+    // the notes folder).
+    r#"
+CREATE TABLE moves (id INTEGER PRIMARY KEY, src TEXT NOT NULL, dst TEXT NOT NULL);
+"#,
+];
 
 pub const CLEAN: i64 = 0;
 pub const MODIFIED: i64 = 1;

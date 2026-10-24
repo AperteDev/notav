@@ -43,9 +43,16 @@ impl Client {
         }
         let mut report = SyncReport::default();
         let mut changed = Vec::new();
-        let result = self
-            .push(&dav, &root, &mut report, &mut changed)
-            .and_then(|_| self.pull(&dav, &root, &mut report, &mut changed));
+        // Folders first: until they are moved, the server does not have what this copy shows
+        // (pushing notes into them or pulling would undo the move), so the rest waits.
+        let result =
+            self.push_folder_moves(&dav, &root, &mut report)
+                .and_then(|moved| match moved {
+                    true => self
+                        .push(&dav, &root, &mut report, &mut changed)
+                        .and_then(|_| self.pull(&dav, &root, &mut report, &mut changed)),
+                    false => Ok(()),
+                });
         self.emit(changed);
         result?;
         store::kv_set(&self.db.lock().unwrap(), "config_notes_root", &root)?;
@@ -138,6 +145,62 @@ impl Client {
     /// The notes folder's href, ending in "/".
     fn notes_root(&self) -> Result<String> {
         Ok(format!("{}{}/", self.files_home()?, self.notes_folder()))
+    }
+
+    /// MOVE the folders moved here on the server, in order: false while one cannot go yet
+    /// (something in it is locked; reported in `report.locked`).
+    fn push_folder_moves(&self, dav: &Dav, root: &str, report: &mut SyncReport) -> Result<bool> {
+        let moves: Vec<(i64, String, String)> = {
+            let db = self.db.lock().unwrap();
+            let mut st = db.prepare("SELECT id, src, dst FROM moves ORDER BY id")?;
+            st.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?
+                .collect::<rusqlite::Result<_>>()?
+        };
+        for (id, src, dst) in moves {
+            let to = format!("{root}{dst}/");
+            dav.mkcol_all(
+                &self.files_home()?,
+                &to[..to[..to.len() - 1].rfind('/').unwrap() + 1],
+            )?;
+            match dav.mv(&format!("{root}{src}/"), &to) {
+                // Gone from the server (moved or deleted elsewhere): the pull finds its notes by
+                // oc:id, or uploads the ones changed here again.
+                Ok(()) | Err(Error::NotFound(_)) => {}
+                // A folder has that name there on the server: its notes move one by one, each
+                // from where the server has it (a name taken there gets a conflict name).
+                Err(Error::Conflict) => {
+                    let db = self.db.lock().unwrap();
+                    let under = |c: &str| format!("substr({c}, 1, length(?1) + 1) = ?1 || '/'");
+                    db.execute(
+                        &format!(
+                            "UPDATE notes SET server_path = ?2 || substr(server_path, length(?1) + 1),
+                               dirty = 1 WHERE {}",
+                            under("server_path")
+                        ),
+                        params![dst, src],
+                    )?;
+                    db.execute(
+                        &format!(
+                            "UPDATE notes SET server_path = ?2 || substr(path, length(?1) + 1),
+                               dirty = 1
+                             WHERE fileid IS NOT NULL AND server_path IS NULL AND {}",
+                            under("path")
+                        ),
+                        params![dst, src],
+                    )?;
+                }
+                Err(Error::Locked(_)) => {
+                    report.locked.push(dst);
+                    return Ok(false);
+                }
+                Err(e) => return Err(e),
+            }
+            self.db
+                .lock()
+                .unwrap()
+                .execute("DELETE FROM moves WHERE id = ?", [id])?;
+        }
+        Ok(true)
     }
 
     fn push(

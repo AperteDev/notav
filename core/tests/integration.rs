@@ -287,13 +287,82 @@ fn a_note_locked_on_the_server_waits_and_the_rest_syncs() {
     assert!(f.a.pending());
     assert!(f.server_text("Open.md").is_some());
 
-    let r = f
-        .dav
-        .request("UNLOCK", &href, &[("Lock-Token", &token)], "")
-        .unwrap();
-    assert!(r.status < 300, "UNLOCK {}", r.status);
+    // The server now and then answers 500 while other tests run: try again.
+    let unlocked = (0..5).any(|_| {
+        let r = f
+            .dav
+            .request("UNLOCK", &href, &[("Lock-Token", &token)], "");
+        let ok = r.is_ok_and(|r| r.status < 300);
+        if !ok {
+            std::thread::sleep(std::time::Duration::from_millis(500));
+        }
+        ok
+    });
+    assert!(unlocked, "UNLOCK failed");
     let r = f.a.sync().unwrap();
     assert!(r.locked.is_empty());
     assert!(!f.a.pending());
     assert_eq!(f.server_text("Work/Open.md").unwrap(), "v1");
+}
+
+#[test]
+fn a_folder_moves_whole_on_the_server() {
+    let f = Fixture::new("folder-move");
+    let plan =
+        f.a.add_note("Work".into(), "Plan".into(), "p".into())
+            .unwrap();
+    f.a.add_note("Work/Old".into(), "Deep".into(), "d".into())
+        .unwrap();
+    f.a.add_folder("Work/Empty".into()).unwrap();
+    f.a.add_folder("Archive".into()).unwrap();
+    f.a.sync().unwrap();
+    f.b.sync().unwrap();
+
+    // Edited, then moved, before the next sync: the edit goes up at the new place.
+    f.a.set_text(plan.id, "p2".into()).unwrap();
+    let to = f.a.move_folder("Work".into(), "Archive".into()).unwrap();
+    assert_eq!(to, "Archive/Work");
+    assert_eq!(f.a.note(plan.id).unwrap().path, "Archive/Work/Plan.md");
+    let r = f.a.sync().unwrap();
+    assert!(r.conflicts.is_empty(), "{r:?}");
+    assert!(!f.a.pending());
+    assert_eq!(f.server_text("Archive/Work/Plan.md").unwrap(), "p2");
+    assert_eq!(f.server_text("Archive/Work/Old/Deep.md").unwrap(), "d");
+    assert!(f.server_text("Work/Plan.md").is_none());
+    let empty = format!("{}Archive/Work/Empty/", f.root);
+    assert!(
+        !f.dav.list(&empty, "0").unwrap().is_empty(),
+        "empty folder moved too"
+    );
+
+    // The other device: moves, one changed text.
+    let r = f.b.sync().unwrap();
+    assert_eq!((r.downloaded, r.removed), (1, 0), "{r:?}");
+    assert_eq!(
+        paths(&f.b),
+        ["Archive/Work/Old/Deep.md", "Archive/Work/Plan.md"]
+    );
+    assert!(f.b.folders().contains(&"Archive/Work/Empty".to_string()));
+}
+
+#[test]
+fn a_folder_moved_onto_a_name_taken_on_the_server_moves_note_by_note() {
+    let f = Fixture::new("folder-merge");
+    f.a.add_note("Work".into(), "Plan".into(), "p".into())
+        .unwrap();
+    f.a.add_folder("Archive".into()).unwrap();
+    f.a.sync().unwrap();
+    // Made elsewhere, not pulled here yet.
+    f.put("Archive/Work/Other.md", "o");
+
+    f.a.move_folder("Work".into(), "Archive".into()).unwrap();
+    let r = f.a.sync().unwrap();
+    assert!(r.conflicts.is_empty(), "{r:?}");
+    assert!(!f.a.pending());
+    assert_eq!(f.server_text("Archive/Work/Plan.md").unwrap(), "p");
+    assert!(f.server_text("Work/Plan.md").is_none());
+    assert_eq!(
+        paths(&f.a),
+        ["Archive/Work/Other.md", "Archive/Work/Plan.md"]
+    );
 }

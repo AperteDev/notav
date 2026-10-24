@@ -251,6 +251,96 @@ impl Client {
         Ok(())
     }
 
+    /// Move folder `folder` ("a/b"), with everything in it, into `parent` ("" for the top level):
+    /// its new path. `Error::Exists` when a folder has that name there, `Invalid` for a move
+    /// into itself. The server's copy moves with the next push, in one `MOVE`.
+    pub fn move_folder(&self, folder: String, parent: String) -> Result<String> {
+        let folder = folder_path(&folder)?;
+        let parent = folder_path(&parent)?;
+        let inside = |p: &str, f: &str| p == f || p.starts_with(&format!("{f}/"));
+        if folder.is_empty() || inside(&parent, &folder) {
+            return Err(Error::Invalid(folder));
+        }
+        let dst = join(&parent, split(&folder).1);
+        if dst == folder {
+            return Ok(dst);
+        }
+        if self.folders().contains(&dst) {
+            return Err(Error::Exists(dst));
+        }
+        let changed = {
+            let db = self.db.lock().unwrap();
+            let tx = db.unchecked_transaction()?;
+            let under = "(substr(%c, 1, length(?1) + 1) = ?1 || '/')";
+            // On the server when pulled from there, or when a note in it is.
+            let made_here: bool = tx
+                .query_row(
+                    "SELECT EXISTS (SELECT 1 FROM folders WHERE path = ? AND dirty = 1)",
+                    [&folder],
+                    |r| r.get(0),
+                )
+                .unwrap_or(false);
+            let on_server: bool = tx.query_row(
+                &format!(
+                    "SELECT EXISTS (SELECT 1 FROM folders WHERE path = ?1 AND dirty = 0)
+                       OR EXISTS (SELECT 1 FROM notes WHERE fileid IS NOT NULL
+                         AND {} AND server_path IS NULL)",
+                    under.replace("%c", "path")
+                ),
+                [&folder],
+                |r| r.get(0),
+            )?;
+            let changed: Vec<String> = {
+                let mut st = tx.prepare(&format!(
+                    "SELECT path FROM notes WHERE {}",
+                    under.replace("%c", "path")
+                ))?;
+                st.query_map([&folder], |r| r.get(0))?
+                    .collect::<rusqlite::Result<_>>()?
+            };
+            let to = |c: &str| format!("{c} = ?2 || substr({c}, length(?1) + 1)");
+            tx.execute(
+                &format!(
+                    "UPDATE notes SET {} WHERE {}",
+                    to("path"),
+                    under.replace("%c", "path")
+                ),
+                params![folder, dst],
+            )?;
+            if on_server && !made_here {
+                // The server's copies of what is in it move with it.
+                tx.execute(
+                    &format!(
+                        "UPDATE notes SET {} WHERE {}",
+                        to("server_path"),
+                        under.replace("%c", "server_path")
+                    ),
+                    params![folder, dst],
+                )?;
+                tx.execute(
+                    "INSERT INTO moves (src, dst) VALUES (?, ?)",
+                    params![folder, dst],
+                )?;
+            }
+            tx.execute(
+                &format!(
+                    "UPDATE folders SET {} WHERE path = ?1 OR {}",
+                    to("path"),
+                    under.replace("%c", "path")
+                ),
+                params![folder, dst],
+            )?;
+            tx.commit()?;
+            changed
+        };
+        let moved = changed
+            .iter()
+            .map(|p| format!("{dst}{}", &p[folder.len()..]))
+            .collect::<Vec<_>>();
+        self.emit(changed.into_iter().chain(moved).collect());
+        Ok(dst)
+    }
+
     /// A new, empty folder ("a/b"), created on the server with the next push.
     pub fn add_folder(&self, folder: String) -> Result<()> {
         let folder = folder_path(&folder)?;
@@ -270,7 +360,8 @@ impl Client {
         let db = self.db.lock().unwrap();
         db.query_row(
             "SELECT EXISTS (SELECT 1 FROM notes WHERE dirty != 0)
-               OR EXISTS (SELECT 1 FROM folders WHERE dirty != 0)",
+               OR EXISTS (SELECT 1 FROM folders WHERE dirty != 0)
+               OR EXISTS (SELECT 1 FROM moves)",
             [],
             |r| r.get(0),
         )
@@ -337,6 +428,22 @@ mod tests {
         assert_eq!(found("\"quoted\" * NEAR("), ["Work/Plan.md"]);
         assert_eq!(found("later text"), ["Later.md"]);
         assert_eq!(found(" ").len(), 2);
+        // A folder moves with what is in it; never on the server, nothing waits to move it.
+        assert_eq!(
+            c.move_folder("Work".into(), "Old".into()).unwrap(),
+            "Old/Work"
+        );
+        assert_eq!(c.note(a.id).unwrap().path, "Old/Work/Plan.md");
+        assert!(matches!(
+            c.move_folder("Old".into(), "Old/Work".into()),
+            Err(Error::Invalid(_))
+        ));
+        c.add_folder("Work".into()).unwrap();
+        assert!(matches!(
+            c.move_folder("Work".into(), "Old".into()),
+            Err(Error::Exists(_))
+        ));
+        assert_eq!(c.folders(), ["Old", "Old/Work", "Work"]);
         // Never uploaded: gone at once.
         c.delete_note(a.id).unwrap();
         assert_eq!(c.notes().len(), 1);

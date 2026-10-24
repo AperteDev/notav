@@ -1,0 +1,12 @@
+[package]
+name = "notav-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "notav"
+path = "src/main.rs"
+
+[dependencies]
+notav-core = { path = "../core" }

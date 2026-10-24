@@ -6,7 +6,7 @@ Oct 24, 2026, @Kris
 
 Notav (*notatka* + DAV) is a personal, local-first notes app with an Obsidian-style journal, kept as plain Markdown files in Nextcloud Files over WebDAV. It is the sibling of [Todav](https://github.com/SelfRef/todav) (tasks and calendar over CalDAV) and follows its design: one Rust core with all storage, sync and parsing logic, thin front-ends, the same Nextcloud and GNOME Online Accounts integration.
 
-Not started: nothing in the code yet, this document is the plan.
+In progress: the skeleton and the core's files sync (see [Plan](#plan)).
 
 **Goals**
 
@@ -26,9 +26,11 @@ Not started: nothing in the code yet, this document is the plan.
 
 - Name Notav, app ID `io.github.selfref.Notav`, gettext domain `notav`, its own repository (decided 2026-10-24).
 - **Separate from Todav in configuration and credentials**: its own sign-in (its own app password, a GNOME Online Accounts account picked on its own), keyring entries under its own app ID, its own synced settings file (`.config/notav/settings.json`) and its own database. Neither app reads or writes the other's.
-- Storage: Markdown files in Nextcloud Files over WebDAV.
-- Journal: one daily note per day in a dated folder; `[[wiki links]]`, backlinks and tags are computed locally from the files.
+- Storage: Markdown files in Nextcloud Files over WebDAV; see [Storage](#storage) (decided 2026-10-24).
+- Journal: one daily note per day in a dated folder (layout and format not decided yet); `[[wiki links]]`, backlinks and tags are computed locally from the files.
 - Cross-app, with no shared database: a note links a task as `todav://task/<uid>`; Todav opens it (it handles the `todav` URI scheme), and Notav shows the task's title and state through Todav's D-Bus API (`GetTask`, to be added in Todav). Without Todav the link stays a plain link.
+- No background service in v1: no autostart and no `HOLD`; notes have no reminders, so the app syncs while it is open (decided 2026-10-24).
+- Editor: GtkSourceView 5 with its Markdown highlighting; a rendered preview is v2 (decided 2026-10-24).
 - Tooling and releases as in Todav: CI on every push (fmt, clippy with warnings as errors, unit tests, packages), the manual Release workflow, Keep a Changelog, the lowest supported GNOME 49. Set up with the first code, from Todav's workflows and scripts.
 
 ## Code from Todav
@@ -39,9 +41,10 @@ Copied, not shared: Notav starts from copies of Todav's code that is not about t
 | --- | --- | --- |
 | Login Flow v2, app password sign-in | `todav/core/src/login.rs` | As is |
 | Minimal JSON | `todav/core/src/json.rs` | As is |
-| WebDAV XML tree, multistatus, percent-encoding | `todav/core/src/caldav.rs` (first part) | The CalDAV requests stay in Todav |
-| Push keys, Web Push decryption, ntfy stream | `todav/core/src/push.rs` | Only if file changes can be pushed (see [Open questions](#open-questions)); the `dav_push` registration is CalDAV-only |
-| Synced settings merge | `todav/core/src/settings.rs` | The merge, parse and serialize; the rest is tied to Todav's store |
+| WebDAV XML tree, multistatus, percent-encoding, HTTP requests with retries | `todav/core/src/caldav.rs` (first part) | In `core/src/dav.rs`; the CalDAV requests stay in Todav |
+| Synced settings | `todav/core/src/settings.rs` | Its own `DEVICE_ONLY`; no ntfy keys; the file's href from `Client::files_home` |
+| `Error`, `b64encode`, `Client::open`/`set_account`/`logout`, store migrations and `kv` | `todav/core/src/lib.rs`, `store.rs` | The task and calendar parts left out |
+| CLI `.env` loading | `todav/cli/src/main.rs` | `NOTAV_*` variables |
 | GNOME Online Accounts | `todav/linux/app/src/goa.rs` | As is |
 | gettext over glibc, first weekday | `todav/linux/app/src/i18n.rs` | Domain `notav` |
 | Secret Service | `todav/linux/app/src/main.rs` (`schema` and helpers) | Schema under Notav's app ID |
@@ -49,7 +52,19 @@ Copied, not shared: Notav starts from copies of Todav's code that is not about t
 
 A fix to one of these probably applies to Todav too: port it, or note it there. They move into a shared crate in its own repository once copying costs more than sharing: when multiple accounts or other services rework the account layer, when a third app or a front-end of its own needs them, or when the same fix keeps being made twice.
 
-## Repository layout (planned)
+## Storage
+
+Decided 2026-10-24.
+
+- **Notes folder**: a folder in Nextcloud Files, by default `Notes/` (Nextcloud Notes' default), so the Nextcloud Notes web and mobile apps and Obsidian (through the desktop sync client) see the same files. It is picked on the welcome page and in Preferences, a synced setting (`notes_folder`), and created when missing. Changing it while there are notes asks whether to move them to the new folder.
+- **Files**: one note per `.md` file (`.txt` read too, as Nextcloud Notes writes them; new notes are `.md`). Subfolders are folders, shown as Nextcloud Notes' categories are. Dot-folders and dot-files (`.obsidian/`, `.attachments.*`, `.trash/`) and other files are skipped; attachments are v2.
+- **Title**: the file name without its extension, as in Obsidian; renaming a note is a `MOVE`. The first line is not the title (Nextcloud Notes renames files after it; Notav does not).
+- **Change detection**: Nextcloud Files has no `sync-collection`. A folder's ETag changes when anything below it changes, so a pull is a `PROPFIND Depth: 1` from the notes folder down, only into folders whose ETag changed, then a `GET` for each file whose ETag changed. Files are keyed by `oc:fileid`, which stays the same across a rename or move, so one made on another device is a move here, not a delete and a new note.
+- **Push**: optional, recommended: Nextcloud's Client Push app (`notify_push`), which the desktop sync client uses. Its WebSocket (from the `notify_push` capability) sends `notify_file` when the user's files change; the app then pulls. Polling stays as the safety net: a `PROPFIND Depth: 0` of the notes folder (its ETag) every 30 s while the window is focused, and when it gets focus. Todav's `dav_push` covers CalDAV only.
+- **Conflicts**: a note edited here and changed on the server since the last sync is not overwritten: the local text is uploaded next to it as `<name> (conflict YYYY-MM-DD HH-MM).md`, and the server's version is taken. No text is lost. The text as of the last sync is kept, for a three-way merge later (v2).
+- **Local copy**: SQLite as in Todav: the notes (fileid, path, ETag, text, text at the last sync, dirty flag), the folders with their ETags, and `kv`. Search through SQLite's FTS5 (built into the bundled SQLite).
+
+## Repository layout
 
 Same shape as Todav, without the app's directory level:
 
@@ -66,23 +81,32 @@ Same shape as Todav, without the app's directory level:
   scripts/                   # i18n.sh, release.py, deb.sh (from Todav)
 ```
 
-**Dependency policy**: Todav's table is the starting point: `ureq` (HTTP + TLS), `rusqlite` (SQLite), `quick-xml` (WebDAV bodies), `ring` + `p256` (Web Push decryption, only if needed), `gtk4` and `libadwaita`, `libsecret`, `libc`. Anything beyond it, a Markdown parser or GtkSourceView for instance, needs a one-line justification here.
+**Dependency policy**: Todav's table is the starting point. Anything beyond it needs a one-line justification here.
+
+| Need | Crate / library | Why not std |
+| --- | --- | --- |
+| HTTP + TLS | `ureq` (sync, rustls) | As in Todav |
+| SQLite | `rusqlite` (bundled) | As in Todav; FTS5 included |
+| XML | `quick-xml` | PROPFIND bodies and multistatus responses |
+| Linux UI | `gtk4`, `libadwaita` | The platform toolkit |
+| Editor | `sourceview5` (GtkSourceView 5) | Markdown highlighting, undo, search; part of the GNOME platform |
+| Linux secrets | `libsecret` | App passwords in the Secret Service |
+| Locale | `libc` + glibc's own gettext | As in Todav (`i18n.rs`) |
 
 ## Open questions
 
-- [ ] Change detection for files: Nextcloud Files has no `sync-collection`; compare folder ETags (they propagate upwards) and only descend into changed folders.
-- [ ] Push for files: `dav_push` covers CalDAV/CardDAV only; check whether Nextcloud's `notify_push` (or a small app posting to ntfy) can signal file changes. Polling as the fallback, as in Todav.
-- [ ] Conflicts: two devices editing the same note offline. Newer-wins for the whole file loses text; keep both (a conflict copy, as the Nextcloud desktop client does) or merge.
-- [ ] Folder layout and name of the notes root (reuse the Nextcloud Notes folder or a separate one), daily note format, attachments.
-- [ ] Editor: GtkSourceView with Markdown highlighting vs. a rendered/WYSIWYG view.
+- [ ] Journal: folder layout and name format of the daily notes, and whether a new one starts from a template.
+- [ ] Client Push: its WebSocket needs a client; a minimal hand-written one over the TLS `ureq` already brings, or a crate (justify it in the table).
+- [ ] Attachments: Nextcloud Notes keeps them in `.attachments.<fileid>/` next to the note, Obsidian in a folder of its own.
 
 ## Plan
 
-Order to be confirmed.
-
-- [ ] Answer the storage questions above: notes root and layout, change detection, conflicts
-- [ ] Skeleton: Cargo workspace, CI, release workflow and scripts from Todav
-- [ ] Core: the code from Todav; WebDAV Files sync into SQLite (listing, `GET`/`PUT` with ETags, folder-ETag change detection); tests against the Test account
+- [x] Answer the storage questions: notes folder and layout, change detection, conflicts (see [Storage](#storage))
+- [x] Skeleton: Cargo workspace (`core`, `cli`), the copied core pieces with their unit tests, CLI `whoami`/`sync`/`login`, CI check job
+- [ ] Linux app shell: sign-in (welcome page with the notes folder, GOA, Login Flow v2, app password), Secret Service, i18n, data files, packaging; CI packages and the Release workflow
+- [ ] Core: WebDAV Files sync into SQLite (folder-ETag pull, `GET`/`PUT`/`DELETE`/`MOVE`/`MKCOL` with ETags, conflict copies); tests against the Test account
 - [ ] CLI round-trip against the server
-- [ ] Linux app: sign-in, notes list, editor, today's daily note
+- [ ] Linux app: notes list, editor, rename and move, search, notes folder in Preferences (with moving the notes)
+- [ ] Client Push (`notify_push`) listener; polling as the fallback
+- [ ] Journal: today's daily note
 - [ ] Links, backlinks and tags; `todav://` links (with `GetTask` in Todav)

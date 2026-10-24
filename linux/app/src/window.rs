@@ -13,9 +13,18 @@ use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 /// The title above the text is an entry that looks like a heading.
+/// While a note is dragged, the folder it would go to is tinted (`.drop-target`; the tree
+/// itself for the top level) instead of GTK's frame around the row under the pointer; the
+/// dragged note's row fades.
 const CSS: &str = "
 .note-title { font-size: 20pt; font-weight: 800; }
 .note-text { font-size: 12pt; }
+.navigation-sidebar > row:drop(active), scrolledwindow:drop(active) { box-shadow: none; }
+.navigation-sidebar > row.drop-target { background-color: alpha(var(--accent-bg-color), 0.25); }
+.navigation-sidebar.drop-target { background-color: alpha(var(--accent-bg-color), 0.12); }
+.navigation-sidebar > row.dragged { opacity: 0.5; }
+.drag-card { padding: 6px 12px; border-radius: 6px; background-color: var(--popover-bg-color);
+  box-shadow: 0 1px 4px alpha(black, 0.3); }
 ";
 
 /// How far each folder level is indented in the tree, and the width of a folder's arrow.
@@ -53,6 +62,11 @@ struct Ui {
     found: RefCell<Vec<Note>>,
     tree: gtk::ListBox,
     tree_stack: gtk::Stack,
+    tree_scroll: gtk::ScrolledWindow,
+    /// The rows of `tree`, as `items`.
+    rows: RefCell<Vec<gtk::ListBoxRow>>,
+    /// The note being dragged in the tree.
+    dragging: RefCell<Option<Note>>,
     /// The items of `tree`'s rows, in order.
     items: RefCell<Vec<Item>>,
     /// Folders shown open in the tree (the device-only `expanded_folders` setting).
@@ -60,7 +74,6 @@ struct Ui {
     /// Where a new note goes: the folder last opened in the tree, or the open note's.
     target_folder: RefCell<String>,
     note_title: adw::WindowTitle,
-    note_menu: gtk::MenuButton,
     note_stack: gtk::Stack,
     title: gtk::Entry,
     buffer: sourceview5::Buffer,
@@ -326,6 +339,9 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         found: RefCell::new(Vec::new()),
         tree: get(&b, "tree"),
         tree_stack: get(&b, "tree_stack"),
+        tree_scroll: get(&b, "tree_scroll"),
+        rows: RefCell::new(Vec::new()),
+        dragging: RefCell::new(None),
         items: RefCell::new(Vec::new()),
         expanded: RefCell::new(
             core()
@@ -337,7 +353,6 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         ),
         target_folder: RefCell::new(String::new()),
         note_title: get(&b, "note_title"),
-        note_menu: get(&b, "note_menu"),
         note_stack: get(&b, "note_stack"),
         title: get(&b, "title"),
         buffer,
@@ -395,27 +410,32 @@ fn connect(ui: &Rc<Ui>) {
         ui.search_button.set_active(true);
         ui.search.grab_focus();
     });
-    let move_note = add("move-note", move_dialog);
-    let delete = add("delete-note", delete_note);
-    // Notes only while the notes are shown; a note's actions while one is open.
+    // From a note's menu in the tree, with the note's id.
+    let delete = gio::SimpleAction::new("delete-note", Some(glib::VariantTy::INT64));
+    let weak = Rc::downgrade(ui);
+    delete.connect_activate(move |_, id| {
+        if let (Some(ui), Some(id)) = (weak.upgrade(), id.and_then(|i| i.get::<i64>())) {
+            delete_note(&ui, id);
+        }
+    });
+    ui.window.add_action(&delete);
+    // Only while the notes are shown.
     let enable = {
         let ui = Rc::downgrade(ui);
         move || {
             let Some(ui) = ui.upgrade() else { return };
             let main = ui.stack.visible_child_name().as_deref() == Some("main");
-            let open = main && ui.current.borrow().is_some();
             new.set_enabled(main);
             search.set_enabled(main);
-            move_note.set_enabled(open);
-            delete.set_enabled(open);
-            ui.note_menu.set_sensitive(open);
         }
     };
     enable();
-    let e = enable.clone();
-    ui.stack.connect_visible_child_name_notify(move |_| e());
-    ui.note_stack
+    ui.stack
         .connect_visible_child_name_notify(move |_| enable());
+    context_menu(ui);
+    // Below the last row: out of the folders, to the top level.
+    ui.tree_scroll
+        .add_controller(drop_target(ui, String::new(), None));
 
     // Shrinking keeps the open note.
     ui.split.connect_collapsed_notify(|s| {
@@ -524,32 +544,43 @@ fn refresh_tree(ui: &Rc<Ui>) {
     };
     let items = tree(&folders, &notes, &ui.expanded.borrow());
     ui.tree.remove_all();
+    ui.rows.borrow_mut().clear();
     let current = ui.current.borrow().as_ref().map(|n| n.id);
     for (depth, item) in &items {
         let open = matches!(item, Item::Folder(f) if ui.expanded.borrow().contains(f));
         let row = tree_row(*depth, item, open);
-        if let Item::Folder(f) = item {
-            // Every click opens or closes it: the list's own activation skips the second and
-            // third press of a double or triple click.
-            let click = gtk::GestureClick::new();
-            click.set_button(gtk::gdk::BUTTON_PRIMARY);
-            click.connect_pressed(|g, _, _, _| {
-                g.set_state(gtk::EventSequenceState::Claimed);
-            });
-            let (weak, f) = (Rc::downgrade(ui), f.clone());
-            click.connect_released(move |_, _, _, _| {
-                if let Some(ui) = weak.upgrade() {
-                    let f = f.clone();
-                    // After the click, as that rebuilds the tree.
-                    glib::idle_add_local_once(move || toggle_folder(&ui, f));
-                }
-            });
-            row.add_controller(click);
+        match item {
+            Item::Folder(f) => {
+                row.add_controller(drop_target(ui, f.clone(), Some(row.clone())));
+                // Every click opens or closes it: the list's own activation skips the second
+                // and third press of a double or triple click.
+                let click = gtk::GestureClick::new();
+                click.set_button(gtk::gdk::BUTTON_PRIMARY);
+                click.connect_pressed(|g, _, _, _| {
+                    g.set_state(gtk::EventSequenceState::Claimed);
+                });
+                let (weak, f) = (Rc::downgrade(ui), f.clone());
+                click.connect_released(move |_, _, _, _| {
+                    if let Some(ui) = weak.upgrade() {
+                        let f = f.clone();
+                        // After the click, as that rebuilds the tree.
+                        glib::idle_add_local_once(move || toggle_folder(&ui, f));
+                    }
+                });
+                row.add_controller(click);
+            }
+            Item::Note(n) => {
+                connect_drag(ui, &row, n);
+                // Onto a note: into its folder.
+                let target = folder_row(ui, &items, &n.folder);
+                row.add_controller(drop_target(ui, n.folder.clone(), target));
+            }
         }
         ui.tree.append(&row);
         if matches!(item, Item::Note(n) if Some(n.id) == current) {
             ui.tree.select_row(Some(&row));
         }
+        ui.rows.borrow_mut().push(row);
     }
     ui.tree_stack
         .set_visible_child_name(if items.is_empty() { "empty" } else { "tree" });
@@ -850,8 +881,9 @@ fn new_note(ui: &Rc<Ui>) {
     }
 }
 
-fn delete_note(ui: &Rc<Ui>) {
-    let Some(n) = ui.current.borrow().clone() else {
+/// Delete a note, after asking.
+fn delete_note(ui: &Rc<Ui>, id: i64) {
+    let Some(n) = core().note(id) else {
         return;
     };
     let ui = ui.clone();
@@ -872,10 +904,15 @@ fn delete_note(ui: &Rc<Ui>) {
         if alert.choose_future(Some(&ui.window)).await != "delete" {
             return;
         }
-        ui.unsaved.set(false);
-        match core().delete_note(n.id) {
+        let open = ui.current.borrow().as_ref().is_some_and(|c| c.id == id);
+        if open {
+            ui.unsaved.set(false);
+        }
+        match core().delete_note(id) {
             Ok(()) => {
-                close_note(&ui);
+                if open {
+                    close_note(&ui);
+                }
                 refresh(&ui);
                 request_sync();
             }
@@ -884,50 +921,186 @@ fn delete_note(ui: &Rc<Ui>) {
     });
 }
 
-/// Move the open note to another folder, or a new one.
-fn move_dialog(ui: &Rc<Ui>) {
-    let Some(n) = ui.current.borrow().clone() else {
-        return;
-    };
-    let b = view!("move-note");
-    let dialog: adw::AlertDialog = get(&b, "dialog");
-    let row: adw::ComboRow = get(&b, "folder");
-    let names: gtk::StringList = get(&b, "folders");
-    let new_folder: adw::EntryRow = get(&b, "new_folder");
-    let folders = core().folders();
-    names.append(&gettext("Top Level"));
-    for f in &folders {
-        names.append(f);
-    }
-    let pos = folders.iter().position(|f| *f == n.folder);
-    row.set_selected(pos.map_or(0, |p| p as u32 + 1));
-    let ui = ui.clone();
-    glib::spawn_future_local(async move {
-        if dialog.choose_future(Some(&ui.window)).await != "move" {
-            return;
-        }
-        let typed = new_folder.text().trim().to_string();
-        let folder = if !typed.is_empty() {
-            typed
-        } else {
-            (row.selected() as usize)
-                .checked_sub(1)
-                .and_then(|i| folders.get(i).cloned())
-                .unwrap_or_default()
+/// A note's menu in the tree, on a right click or a long press: Delete.
+fn context_menu(ui: &Rc<Ui>) {
+    let weak = Rc::downgrade(ui);
+    let show = Rc::new(move |x: f64, y: f64| {
+        let Some(ui) = weak.upgrade() else {
+            return false;
         };
-        save_now(&ui);
-        match core().move_note(n.id, folder, n.title.clone()) {
-            Ok(_) => {
-                refresh(&ui);
-                reload_current(&ui);
-                request_sync();
-            }
-            Err(notav_core::Error::Exists(_)) => toast(&gettext(
-                "A note with this name exists in that folder already",
-            )),
-            Err(e) => toast(&e.to_string()),
+        let Some(row) = ui.tree.row_at_y(y as i32) else {
+            return false;
+        };
+        let Some(Item::Note(n)) = ui.items.borrow().get(row.index() as usize).cloned() else {
+            return false;
+        };
+        let m = gio::Menu::new();
+        let delete = gio::Action::print_detailed_name("win.delete-note", Some(&n.id.to_variant()));
+        m.append(Some(&gettext("Delete")), Some(&delete));
+        // On the row (a list box takes no other children), gone once closed.
+        let menu = gtk::PopoverMenu::from_model(Some(&m));
+        menu.set_parent(&row);
+        menu.set_has_arrow(false);
+        menu.set_halign(gtk::Align::Start);
+        let at = ui
+            .tree
+            .compute_point(&row, &gtk::graphene::Point::new(x as f32, y as f32))
+            .unwrap_or_else(|| gtk::graphene::Point::new(x as f32, 0.0));
+        menu.set_pointing_to(Some(&gtk::gdk::Rectangle::new(
+            at.x() as i32,
+            at.y() as i32,
+            1,
+            1,
+        )));
+        menu.connect_closed(|m| {
+            let m = m.clone();
+            glib::idle_add_local_once(move || m.unparent());
+        });
+        menu.popup();
+        true
+    });
+    let click = gtk::GestureClick::builder()
+        .button(gtk::gdk::BUTTON_SECONDARY)
+        .build();
+    let s = show.clone();
+    click.connect_pressed(move |g, _, x, y| {
+        if s(x, y) {
+            g.set_state(gtk::EventSequenceState::Claimed);
         }
     });
+    ui.tree.add_controller(click);
+    let hold = gtk::GestureLongPress::builder().touch_only(true).build();
+    hold.connect_pressed(move |g, x, y| {
+        if show(x, y) {
+            g.set_state(gtk::EventSequenceState::Claimed);
+        }
+    });
+    ui.tree.add_controller(hold);
+}
+
+/// A note's row drags the note, shown as a card with its title.
+fn connect_drag(ui: &Rc<Ui>, row: &gtk::ListBoxRow, n: &Note) {
+    let drag = gtk::DragSource::new();
+    drag.set_actions(gtk::gdk::DragAction::MOVE);
+    let id = n.id.to_string();
+    drag.connect_prepare(move |_, _, _| Some(gtk::gdk::ContentProvider::for_value(&id.to_value())));
+    let (weak, note, r) = (Rc::downgrade(ui), n.clone(), row.clone());
+    drag.connect_drag_begin(move |_, drag| {
+        if let Some(ui) = weak.upgrade() {
+            *ui.dragging.borrow_mut() = Some(note.clone());
+        }
+        let card = gtk::Label::new(Some(&note.title));
+        card.add_css_class("drag-card");
+        if let Ok(icon) = gtk::DragIcon::for_drag(drag).downcast::<gtk::DragIcon>() {
+            icon.set_child(Some(&card));
+        }
+        r.add_css_class("dragged");
+    });
+    let (weak, r) = (Rc::downgrade(ui), row.clone());
+    drag.connect_drag_end(move |_, _, _| {
+        r.remove_css_class("dragged");
+        if let Some(ui) = weak.upgrade() {
+            ui.dragging.take();
+            mark_drop(&ui, None);
+        }
+    });
+    row.add_controller(drag);
+}
+
+/// The row of `folder` in the tree being built from `items`; None for the top level.
+fn folder_row(ui: &Ui, items: &[(usize, Item)], folder: &str) -> Option<gtk::ListBoxRow> {
+    let i = items
+        .iter()
+        .position(|(_, it)| matches!(it, Item::Folder(f) if f == folder))?;
+    // Folders come before their notes, so the row is already built.
+    ui.rows.borrow().get(i).cloned()
+}
+
+/// Dropping a note moves it into `folder` ("": the top level); `target` (its row; the tree for
+/// the top level) is tinted while it would go there. A note already there stays: the target
+/// still takes the drag, so it does not fall through to the tree's top level behind the row.
+fn drop_target(ui: &Rc<Ui>, folder: String, target: Option<gtk::ListBoxRow>) -> gtk::DropTarget {
+    let drop = gtk::DropTarget::new(glib::Type::STRING, gtk::gdk::DragAction::MOVE);
+    let weak = Rc::downgrade(ui);
+    drop.connect_accept(move |_, _| {
+        weak.upgrade()
+            .is_some_and(|ui| ui.dragging.borrow().is_some())
+    });
+    // Whether the dragged note would move.
+    let moves = {
+        let (weak, f) = (Rc::downgrade(ui), folder.clone());
+        move || {
+            weak.upgrade()
+                .is_some_and(|ui| ui.dragging.borrow().as_ref().is_some_and(|n| n.folder != f))
+        }
+    };
+    let (weak, t, m) = (Rc::downgrade(ui), target.clone(), moves.clone());
+    let hover = move || {
+        let Some(ui) = weak.upgrade() else {
+            return gtk::gdk::DragAction::empty();
+        };
+        if !m() {
+            mark_drop(&ui, None);
+            return gtk::gdk::DragAction::empty();
+        }
+        let w: &gtk::Widget = t.as_ref().map_or(ui.tree.upcast_ref(), |r| r.upcast_ref());
+        mark_drop(&ui, Some(w));
+        gtk::gdk::DragAction::MOVE
+    };
+    let h = hover.clone();
+    drop.connect_enter(move |_, _, _| h());
+    drop.connect_motion(move |_, _, _| hover());
+    let weak = Rc::downgrade(ui);
+    drop.connect_leave(move |_| {
+        if let Some(ui) = weak.upgrade() {
+            mark_drop(&ui, None);
+        }
+    });
+    let weak = Rc::downgrade(ui);
+    drop.connect_drop(move |_, _, _, _| {
+        let Some(ui) = weak.upgrade() else {
+            return false;
+        };
+        mark_drop(&ui, None);
+        if !moves() {
+            return false;
+        }
+        let Some(n) = ui.dragging.take() else {
+            return false;
+        };
+        let folder = folder.clone();
+        // After the drop: moving rebuilds the tree, the drag's rows with it.
+        glib::idle_add_local_once(move || {
+            if ui.current.borrow().as_ref().is_some_and(|c| c.id == n.id) {
+                save_now(&ui);
+            }
+            match core().move_note(n.id, folder.clone(), n.title.clone()) {
+                Ok(_) => {
+                    reveal(&ui, &folder);
+                    refresh(&ui);
+                    reload_current(&ui);
+                    request_sync();
+                }
+                Err(notav_core::Error::Exists(_)) => toast(&gettext(
+                    "A note with this name exists in that folder already",
+                )),
+                Err(e) => toast(&e.to_string()),
+            }
+        });
+        true
+    });
+    drop
+}
+
+/// Tint where a dragged note would go: a folder's row, or the tree for the top level.
+fn mark_drop(ui: &Ui, on: Option<&gtk::Widget>) {
+    for r in ui.rows.borrow().iter() {
+        r.remove_css_class("drop-target");
+    }
+    ui.tree.remove_css_class("drop-target");
+    if let Some(w) = on {
+        w.add_css_class("drop-target");
+    }
 }
 
 // --- welcome -----------------------------------------------------------------

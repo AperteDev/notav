@@ -197,7 +197,8 @@ Adw.ApplicationWindow window {
               content: Gtk.Stack tree_stack {
                 Gtk.StackPage {
                   name: "tree";
-                  child: Gtk.ScrolledWindow {
+                  // Notes dropped below the last row go to the top level (src/window.rs).
+                  child: Gtk.ScrolledWindow tree_scroll {
                     vexpand: true;
                     hscrollbar-policy: never;
 
@@ -233,13 +234,6 @@ Adw.ApplicationWindow window {
                   icon-name: "document-new-symbolic";
                   tooltip-text: _("New Note (Ctrl+N)");
                   action-name: "win.new-note";
-                }
-
-                [end]
-                Gtk.MenuButton note_menu {
-                  icon-name: "view-more-symbolic";
-                  menu-model: note_menu_model;
-                  tooltip-text: _("Note Menu");
                 }
 
                 // The icon, or a spinner while syncing.
@@ -394,11 +388,6 @@ menu main_menu {
   item (_("Keyboard Shortcuts"), "app.shortcuts")
   item (_("About Notav"), "app.about")
   item (_("Quit"), "app.quit")
-}
-
-menu note_menu_model {
-  item (_("Move to Folder…"), "win.move-note")
-  item (_("Delete"), "win.delete-note")
 }
 
 menu login_menu {

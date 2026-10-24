@@ -1,15 +1,19 @@
 pub mod dav;
 pub mod json;
 mod login;
+mod notes;
 mod settings;
 pub mod store;
+mod sync;
 
 use dav::Dav;
 use rusqlite::Connection;
 use std::sync::{Arc, Mutex};
 
 pub use login::{Credentials, LoginFlow, login_flow_poll, login_flow_start, password_login};
+pub use notes::Note;
 pub use settings::DEVICE_ONLY;
+pub use sync::{DEFAULT_FOLDER, SyncReport};
 
 #[derive(Debug, Clone)]
 pub struct Account {
@@ -57,7 +61,9 @@ impl Client {
             || store::kv_get(&db, "account_user")?.as_deref() != Some(&user)
         {
             // Different account: its copy belongs to the old one.
-            db.execute_batch("DELETE FROM kv WHERE key LIKE 'config_%';")?;
+            db.execute_batch(
+                "DELETE FROM notes; DELETE FROM folders; DELETE FROM kv WHERE key LIKE 'config_%';",
+            )?;
         }
         store::kv_set(&db, "account_url", &url)?;
         store::kv_set(&db, "account_user", &user)?;
@@ -76,7 +82,10 @@ impl Client {
     /// Forget the account and its local copy.
     pub fn logout(&self) -> Result<()> {
         let db = self.db.lock().unwrap();
-        db.execute_batch("DELETE FROM kv WHERE key LIKE 'config_%' OR key LIKE 'account_%';")?;
+        db.execute_batch(
+            "DELETE FROM notes; DELETE FROM folders;
+             DELETE FROM kv WHERE key LIKE 'config_%' OR key LIKE 'account_%';",
+        )?;
         *self.dav.lock().unwrap() = None;
         Ok(())
     }
@@ -102,12 +111,6 @@ impl Client {
         Ok(home)
     }
 
-    /// Settings, then notes.
-    pub fn sync(&self) -> Result<()> {
-        let _guard = self.sync_lock.lock().unwrap();
-        self.sync_settings()
-    }
-
     pub fn subscribe(&self, listener: Box<dyn ChangeListener>) {
         self.listeners.lock().unwrap().push(listener);
     }
@@ -119,6 +122,10 @@ pub enum Error {
     Conflict,
     NoAccount,
     NotFound(String),
+    /// A note has that name already.
+    Exists(String),
+    /// Not a name a note or folder can have.
+    Invalid(String),
     Http(u16, String),
     Net(String),
     Parse(String),
@@ -132,6 +139,8 @@ impl std::fmt::Display for Error {
             Error::Conflict => write!(f, "precondition failed (changed on server)"),
             Error::NoAccount => write!(f, "no account configured"),
             Error::NotFound(s) => write!(f, "not found: {s}"),
+            Error::Exists(s) => write!(f, "exists already: {s}"),
+            Error::Invalid(s) => write!(f, "invalid name: {s}"),
             // A WebDAV error body is XML: its <s:message> is the part worth reading.
             Error::Http(code, body) => {
                 let message = body

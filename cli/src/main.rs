@@ -1,13 +1,23 @@
 //! notav — debugging/scripting front-end for notav-core.
 //! Account comes from NOTAV_URL / NOTAV_USER / NOTAV_PASS (or a .env file in the cwd).
 
-use notav_core::Client;
+use notav_core::{Client, Note};
+use std::io::Read;
 use std::process::exit;
 
 const USAGE: &str = "usage: notav <command>
-  whoami                        show the account and its Files root
+  ls                            show notes (* changed here, not uploaded yet)
+  cat <path>                    print a note
+  new <path> [text | -]         add a note (- reads stdin)
+  put <path> <text | ->         replace a note's text
+  mv <path> <new path>          rename or move a note
+  rm <path>                     delete a note
+  mkdir <folder>                add a folder
+  folder [<folder> [--move]]    show or set the notes folder (--move: take the notes along)
   sync                          push + pull everything
-  login <server>                sign in with the browser (Login Flow v2), print the credentials";
+  whoami                        show the account and its Files root
+  login <server>                sign in with the browser (Login Flow v2), print the credentials
+Paths are relative to the notes folder: \"Work/Plan.md\"; changes are synced at once.";
 
 fn main() {
     load_dotenv();
@@ -51,10 +61,81 @@ fn run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             println!("{} at {}", a.user, a.url);
             println!("{}", client.files_home()?);
         }
-        Some("sync") => client.sync()?,
+        Some("ls") => {
+            for n in client.notes() {
+                println!("{} {}", if n.pending { "*" } else { " " }, n.path);
+            }
+        }
+        Some("cat") => print!("{}", text(&client, &find(&client, &arg(1)?)?)),
+        Some("new") => {
+            let (folder, title) = folder_title(&arg(1)?);
+            let body = match args.get(2).map(String::as_str) {
+                Some("-") => stdin()?,
+                Some(t) => t.to_string(),
+                None => String::new(),
+            };
+            println!("{}", client.add_note(folder, title, body)?.path);
+            println!("{:?}", client.sync()?);
+        }
+        Some("put") => {
+            let n = find(&client, &arg(1)?)?;
+            let body = match arg(2)?.as_str() {
+                "-" => stdin()?,
+                t => t.to_string(),
+            };
+            client.set_text(n.id, body)?;
+            println!("{:?}", client.sync()?);
+        }
+        Some("mv") => {
+            let n = find(&client, &arg(1)?)?;
+            let (folder, title) = folder_title(&arg(2)?);
+            println!("{}", client.move_note(n.id, folder, title)?.path);
+            println!("{:?}", client.sync()?);
+        }
+        Some("rm") => {
+            client.delete_note(find(&client, &arg(1)?)?.id)?;
+            println!("{:?}", client.sync()?);
+        }
+        Some("mkdir") => {
+            client.add_folder(arg(1)?)?;
+            println!("{:?}", client.sync()?);
+        }
+        Some("folder") => match args.get(1) {
+            Some(f) => {
+                client.set_notes_folder(f.clone(), args.iter().any(|a| a == "--move"))?;
+                println!("{:?}", client.sync()?);
+            }
+            None => println!("{}", client.notes_folder()),
+        },
+        Some("sync") => println!("{:?}", client.sync()?),
         _ => return Err(USAGE.into()),
     }
     Ok(())
+}
+
+fn find(client: &Client, path: &str) -> Result<Note, String> {
+    client
+        .notes()
+        .into_iter()
+        .find(|n| n.path == path || n.path == format!("{path}.md"))
+        .ok_or_else(|| format!("no note '{path}' (run `notav sync` first?)"))
+}
+
+fn text(client: &Client, n: &Note) -> String {
+    client.note_text(n.id).unwrap_or_default()
+}
+
+/// "Work/Plan.md" → ("Work", "Plan").
+fn folder_title(path: &str) -> (String, String) {
+    let path = path.strip_suffix(".md").unwrap_or(path);
+    let (folder, title) = path.rsplit_once('/').unwrap_or(("", path));
+    (folder.to_string(), title.to_string())
+}
+
+fn stdin() -> std::io::Result<String> {
+    let mut s = String::new();
+    std::io::stdin().read_to_string(&mut s)?;
+    Ok(s)
 }
 
 fn load_dotenv() {

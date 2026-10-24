@@ -198,7 +198,23 @@ pub struct HttpResponse {
     pub status: u16,
     pub etag: Option<String>,
     pub location: Option<String>,
+    /// Nextcloud's `OC-FileId` (as `oc:id`), sent when a PUT stored a file.
+    pub fileid: Option<String>,
     pub body: String,
+}
+
+/// A file or folder in a PROPFIND listing.
+#[derive(Debug, Clone)]
+pub struct Entry {
+    pub href: String,
+    pub etag: String,
+    /// `oc:id`: stays with the file across a rename or move.
+    pub fileid: String,
+    pub folder: bool,
+    /// Bytes, of a file.
+    pub size: Option<u64>,
+    /// Unix time.
+    pub modified: i64,
 }
 
 pub struct Dav {
@@ -295,6 +311,7 @@ impl Dav {
         };
         let etag = header("etag").map(|e| strong(&e).to_string());
         let location = header("location");
+        let fileid = header("oc-fileid");
         let status = resp.status().as_u16();
         let body = resp
             .body_mut()
@@ -307,6 +324,7 @@ impl Dav {
             status,
             etag,
             location,
+            fileid,
             body,
         })
     }
@@ -338,6 +356,142 @@ impl Dav {
             s => Err(Error::Http(s, r.body)),
         }
     }
+
+    /// Folder `href` and what is directly in it (`depth` "1"), or only itself ("0"); the folder
+    /// first. Empty if it does not exist.
+    pub fn list(&self, href: &str, depth: &str) -> Result<Vec<Entry>> {
+        let props =
+            "<d:getetag/><oc:id/><d:resourcetype/><d:getlastmodified/><d:getcontentlength/>";
+        let resps = match self.propfind(href, depth, props) {
+            Err(Error::Http(404, _)) => return Ok(Vec::new()),
+            r => r?,
+        };
+        Ok(resps
+            .into_iter()
+            .filter(|r| r.status == 200)
+            .map(|r| Entry {
+                etag: r
+                    .props
+                    .find_text(DAV, "getetag")
+                    .map(|e| strong(&e).to_string())
+                    .unwrap_or_default(),
+                fileid: r.props.find_text(OC, "id").unwrap_or_default(),
+                folder: r
+                    .props
+                    .child(DAV, "resourcetype")
+                    .is_some_and(|t| t.child(DAV, "collection").is_some()),
+                size: r
+                    .props
+                    .find_text(DAV, "getcontentlength")
+                    .and_then(|s| s.parse().ok()),
+                modified: r
+                    .props
+                    .find_text(DAV, "getlastmodified")
+                    .and_then(|d| http_date(&d))
+                    .unwrap_or(0),
+                href: r.href,
+            })
+            .collect())
+    }
+
+    /// PUT a text file with `If-Match` (update) or `If-None-Match: *` (create), modified at
+    /// `mtime` (unix time): its new (ETag, `oc:id`). `Error::Conflict` when the precondition
+    /// fails, `NotFound` when its folder does not exist.
+    ///
+    /// Nextcloud derives a file's ETag from its modification time in whole seconds, not its
+    /// content: give each version a later `mtime` than the one it replaces, or `If-Match` can
+    /// match a version written in the same second.
+    pub fn put(
+        &self,
+        href: &str,
+        body: &str,
+        etag: Option<&str>,
+        mtime: i64,
+    ) -> Result<(Option<String>, Option<String>)> {
+        let cond = match etag {
+            Some(e) => ("If-Match", e),
+            None => ("If-None-Match", "*"),
+        };
+        let mtime = mtime.to_string();
+        let h = [
+            ("Content-Type", "text/markdown; charset=utf-8"),
+            ("X-OC-MTime", &mtime),
+            cond,
+        ];
+        let r = self.request("PUT", href, &h, body)?;
+        match r.status {
+            200..=299 => Ok((r.etag, r.fileid)),
+            412 => Err(Error::Conflict),
+            404 | 409 => Err(Error::NotFound(href.into())),
+            s => Err(Error::Http(s, r.body)),
+        }
+    }
+
+    /// DELETE, if the ETag still matches (when given); gone already counts as done.
+    pub fn delete(&self, href: &str, etag: Option<&str>) -> Result<()> {
+        let h: Vec<(&str, &str)> = etag.map(|e| ("If-Match", e)).into_iter().collect();
+        let r = self.request("DELETE", href, &h, "")?;
+        match r.status {
+            200..=299 | 404 => Ok(()),
+            412 => Err(Error::Conflict),
+            s => Err(Error::Http(s, r.body)),
+        }
+    }
+
+    /// Create folder `href` (ending in `/`) and the folders above it, below `base`.
+    pub fn mkcol_all(&self, base: &str, href: &str) -> Result<()> {
+        let rest = href.strip_prefix(base).unwrap_or(href);
+        let mut path = base.to_string();
+        for segment in rest.split('/').filter(|s| !s.is_empty()) {
+            path = format!("{path}{segment}/");
+            let r = self.request("MKCOL", &path, &[], "")?;
+            // 405: it exists already.
+            if !matches!(r.status, 200..=299 | 405) {
+                return Err(Error::Http(r.status, r.body));
+            }
+        }
+        Ok(())
+    }
+
+    /// MOVE `from` to `to` without overwriting: `Conflict` when `to` exists, `NotFound` when
+    /// `from` is gone or `to`'s folder does not exist.
+    pub fn mv(&self, from: &str, to: &str) -> Result<()> {
+        let dest = self.url(to);
+        let r = self.request(
+            "MOVE",
+            from,
+            &[("Destination", &dest), ("Overwrite", "F")],
+            "",
+        )?;
+        match r.status {
+            200..=299 => Ok(()),
+            412 => Err(Error::Conflict),
+            404 | 409 => Err(Error::NotFound(from.into())),
+            s => Err(Error::Http(s, r.body)),
+        }
+    }
+}
+
+/// An HTTP date ("Fri, 23 Oct 2026 09:17:18 GMT") as unix time.
+pub fn http_date(s: &str) -> Option<i64> {
+    let mut it = s.split_whitespace().skip(1);
+    let day: i64 = it.next()?.parse().ok()?;
+    let name = it.next()?;
+    let months = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ];
+    let month = months.iter().position(|m| *m == name)? as i64 + 1;
+    let year: i64 = it.next()?.parse().ok()?;
+    let mut hms = it.next()?.split(':').map(|x| x.parse::<i64>().ok());
+    let (h, m, sec) = (hms.next()??, hms.next()??, hms.next()??);
+    // Days from 1970-01-01 to the date (Howard Hinnant's days_from_civil).
+    let y = if month <= 2 { year - 1 } else { year };
+    let era = y.div_euclid(400);
+    let yoe = y - era * 400;
+    let doy = (153 * ((month + 9) % 12) + 2) / 5 + day - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    let days = era * 146097 + doe - 719468;
+    Some(days * 86400 + h * 3600 + m * 60 + sec)
 }
 
 /// A proxy that compresses a response marks its ETag weak ("W/"), and If-Match never matches a
@@ -386,5 +540,8 @@ mod tests {
         assert_eq!(crate::b64encode(b"ab", false), "YWI=");
         assert_eq!(percent_encode_path("/a b/ż.md"), "/a%20b/%C5%BC.md");
         assert_eq!(percent_decode("/a%20b/%C5%BC.md"), "/a b/ż.md");
+        assert_eq!(http_date("Fri, 23 Oct 2026 09:17:18 GMT"), Some(1792747038));
+        assert_eq!(http_date("Thu, 01 Jan 1970 00:00:00 GMT"), Some(0));
+        assert_eq!(http_date("Tue, 29 Feb 2028 12:00:00 GMT"), Some(1835438400));
     }
 }

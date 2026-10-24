@@ -1,0 +1,116 @@
+using Gtk 4.0;
+using Adw 1;
+
+Adw.PreferencesDialog dialog {
+  search-enabled: false;
+
+  Adw.PreferencesPage {
+    title: _("General");
+    icon-name: "preferences-system-symbolic";
+
+    Adw.PreferencesGroup {
+      title: _("Appearance");
+
+      // Kept on this device only.
+      Adw.ActionRow {
+        title: _("Style");
+
+        [suffix]
+        Adw.ToggleGroup color_scheme {
+          valign: center;
+
+          Adw.Toggle {
+            name: "system";
+            label: C_("style", "System");
+          }
+
+          Adw.Toggle {
+            name: "light";
+            label: C_("style", "Light");
+          }
+
+          Adw.Toggle {
+            name: "dark";
+            label: C_("style", "Dark");
+          }
+        }
+      }
+    }
+
+    // The notes folder (synced); another one asks whether to move the notes there.
+    Adw.PreferencesGroup notes {
+      title: _("Notes");
+
+      Adw.EntryRow notes_folder {
+        title: _("Notes folder in Nextcloud Files");
+        show-apply-button: true;
+      }
+    }
+  }
+
+  Adw.PreferencesPage {
+    title: _("Accounts");
+    icon-name: "system-users-symbolic";
+
+    // The status row, then the shared connection rows (ui/connection.blp).
+    Adw.PreferencesGroup account {
+      title: _("Account");
+
+      // How Notav is connected now. Signed in here: "Sign Out", with signing in again in its
+      // menu. Not connected: "Sign In with Browser". A GOA account is managed in GNOME Settings.
+      Adw.ActionRow status {
+        [prefix]
+        Gtk.Image status_icon {
+          icon-name: "object-select-symbolic";
+          styles ["success"]
+        }
+
+        [suffix]
+        Gtk.Button cancel_sign_in {
+          label: _("Cancel");
+          valign: center;
+          visible: false;
+          styles ["flat"]
+        }
+
+        [suffix]
+        Adw.SplitButton sign_out {
+          label: _("Sign Out");
+          menu-model: sign_out_menu;
+          dropdown-tooltip: _("Sign In Again");
+          valign: center;
+          styles ["destructive-action"]
+        }
+
+        [suffix]
+        Adw.SplitButton sign_in {
+          label: _("Sign In with Browser");
+          menu-model: sign_in_menu;
+          dropdown-tooltip: _("More Sign-In Options");
+          valign: center;
+        }
+      }
+    }
+
+    Adw.PreferencesGroup sync {
+      title: _("Sync");
+
+      Adw.SwitchRow sync_settings {
+        title: _("Sync settings with server");
+        subtitle: _("The Nextcloud server always stays on this device");
+        active: true;
+      }
+    }
+  }
+}
+
+menu sign_out_menu {
+  item (_("Sign In Again"), "account.sign-in")
+  item (_("Copy Login Link"), "account.sign-in-copy")
+  item (_("Sign In with Password…"), "account.sign-in-password")
+}
+
+menu sign_in_menu {
+  item (_("Copy Login Link"), "account.sign-in-copy")
+  item (_("Sign In with Password…"), "account.sign-in-password")
+}

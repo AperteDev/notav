@@ -6,7 +6,7 @@ Oct 24, 2026, @Kris
 
 Notav (*notatka* + DAV) is a personal, local-first notes app with an Obsidian-style journal, kept as plain Markdown files in Nextcloud Files over WebDAV. It is the sibling of [Todav](https://github.com/SelfRef/todav) (tasks and calendar over CalDAV) and follows its design: one Rust core with all storage, sync and parsing logic, thin front-ends, the same Nextcloud and GNOME Online Accounts integration.
 
-In progress: the skeleton and the core's files sync (see [Plan](#plan)).
+In progress: the core syncs notes, the Linux app edits them; the journal and links are next (see [Plan](#plan)).
 
 **Goals**
 
@@ -48,7 +48,11 @@ Copied, not shared: Notav starts from copies of Todav's code that is not about t
 | GNOME Online Accounts | `todav/linux/app/src/goa.rs` | As is |
 | gettext over glibc, first weekday | `todav/linux/app/src/i18n.rs` | Domain `notav` |
 | Secret Service | `todav/linux/app/src/main.rs` (`schema` and helpers) | Schema under Notav's app ID |
-| Welcome page, login dialogs | `todav/linux/app/src/connection.rs`, `ui/connection.blp`, `ui/password-login.blp`, parts of `window.rs` | Adapted |
+| Welcome page, login dialogs | `todav/linux/app/src/connection.rs`, `ui/connection.blp`, `ui/password-login.blp`, parts of `window.rs` | Adapted; GOA accounts need Files on, their Files URI gives the server |
+| Account handling, sync worker | `todav/linux/app/src/main.rs` | No push, reminders, D-Bus or local mode |
+| Preferences: style, account | `todav/linux/app/src/settings.rs`, `ui/settings.blp` | The account group as is |
+| Build and packaging | `build.rs`, `todav/linux/Makefile`, Flatpak manifest, `scripts/`, `.github/workflows/`, `po/its/` | No GNOME extension; GtkSourceView added |
+| Polish translations | `po/pl.po` | Shared strings merged from Todav's catalog |
 
 A fix to one of these probably applies to Todav too: port it, or note it there. They move into a shared crate in its own repository once copying costs more than sharing: when multiple accounts or other services rework the account layer, when a third app or a front-end of its own needs them, or when the same fix keeps being made twice.
 
@@ -66,6 +70,15 @@ Decided 2026-10-24.
 - **Local copy**: SQLite as in Todav (`core/src/store.rs`): `notes` (path, `oc:id`, ETag, the server's path while a local move waits, text, the text and the server time as of the last sync, dirty flag: 1 changed, 2 deleted), `folders` (path, ETag as last pulled, dirty for one made here) and `kv`. Search through SQLite's FTS5 (built into the bundled SQLite).
 - **Sync** (`core/src/sync.rs`, `Client::sync`): settings first (the notes folder is one), then the push: new folders (`MKCOL`), deletions (`DELETE` with `If-Match`; a note changed on the server since stays), moves (`MOVE`; the folders above made first; a name taken there gets a conflict name), uploads (`PUT` with `If-Match`, or `If-None-Match: *` for a new note; `412` makes a conflict copy). Then the pull: a `PROPFIND Depth: 0` of the notes folder, created when missing; if its ETag changed, the folders whose ETags changed are listed (`Depth: 1`), changed files downloaded, moved ones moved, and notes in a listed folder (or one gone) that were not seen anywhere deleted, unless changed here: those are uploaded again as new. Another notes folder (set here or on another device) lists everything again.
 
+## Linux app
+
+A GTK 4 + libadwaita app (`linux/app`), thin over the core as Todav's is.
+
+- **Welcome page**: GNOME Online Accounts or a Nextcloud server (browser sign-in or app password), then the notes folder, suggested from the server (`Client::suggested_notes_folder`: the synced setting, else the Nextcloud Notes app's `notes_path` capability, else `Notes`); it is created when missing.
+- **Main window**: a sidebar with the notes, newest first (search through FTS5, a folder filter) and the open note: its title (the file name: renames on Enter or when the focus leaves) above a GtkSourceView with Markdown highlighting. Typing saves to the core after 0.8 s; the sync worker waits 1.5 s more for the burst to end, then syncs. A note changed by a sync reloads in the editor unless it holds unsaved text (the core never overwrites a note changed here). Move to a folder and delete from the note's menu.
+- **No background service**: closing the window hides it, and the app quits once what waits for the server is up (`quit_after_sync`). While the window is open it syncs every 30 s when focused and when it gets the focus.
+- **Preferences**: style, the notes folder (another one asks whether to move the notes there, when there are some), the account (as in Todav), settings sync.
+
 ## Repository layout
 
 Same shape as Todav, without the app's directory level:
@@ -77,7 +90,7 @@ Same shape as Todav, without the app's directory level:
   cli/                       # notav-cli: debugging/scripting front-end
   linux/
     app/                     # GTK4 + libadwaita app (Rust); Blueprint views in ui/
-    data/                    # .desktop, metainfo, icons, D-Bus service
+    data/                    # .desktop, metainfo, icons
     flatpak/                 # io.github.selfref.Notav.json
   po/                        # gettext catalogs, domain notav
   scripts/                   # i18n.sh, release.py, deb.sh (from Todav)
@@ -107,8 +120,9 @@ Same shape as Todav, without the app's directory level:
 - [x] Skeleton: Cargo workspace (`core`, `cli`), the copied core pieces with their unit tests, CLI `whoami`/`sync`/`login`, CI check job
 - [x] Core: WebDAV Files sync into SQLite (folder-ETag pull, `GET`/`PUT`/`DELETE`/`MOVE`/`MKCOL` with ETags, conflict copies), the notes folder (suggested from the Nextcloud Notes capability, moving the notes to another one); integration tests against the Test account (`cargo test -p notav-core --features integration`, each test in its own `it-notav/<name>/` folder with settings sync off): two-device round trip with rename and delete, changes made on the server (moves, removed folders, dot-folders and other files skipped), conflict copies (same note, same new name), edited here and deleted there, moving the notes folder
 - [x] CLI round-trip against the server: `ls`, `cat`, `new`, `put`, `mv`, `rm`, `mkdir`, `folder`, `sync`, `whoami`, `login`
-- [ ] Linux app shell: sign-in (welcome page with the notes folder, GOA, Login Flow v2, app password), Secret Service, i18n, data files, packaging; CI packages and the Release workflow
-- [ ] Linux app: notes list, editor, rename and move, search, notes folder in Preferences (with moving the notes)
+- [x] Linux app shell: sign-in (welcome page with the notes folder, GOA, Login Flow v2, app password), Secret Service, i18n (Polish), data files with a placeholder icon, packaging; CI packages and the Release workflow
+- [x] Linux app: notes list, editor, rename and move, search (FTS5 in the core), notes folder in Preferences (with moving the notes). Verified in Broadway against the Test account: sign-in through GOA, notes from the server, typing and renaming uploaded, a server edit shown in the open note, moving the notes folder there and back
+- [ ] App icon (the user's), screenshots in the README
 - [ ] Client Push (`notify_push`) listener; polling as the fallback
 - [ ] Journal: today's daily note
 - [ ] Links, backlinks and tags; `todav://` links (with `GetTask` in Todav)

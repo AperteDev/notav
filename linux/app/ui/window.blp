@@ -1,0 +1,368 @@
+using Gtk 4.0;
+using Adw 1;
+using GtkSource 5;
+
+Adw.ApplicationWindow window {
+  title: "Notav";
+  default-width: 1000;
+  default-height: 700;
+  // Closing hides it while what waits for the server goes up (`quit_after_sync`).
+  hide-on-close: true;
+
+  content: Adw.ToastOverlay toasts {
+    Gtk.Stack stack {
+      Gtk.StackPage {
+        name: "welcome";
+
+        // How to connect, the account, then the notes folder (src/window.rs `connect_welcome`).
+        child: Adw.NavigationView welcome {
+          Adw.NavigationPage {
+            tag: "choose";
+            title: "Notav";
+
+            child: Adw.ToolbarView {
+              [top]
+              Adw.HeaderBar {
+                show-title: false;
+              }
+
+              content: Adw.StatusPage {
+                icon-name: "io.github.selfref.Notav";
+                title: "Notav";
+                description: _("Notes and a journal kept as Markdown files in your Nextcloud");
+                styles ["compact"]
+
+                Adw.Clamp {
+                  maximum-size: 420;
+
+                  Gtk.ListBox {
+                    selection-mode: none;
+                    styles ["boxed-list"]
+
+                    Adw.ActionRow use_goa {
+                      title: _("GNOME Online Accounts");
+                      activatable: true;
+
+                      [prefix]
+                      Gtk.Image {
+                        icon-name: "goa-panel-symbolic";
+                      }
+
+                      [suffix]
+                      Gtk.Image {
+                        icon-name: "go-next-symbolic";
+                      }
+                    }
+
+                    Adw.ActionRow use_server {
+                      title: _("Nextcloud Server");
+                      subtitle: _("Sign in with the browser or an app password");
+                      activatable: true;
+
+                      [prefix]
+                      Gtk.Image {
+                        icon-name: "network-server-symbolic";
+                      }
+
+                      [suffix]
+                      Gtk.Image {
+                        icon-name: "go-next-symbolic";
+                      }
+                    }
+                  }
+                }
+              };
+            };
+          }
+
+          // The GOA account or the server, as chosen; its title is set in code.
+          Adw.NavigationPage connect_page {
+            tag: "connect";
+
+            child: Adw.ToolbarView {
+              [top]
+              Adw.HeaderBar {}
+
+              content: Adw.StatusPage connect_status {
+                styles ["compact"]
+
+                Adw.Clamp {
+                  maximum-size: 420;
+
+                  Gtk.Box {
+                    orientation: vertical;
+                    spacing: 24;
+
+                    // Filled with the shared connection rows (ui/connection.blp).
+                    Adw.PreferencesGroup login_group {}
+
+                    Gtk.Box {
+                      orientation: vertical;
+                      spacing: 6;
+
+                      Gtk.Button connect_goa {
+                        label: _("Connect");
+                        halign: center;
+                        styles ["suggested-action", "pill"]
+                      }
+
+                      Adw.SplitButton login {
+                        label: _("Sign In with Browser");
+                        menu-model: login_menu;
+                        dropdown-tooltip: _("More Sign-In Options");
+                        halign: center;
+                        styles ["suggested-action", "pill"]
+                      }
+
+                      Gtk.Button cancel_login {
+                        label: _("Cancel");
+                        halign: center;
+                        visible: false;
+                        styles ["flat"]
+                      }
+                    }
+                  }
+                }
+              };
+            };
+          }
+
+          // Where the notes are, once connected; suggested from the server (src/window.rs).
+          Adw.NavigationPage {
+            tag: "folder";
+            title: _("Notes Folder");
+            can-pop: false;
+
+            child: Adw.ToolbarView {
+              [top]
+              Adw.HeaderBar {}
+
+              content: Adw.StatusPage {
+                icon-name: "folder-documents-symbolic";
+                title: _("Notes Folder");
+                description: _("The folder in Nextcloud Files your notes are kept in. The Nextcloud Notes app uses the same one; it is created if it does not exist.");
+                styles ["compact"]
+
+                Adw.Clamp {
+                  maximum-size: 420;
+
+                  Gtk.Box {
+                    orientation: vertical;
+                    spacing: 24;
+
+                    Adw.PreferencesGroup {
+                      Adw.EntryRow folder {
+                        title: _("Folder");
+                        activates-default: true;
+                      }
+                    }
+
+                    Gtk.Button folder_done {
+                      label: _("Continue");
+                      halign: center;
+                      styles ["suggested-action", "pill"]
+                    }
+                  }
+                }
+              };
+            };
+          }
+        };
+      }
+
+      Gtk.StackPage {
+        name: "main";
+
+        child: Adw.NavigationSplitView split {
+          min-sidebar-width: 260;
+          max-sidebar-width: 340;
+
+          sidebar: Adw.NavigationPage {
+            title: "Notav";
+
+            child: Adw.ToolbarView {
+              [top]
+              Adw.HeaderBar {
+                [start]
+                Gtk.Button {
+                  icon-name: "list-add-symbolic";
+                  tooltip-text: _("New Note");
+                  action-name: "win.new-note";
+                }
+
+                [end]
+                Gtk.MenuButton {
+                  icon-name: "open-menu-symbolic";
+                  menu-model: main_menu;
+                  tooltip-text: _("Main Menu");
+                  primary: true;
+                }
+
+                [end]
+                Gtk.Button {
+                  action-name: "app.sync";
+                  tooltip-text: _("Sync");
+
+                  Gtk.Stack sync_state {
+                    transition-type: crossfade;
+
+                    Gtk.StackPage {
+                      name: "idle";
+                      child: Gtk.Image {
+                        icon-name: "view-refresh-symbolic";
+                      };
+                    }
+
+                    Gtk.StackPage {
+                      name: "syncing";
+                      child: Adw.Spinner {};
+                    }
+                  }
+                }
+
+                [end]
+                Gtk.ToggleButton search_button {
+                  icon-name: "system-search-symbolic";
+                  tooltip-text: _("Search");
+                  active: bind search_bar.search-mode-enabled bidirectional;
+                }
+              }
+
+              [top]
+              Gtk.SearchBar search_bar {
+                Gtk.SearchEntry search {
+                  placeholder-text: _("Search notes");
+                  hexpand: true;
+                }
+              }
+
+              [top]
+              Gtk.DropDown folder_filter {
+                margin-start: 12;
+                margin-end: 12;
+                margin-bottom: 6;
+                tooltip-text: _("Folder");
+                model: Gtk.StringList folder_names {};
+              }
+
+              content: Gtk.Stack list_stack {
+                Gtk.StackPage {
+                  name: "notes";
+                  child: Gtk.ScrolledWindow {
+                    vexpand: true;
+
+                    Gtk.ListBox notes {
+                      styles ["navigation-sidebar"]
+                    }
+                  };
+                }
+
+                Gtk.StackPage {
+                  name: "empty";
+                  child: Adw.StatusPage list_empty {
+                    icon-name: "folder-documents-symbolic";
+                    styles ["compact"]
+                  };
+                }
+              };
+            };
+          };
+
+          content: Adw.NavigationPage {
+            title: _("Note");
+
+            child: Adw.ToolbarView {
+              [top]
+              Adw.HeaderBar {
+                title-widget: Adw.WindowTitle note_title {};
+
+                [end]
+                Gtk.MenuButton note_menu {
+                  icon-name: "view-more-symbolic";
+                  menu-model: note_menu_model;
+                  tooltip-text: _("Note Menu");
+                }
+              }
+
+              content: Gtk.Stack note_stack {
+                Gtk.StackPage {
+                  name: "none";
+                  child: Adw.StatusPage {
+                    icon-name: "io.github.selfref.Notav-symbolic";
+                    title: _("No Note Selected");
+                    description: _("Pick a note or add one with Ctrl+N");
+                  };
+                }
+
+                Gtk.StackPage {
+                  name: "note";
+                  // The editor's background all the way, as in GNOME Text Editor.
+                  child: Gtk.ScrolledWindow {
+                    vexpand: true;
+                    styles ["view"]
+
+                    Adw.Clamp {
+                      maximum-size: 860;
+                      tightening-threshold: 600;
+
+                      Gtk.Box {
+                        orientation: vertical;
+                        margin-top: 18;
+                        margin-bottom: 18;
+                        margin-start: 12;
+                        margin-end: 12;
+                        spacing: 6;
+
+                        // The file name: renames the note when changed.
+                        Gtk.Entry title {
+                          placeholder-text: _("Title");
+                          styles ["flat", "note-title"]
+                        }
+
+                        GtkSource.View editor {
+                          vexpand: true;
+                          wrap-mode: word_char;
+                          top-margin: 6;
+                          bottom-margin: 48;
+                          left-margin: 6;
+                          right-margin: 6;
+                          pixels-below-lines: 4;
+                          styles ["note-text"]
+                        }
+                      }
+                    }
+                  };
+                }
+              };
+            };
+          };
+        };
+      }
+    }
+  };
+
+  Adw.Breakpoint {
+    condition ("max-width: 640sp")
+
+    setters {
+      split.collapsed: true;
+    }
+  }
+}
+
+menu main_menu {
+  item (_("Preferences"), "win.preferences")
+  item (_("Keyboard Shortcuts"), "app.shortcuts")
+  item (_("About Notav"), "app.about")
+  item (_("Quit"), "app.quit")
+}
+
+menu note_menu_model {
+  item (_("Move to Folder…"), "win.move-note")
+  item (_("Delete"), "win.delete-note")
+}
+
+menu login_menu {
+  item (_("Copy Login Link"), "win.copy-login")
+  item (_("Sign In with Password…"), "win.password-login")
+}

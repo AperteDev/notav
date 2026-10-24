@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Placeholder until the real icon: a page with lines, Adwaita palette. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <rect x="20" y="14" width="88" height="106" rx="10" fill="#deddda"/>
+  <rect x="20" y="10" width="88" height="104" rx="10" fill="#ffffff"/>
+  <rect x="20" y="10" width="88" height="22" rx="10" fill="#f6d32d"/>
+  <rect x="20" y="22" width="88" height="10" fill="#f6d32d"/>
+  <rect x="34" y="46" width="60" height="6" rx="3" fill="#9a9996"/>
+  <rect x="34" y="62" width="52" height="6" rx="3" fill="#9a9996"/>
+  <rect x="34" y="78" width="60" height="6" rx="3" fill="#9a9996"/>
+  <rect x="34" y="94" width="36" height="6" rx="3" fill="#9a9996"/>
+</svg>

@@ -1,0 +1,39 @@
+{
+  "id": "io.github.selfref.Notav",
+  "runtime": "org.gnome.Platform",
+  "runtime-version": "51",
+  "sdk": "org.gnome.Sdk",
+  "sdk-extensions": ["org.freedesktop.Sdk.Extension.rust-stable"],
+  "command": "notav-linux",
+  "finish-args": [
+    "--share=ipc",
+    "--share=network",
+    "--socket=wayland",
+    "--socket=fallback-x11",
+    "--device=dri",
+    "--talk-name=org.gnome.OnlineAccounts",
+    "--talk-name=org.freedesktop.secrets"
+  ],
+  "build-options": {
+    "append-path": "/usr/lib/sdk/rust-stable/bin",
+    "env": { "CARGO_HOME": "/run/build/notav/cargo" },
+    "build-args": ["--share=network"]
+  },
+  "modules": [
+    {
+      "name": "notav",
+      "buildsystem": "simple",
+      "build-commands": [
+        "cargo build --release --locked -p notav-linux",
+        "make -C linux install-data PREFIX=/app BINDIR=/app/bin"
+      ],
+      "sources": [
+        {
+          "type": "dir",
+          "path": "../..",
+          "skip": ["target", "tmp", ".git", ".env", ".playwright-mcp", ".flatpak-builder", "flatpak_app", "repo"]
+        }
+      ]
+    }
+  ]
+}

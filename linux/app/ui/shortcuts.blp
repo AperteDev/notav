@@ -1,0 +1,58 @@
+using Gtk 4.0;
+using Adw 1;
+
+// Keyboard Shortcuts (Ctrl+?). Window-wide ones show the keys set in code by their action.
+Adw.ShortcutsDialog dialog {
+  Adw.ShortcutsSection {
+    title: _("General");
+
+    Adw.ShortcutsItem {
+      title: _("New Note");
+      action-name: "win.new-note";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Search");
+      action-name: "win.search";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Sync");
+      action-name: "app.sync";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Preferences");
+      action-name: "win.preferences";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Keyboard Shortcuts");
+      action-name: "app.shortcuts";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Close Window");
+      action-name: "window.close";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Quit");
+      action-name: "app.quit";
+    }
+  }
+
+  Adw.ShortcutsSection {
+    title: _("Editor");
+
+    Adw.ShortcutsItem {
+      title: _("Undo");
+      accelerator: "<Control>z";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Redo");
+      accelerator: "<Shift><Control>z";
+    }
+  }
+}

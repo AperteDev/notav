@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Notav
+Comment=Notes and a journal kept in your Nextcloud
+Exec=notav-linux
+Icon=io.github.selfref.Notav
+Terminal=false
+Type=Application
+Categories=Office;Utility;
+Keywords=notes;markdown;journal;nextcloud;webdav;
+StartupNotify=true

@@ -1,0 +1,25 @@
+using Gtk 4.0;
+using Adw 1;
+
+// Move a note to another folder, or a new one (src/window.rs `move_dialog`).
+Adw.AlertDialog dialog {
+  heading: _("Move to Folder");
+  default-response: "move";
+  close-response: "cancel";
+
+  responses [
+    cancel: _("Cancel"),
+    move: _("Move") suggested,
+  ]
+
+  extra-child: Adw.PreferencesGroup {
+    Adw.ComboRow folder {
+      title: _("Folder");
+      model: Gtk.StringList folders {};
+    }
+
+    Adw.EntryRow new_folder {
+      title: _("Or a new folder");
+    }
+  };
+}

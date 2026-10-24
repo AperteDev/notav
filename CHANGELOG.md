@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The notes folder as a tree of folders and notes in the sidebar, as in Obsidian
 - Search through titles and text, ignoring case and accents
 - Markdown editor that saves as you type; the title renames the note
-- Drag notes into and out of folders in the sidebar
+- Drag notes and folders into and out of folders in the sidebar
 - Sidebar menu (right click): new note or folder inside a folder, next to a note, or at the top
   level; delete a note
 - A note changed on two devices at once keeps both versions: yours as a conflict copy next to it

@@ -30,6 +30,13 @@ const CSS: &str = "
 /// How far each folder level is indented in the tree, and the width of a folder's arrow.
 const INDENT: i32 = 16;
 
+/// What is being dragged in the tree.
+#[derive(Debug, Clone, PartialEq)]
+enum Dragged {
+    Note(Note),
+    Folder(String),
+}
+
 /// A row of the sidebar's tree.
 #[derive(Debug, Clone, PartialEq)]
 enum Item {
@@ -65,8 +72,8 @@ struct Ui {
     tree_scroll: gtk::ScrolledWindow,
     /// The rows of `tree`, as `items`.
     rows: RefCell<Vec<gtk::ListBoxRow>>,
-    /// The note being dragged in the tree.
-    dragging: RefCell<Option<Note>>,
+    /// The note or folder being dragged in the tree.
+    dragging: RefCell<Option<Dragged>>,
 
     /// The items of `tree`'s rows, in order.
     items: RefCell<Vec<Item>>,
@@ -488,8 +495,8 @@ fn connect(ui: &Rc<Ui>) {
         let Some(ui) = weak.upgrade() else { return };
         let item = ui.items.borrow().get(row.index() as usize).cloned();
         glib::idle_add_local_once(move || match item {
-            // From the keyboard; clicks have their own gesture (`refresh_tree`).
-            Some(Item::Folder(f)) => toggle_folder(&ui, f),
+            // Folder rows are not activatable: they have their own keys and clicks.
+            Some(Item::Folder(_)) => {}
             Some(Item::Note(n)) => {
                 ui.search_button.set_active(false);
                 open_note(&ui, &n);
@@ -498,6 +505,27 @@ fn connect(ui: &Rc<Ui>) {
             None => {}
         });
     });
+
+    // Enter or Space on a folder opens or closes it.
+    let keys = gtk::EventControllerKey::new();
+    let weak = Rc::downgrade(ui);
+    keys.connect_key_pressed(move |_, key, _, _| {
+        use gtk::gdk::Key;
+        let Some(ui) = weak.upgrade() else {
+            return glib::Propagation::Proceed;
+        };
+        if !matches!(key, Key::Return | Key::KP_Enter | Key::space) {
+            return glib::Propagation::Proceed;
+        }
+        let row = ui.tree.focus_child().and_downcast::<gtk::ListBoxRow>();
+        let item = row.and_then(|r| ui.items.borrow().get(r.index() as usize).cloned());
+        let Some(Item::Folder(f)) = item else {
+            return glib::Propagation::Proceed;
+        };
+        glib::idle_add_local_once(move || toggle_folder(&ui, f));
+        glib::Propagation::Stop
+    });
+    ui.tree.add_controller(keys);
 
     let weak = Rc::downgrade(ui);
     ui.search.connect_search_changed(move |_| {
@@ -592,23 +620,23 @@ fn refresh_tree(ui: &Rc<Ui>) {
                 // Every click opens or closes it: the list's own activation skips the second
                 // and third press of a double or triple click.
                 let click = gtk::GestureClick::new();
+                // Not claimed on press, so the row can still be dragged (a drag cancels the
+                // click); not activatable, so the list does not toggle it too.
                 click.set_button(gtk::gdk::BUTTON_PRIMARY);
-                click.connect_pressed(|g, _, _, _| {
-                    g.set_state(gtk::EventSequenceState::Claimed);
-                });
-                let (weak, f) = (Rc::downgrade(ui), f.clone());
+                row.set_activatable(false);
+                let (weak, path) = (Rc::downgrade(ui), f.clone());
                 click.connect_released(move |_, _, _, _| {
                     if let Some(ui) = weak.upgrade() {
-                        let f = f.clone();
+                        let path = path.clone();
                         // After the click, as that rebuilds the tree.
-                        glib::idle_add_local_once(move || toggle_folder(&ui, f));
+                        glib::idle_add_local_once(move || toggle_folder(&ui, path));
                     }
                 });
                 row.add_controller(click);
+                let name = f.rsplit('/').next().unwrap_or(f.as_str());
+                connect_drag(ui, &row, Dragged::Folder(f.clone()), name);
             }
-            Item::Note(n) => {
-                connect_drag(ui, &row, n);
-            }
+            Item::Note(n) => connect_drag(ui, &row, Dragged::Note(n.clone()), &n.title),
         }
         ui.tree.append(&row);
         if matches!(item, Item::Note(n) if Some(n.id) == current) {
@@ -1081,18 +1109,21 @@ fn context_menu(ui: &Rc<Ui>) {
     ui.tree_stack.add_controller(hold);
 }
 
-/// A note's row drags the note, shown as a card with its title.
-fn connect_drag(ui: &Rc<Ui>, row: &gtk::ListBoxRow, n: &Note) {
+/// A row drags its note or folder, shown as a card with its name.
+fn connect_drag(ui: &Rc<Ui>, row: &gtk::ListBoxRow, what: Dragged, name: &str) {
     let drag = gtk::DragSource::new();
     drag.set_actions(gtk::gdk::DragAction::MOVE);
-    let id = n.id.to_string();
+    let id = match &what {
+        Dragged::Note(n) => format!("note:{}", n.id),
+        Dragged::Folder(f) => format!("folder:{f}"),
+    };
     drag.connect_prepare(move |_, _, _| Some(gtk::gdk::ContentProvider::for_value(&id.to_value())));
-    let (weak, note, r) = (Rc::downgrade(ui), n.clone(), row.clone());
+    let (weak, r, name) = (Rc::downgrade(ui), row.clone(), name.to_string());
     drag.connect_drag_begin(move |_, drag| {
         if let Some(ui) = weak.upgrade() {
-            *ui.dragging.borrow_mut() = Some(note.clone());
+            *ui.dragging.borrow_mut() = Some(what.clone());
         }
-        let card = gtk::Label::new(Some(&note.title));
+        let card = gtk::Label::new(Some(&name));
         card.add_css_class("drag-card");
         if let Ok(icon) = gtk::DragIcon::for_drag(drag).downcast::<gtk::DragIcon>() {
             icon.set_child(Some(&card));
@@ -1110,9 +1141,9 @@ fn connect_drag(ui: &Rc<Ui>, row: &gtk::ListBoxRow, n: &Note) {
     row.add_controller(drag);
 }
 
-/// Notes dropped on the tree move: onto a folder, into it; onto a note, into its folder; below
-/// the last row, to the top level. Where it would go is tinted (`mark_drop`); onto its own
-/// folder nothing happens. One target for the whole tree, finding the row itself: GTK gives a
+/// Notes and folders dropped on the tree move: onto a folder, into it; onto a note, into its
+/// folder; below the last row, to the top level. Where it would go is tinted (`mark_drop`);
+/// where it is already, or a folder into itself, nothing happens. One target for the whole tree, finding the row itself: GTK gives a
 /// drag's motion to every drop target under the pointer, so targets on the rows and one for the
 /// top level behind them would all take it.
 fn connect_drop(ui: &Rc<Ui>) {
@@ -1155,24 +1186,35 @@ fn connect_drop(ui: &Rc<Ui>) {
         let Some(folder) = drop_folder(&ui, x, y) else {
             return false;
         };
-        let Some(n) = ui.dragging.take() else {
+        let Some(what) = ui.dragging.take() else {
             return false;
         };
         // After the drop: moving rebuilds the tree, the drag's rows with it.
         glib::idle_add_local_once(move || {
-            if ui.current.borrow().as_ref().is_some_and(|c| c.id == n.id) {
-                save_now(&ui);
-            }
-            match core().move_note(n.id, folder.clone(), n.title.clone()) {
-                Ok(_) => {
+            save_now(&ui);
+            let moved = match &what {
+                Dragged::Note(n) => core()
+                    .move_note(n.id, folder.clone(), n.title.clone())
+                    .map(|_| ()),
+                Dragged::Folder(f) => core()
+                    .move_folder(f.clone(), folder.clone())
+                    .map(|to| follow_folder(&ui, f, &to)),
+            };
+            match moved {
+                Ok(()) => {
                     reveal(&ui, &folder);
                     refresh(&ui);
                     reload_current(&ui);
                     request_sync();
                 }
-                Err(notav_core::Error::Exists(_)) => toast(&gettext(
-                    "A note with this name exists in that folder already",
-                )),
+                Err(notav_core::Error::Exists(_)) => toast(&match what {
+                    Dragged::Note(_) => {
+                        gettext("A note with this name exists in that folder already")
+                    }
+                    Dragged::Folder(_) => {
+                        gettext("A folder with this name exists in that folder already")
+                    }
+                }),
                 Err(e) => toast(&e.to_string()),
             }
         });
@@ -1181,8 +1223,8 @@ fn connect_drop(ui: &Rc<Ui>) {
     ui.tree_scroll.add_controller(drop);
 }
 
-/// The folder the dragged note would go to with the pointer at (`x`, `y`) on the tree's
-/// scrolled window ("": the top level); None when it is there already.
+/// The folder the dragged note or folder would go to with the pointer at (`x`, `y`) on the
+/// tree's scrolled window ("": the top level); None when nothing would move.
 fn drop_folder(ui: &Ui, x: f64, y: f64) -> Option<String> {
     let at = ui
         .tree_scroll
@@ -1194,8 +1236,39 @@ fn drop_folder(ui: &Ui, x: f64, y: f64) -> Option<String> {
         },
         None => String::new(),
     };
-    let from = ui.dragging.borrow().as_ref()?.folder.clone();
-    (folder != from).then_some(folder)
+    moves(ui.dragging.borrow().as_ref()?, &folder).then_some(folder)
+}
+
+/// Whether dropping `what` into `folder` moves it: not where it is, not a folder into itself.
+fn moves(what: &Dragged, folder: &str) -> bool {
+    match what {
+        Dragged::Note(n) => n.folder != folder,
+        Dragged::Folder(f) => {
+            let parent = f.rsplit_once('/').map_or("", |(p, _)| p);
+            parent != folder && folder != f && !folder.starts_with(&format!("{f}/"))
+        }
+    }
+}
+
+/// A folder moved from `from` to `to`: the tree keeps its folders open, new notes still go
+/// where they went.
+fn follow_folder(ui: &Ui, from: &str, to: &str) {
+    let renamed = |p: &str| {
+        (p == from || p.starts_with(&format!("{from}/")))
+            .then(|| format!("{to}{}", &p[from.len()..]))
+    };
+    let open: HashSet<String> = ui
+        .expanded
+        .borrow()
+        .iter()
+        .map(|p| renamed(p).unwrap_or_else(|| p.clone()))
+        .collect();
+    *ui.expanded.borrow_mut() = open;
+    save_expanded(ui);
+    let target = renamed(&ui.target_folder.borrow());
+    if let Some(t) = target {
+        *ui.target_folder.borrow_mut() = t;
+    }
 }
 
 /// Tint where a dragged note would go: a folder's row with what shows of it below, or the
@@ -1578,6 +1651,19 @@ mod tests {
             modified: 0,
             pending: false,
         }
+    }
+
+    #[test]
+    fn drops_that_move_nothing_or_into_itself_are_refused() {
+        let folder = |f: &str| Dragged::Folder(f.into());
+        assert!(moves(&Dragged::Note(note("Work/Plan.md")), ""));
+        assert!(!moves(&Dragged::Note(note("Work/Plan.md")), "Work"));
+        assert!(moves(&folder("Work/Old"), ""));
+        assert!(moves(&folder("Work"), "Archive"));
+        assert!(!moves(&folder("Work/Old"), "Work"), "already there");
+        assert!(!moves(&folder("Work"), "Work"));
+        assert!(!moves(&folder("Work"), "Work/Old"), "into itself");
+        assert!(moves(&folder("Work"), "Workshop"));
     }
 
     #[test]

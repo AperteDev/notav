@@ -67,8 +67,7 @@ struct Ui {
     rows: RefCell<Vec<gtk::ListBoxRow>>,
     /// The note being dragged in the tree.
     dragging: RefCell<Option<Note>>,
-    /// The drop target whose folder is tinted (see `drop_target`); 0: none.
-    drop_mark: Cell<u64>,
+
     /// The items of `tree`'s rows, in order.
     items: RefCell<Vec<Item>>,
     /// Folders shown open in the tree (the device-only `expanded_folders` setting).
@@ -87,6 +86,8 @@ struct Ui {
     /// Set while code replaces the editor's text or the list's rows.
     loading: Cell<bool>,
     last_error: RefCell<String>,
+    /// The locked notes last told about, so each sync (every 30 s) does not repeat it.
+    last_locked: RefCell<Vec<String>>,
 }
 
 thread_local! {
@@ -231,16 +232,32 @@ pub fn on_event(ev: &Event) {
                 ui.last_error.borrow_mut().clear();
             }
         }
-        Event::Conflicts(copies) => {
-            let name = |p: &str| {
-                let file = p.rsplit('/').next().unwrap_or(p);
-                file.rsplit_once('.').map_or(file, |(t, _)| t).to_string()
+        Event::Locked(paths) => {
+            if *ui.last_locked.borrow() == *paths {
+                return;
+            }
+            *ui.last_locked.borrow_mut() = paths.clone();
+            let msg = match paths.as_slice() {
+                [] => return,
+                [one] => gettext(
+                    "“{title}” is open in an editor on the server, which locks it: your change goes up once it is closed",
+                )
+                .replace("{title}", &title_of(one)),
+                _ => ngettext(
+                    "{n} note is open in an editor on the server, which locks it: your changes go up once it is closed",
+                    "{n} notes are open in an editor on the server, which locks them: your changes go up once they are closed",
+                    paths.len() as u64,
+                )
+                .replace("{n}", &paths.len().to_string()),
             };
+            ui.toasts.add_toast(note(&msg));
+        }
+        Event::Conflicts(copies) => {
             let msg = match copies.as_slice() {
                 [one] => gettext(
                     "“{title}” was changed elsewhere too: your version is kept next to it as a copy",
                 )
-                .replace("{title}", &name(one)),
+                .replace("{title}", &title_of(one)),
                 _ => ngettext(
                     "{n} note was changed elsewhere too: your version is kept next to it as a copy",
                     "{n} notes were changed elsewhere too: your versions are kept next to them as copies",
@@ -254,6 +271,12 @@ pub fn on_event(ev: &Event) {
             ui.toasts.add_toast(t);
         }
     }
+}
+
+/// A note's title from its path: the file name without its extension.
+fn title_of(path: &str) -> String {
+    let file = path.rsplit('/').next().unwrap_or(path);
+    file.rsplit_once('.').map_or(file, |(t, _)| t).to_string()
 }
 
 /// Loads a view compiled from `ui/<name>.blp` by build.rs.
@@ -344,7 +367,6 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         tree_scroll: get(&b, "tree_scroll"),
         rows: RefCell::new(Vec::new()),
         dragging: RefCell::new(None),
-        drop_mark: Cell::new(0),
         items: RefCell::new(Vec::new()),
         expanded: RefCell::new(
             core()
@@ -365,6 +387,7 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         save_timer: RefCell::new(None),
         loading: Cell::new(false),
         last_error: RefCell::new(String::new()),
+        last_locked: RefCell::new(Vec::new()),
     });
     ui.conn.attach(&get(&b, "login_group"));
     close_note(&ui);
@@ -436,9 +459,7 @@ fn connect(ui: &Rc<Ui>) {
     ui.stack
         .connect_visible_child_name_notify(move |_| enable());
     context_menu(ui);
-    // Below the last row: out of the folders, to the top level.
-    ui.tree_scroll
-        .add_controller(drop_target(ui, String::new()));
+    connect_drop(ui);
 
     // Shrinking keeps the open note.
     ui.split.connect_collapsed_notify(|s| {
@@ -554,7 +575,6 @@ fn refresh_tree(ui: &Rc<Ui>) {
         let row = tree_row(*depth, item, open);
         match item {
             Item::Folder(f) => {
-                row.add_controller(drop_target(ui, f.clone()));
                 // Every click opens or closes it: the list's own activation skips the second
                 // and third press of a double or triple click.
                 let click = gtk::GestureClick::new();
@@ -574,8 +594,6 @@ fn refresh_tree(ui: &Rc<Ui>) {
             }
             Item::Note(n) => {
                 connect_drag(ui, &row, n);
-                // Onto a note: into its folder.
-                row.add_controller(drop_target(ui, n.folder.clone()));
             }
         }
         ui.tree.append(&row);
@@ -1009,66 +1027,54 @@ fn connect_drag(ui: &Rc<Ui>, row: &gtk::ListBoxRow, n: &Note) {
     row.add_controller(drag);
 }
 
-/// Dropping a note moves it into `folder` ("": the top level), tinted while it would go there
-/// (`mark_drop`). A note already there stays: the target still takes the drag, so it does not
-/// fall through to the tree's top level behind the row.
-fn drop_target(ui: &Rc<Ui>, folder: String) -> gtk::DropTarget {
-    // Which target tints: GTK may tell the one left after the one entered, and that must not
-    // clear the new tint.
-    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
-    let me = NEXT.fetch_add(1, Ordering::Relaxed);
+/// Notes dropped on the tree move: onto a folder, into it; onto a note, into its folder; below
+/// the last row, to the top level. Where it would go is tinted (`mark_drop`); onto its own
+/// folder nothing happens. One target for the whole tree, finding the row itself: GTK gives a
+/// drag's motion to every drop target under the pointer, so targets on the rows and one for the
+/// top level behind them would all take it.
+fn connect_drop(ui: &Rc<Ui>) {
     let drop = gtk::DropTarget::new(glib::Type::STRING, gtk::gdk::DragAction::MOVE);
     let weak = Rc::downgrade(ui);
     drop.connect_accept(move |_, _| {
         weak.upgrade()
             .is_some_and(|ui| ui.dragging.borrow().is_some())
     });
-    // Whether the dragged note would move.
-    let moves = {
-        let (weak, f) = (Rc::downgrade(ui), folder.clone());
-        move || {
-            weak.upgrade()
-                .is_some_and(|ui| ui.dragging.borrow().as_ref().is_some_and(|n| n.folder != f))
+    let hover = {
+        let weak = Rc::downgrade(ui);
+        move |x: f64, y: f64| {
+            let Some(ui) = weak.upgrade() else {
+                return gtk::gdk::DragAction::empty();
+            };
+            let to = drop_folder(&ui, x, y);
+            mark_drop(&ui, to.as_deref());
+            if to.is_some() {
+                gtk::gdk::DragAction::MOVE
+            } else {
+                gtk::gdk::DragAction::empty()
+            }
         }
-    };
-    let (weak, f, m) = (Rc::downgrade(ui), folder.clone(), moves.clone());
-    let hover = move || {
-        let Some(ui) = weak.upgrade() else {
-            return gtk::gdk::DragAction::empty();
-        };
-        ui.drop_mark.set(me);
-        if !m() {
-            mark_drop(&ui, None);
-            return gtk::gdk::DragAction::empty();
-        }
-        mark_drop(&ui, Some(&f));
-        gtk::gdk::DragAction::MOVE
     };
     let h = hover.clone();
-    drop.connect_enter(move |_, _, _| h());
-    drop.connect_motion(move |_, _, _| hover());
+    drop.connect_enter(move |_, x, y| h(x, y));
+    drop.connect_motion(move |_, x, y| hover(x, y));
     let weak = Rc::downgrade(ui);
     drop.connect_leave(move |_| {
-        if let Some(ui) = weak.upgrade()
-            && ui.drop_mark.get() == me
-        {
-            ui.drop_mark.set(0);
+        if let Some(ui) = weak.upgrade() {
             mark_drop(&ui, None);
         }
     });
     let weak = Rc::downgrade(ui);
-    drop.connect_drop(move |_, _, _, _| {
+    drop.connect_drop(move |_, _, x, y| {
         let Some(ui) = weak.upgrade() else {
             return false;
         };
         mark_drop(&ui, None);
-        if !moves() {
+        let Some(folder) = drop_folder(&ui, x, y) else {
             return false;
-        }
+        };
         let Some(n) = ui.dragging.take() else {
             return false;
         };
-        let folder = folder.clone();
         // After the drop: moving rebuilds the tree, the drag's rows with it.
         glib::idle_add_local_once(move || {
             if ui.current.borrow().as_ref().is_some_and(|c| c.id == n.id) {
@@ -1089,7 +1095,24 @@ fn drop_target(ui: &Rc<Ui>, folder: String) -> gtk::DropTarget {
         });
         true
     });
-    drop
+    ui.tree_scroll.add_controller(drop);
+}
+
+/// The folder the dragged note would go to with the pointer at (`x`, `y`) on the tree's
+/// scrolled window ("": the top level); None when it is there already.
+fn drop_folder(ui: &Ui, x: f64, y: f64) -> Option<String> {
+    let at = ui
+        .tree_scroll
+        .compute_point(&ui.tree, &gtk::graphene::Point::new(x as f32, y as f32))?;
+    let folder = match ui.tree.row_at_y(at.y() as i32) {
+        Some(row) => match ui.items.borrow().get(row.index() as usize)? {
+            Item::Folder(f) => f.clone(),
+            Item::Note(n) => n.folder.clone(),
+        },
+        None => String::new(),
+    };
+    let from = ui.dragging.borrow().as_ref()?.folder.clone();
+    (folder != from).then_some(folder)
 }
 
 /// Tint where a dragged note would go: a folder's row with what shows of it below, or the

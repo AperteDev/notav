@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Markdown editor that saves as you type; the title renames the note
 - Drag notes into and out of folders in the sidebar; delete one from its menu there
 - A note changed on two devices at once keeps both versions: yours as a conflict copy next to it
+- A note locked on the server (open in Nextcloud Text) waits with its change and the rest syncs
 - Preferences: style, notes folder (moving the notes there or not), account, settings sync
 - Settings synced between devices through `.config/notav/settings.json`
 - Polish translation

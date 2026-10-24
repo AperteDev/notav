@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notav\n"
 "Report-Msgid-Bugs-To: https://github.com/SelfRef/notav/issues\n"
-"POT-Creation-Date: 2026-10-25 00:10+0200\n"
+"POT-Creation-Date: 2026-10-25 00:16+0200\n"
 "PO-Revision-Date: 2026-10-24 20:03+0200\n"
 "Last-Translator: SelfRef\n"
 "Language-Team: Polish\n"
@@ -18,29 +18,29 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 "
 "|| n%100>=20) ? 1 : 2);\n"
 
-#: linux/app/src/connection.rs:39 linux/app/src/window.rs:1116
+#: linux/app/src/connection.rs:39 linux/app/src/window.rs:1154
 msgid "No Nextcloud account in Settings → Online Accounts"
 msgstr "Brak konta Nextcloud w Ustawienia → Konta online"
 
-#: linux/app/src/main.rs:238
+#: linux/app/src/main.rs:243
 #, rust-format
 msgid "Cannot upload pending changes first: {error}"
 msgstr "Nie można najpierw wysłać oczekujących zmian: {error}"
 
-#: linux/app/src/main.rs:256
+#: linux/app/src/main.rs:261
 msgid "Disconnecting failed"
 msgstr "Nie udało się rozłączyć"
 
-#: linux/app/src/main.rs:275
+#: linux/app/src/main.rs:280
 msgid "Online Accounts has no password for this account"
 msgstr "Konta online nie mają hasła do tego konta"
 
-#: linux/app/src/main.rs:293
+#: linux/app/src/main.rs:298
 #, rust-format
 msgid "Cannot save password: {error}"
 msgstr "Nie można zapisać hasła: {error}"
 
-#: linux/app/src/main.rs:307
+#: linux/app/src/main.rs:312
 msgid "Connecting failed"
 msgstr "Nie udało się połączyć"
 
@@ -57,7 +57,7 @@ msgstr ""
 "Przenieść notatki z „{old}” do „{new}”, czy zostawić je tam i pokazać "
 "notatki z „{new}”?"
 
-#: linux/app/src/settings.rs:77 linux/app/src/window.rs:898
+#: linux/app/src/settings.rs:77 linux/app/src/window.rs:918
 #: linux/app/ui/password-login.blp:19 linux/app/ui/settings.blp:70
 #: linux/app/ui/window.blp:118
 msgid "Cancel"
@@ -76,7 +76,7 @@ msgstr "Przenieś"
 msgid "Notes folder changed to “{folder}”"
 msgstr "Zmieniono folder notatek na „{folder}”"
 
-#: linux/app/src/settings.rs:103 linux/app/src/window.rs:1320
+#: linux/app/src/settings.rs:103 linux/app/src/window.rs:1358
 msgid "Not a folder name"
 msgstr "To nie jest poprawna nazwa folderu"
 
@@ -94,7 +94,7 @@ msgstr "Nie zmieniono folderu notatek"
 msgid "Connected as {name}"
 msgstr "Połączono jako {name}"
 
-#: linux/app/src/settings.rs:142 linux/app/src/window.rs:1131
+#: linux/app/src/settings.rs:142 linux/app/src/window.rs:1169
 #: linux/app/ui/window.blp:43
 msgid "GNOME Online Accounts"
 msgstr "Konta online GNOME"
@@ -113,20 +113,47 @@ msgstr "Nie zalogowano"
 msgid "Disconnected"
 msgstr "Rozłączono"
 
-#: linux/app/src/settings.rs:242 linux/app/src/window.rs:1248
+#: linux/app/src/settings.rs:242 linux/app/src/window.rs:1286
 msgid "Waiting for Sign-In…"
 msgstr "Oczekiwanie na zalogowanie…"
 
-#: linux/app/src/settings.rs:244 linux/app/src/window.rs:1250
+#: linux/app/src/settings.rs:244 linux/app/src/window.rs:1288
 msgid "Waiting for Browser…"
 msgstr "Oczekiwanie na przeglądarkę…"
 
-#: linux/app/src/window.rs:224
+#: linux/app/src/window.rs:227
 #, rust-format
 msgid "Sync failed: {error}"
 msgstr "Synchronizacja nie powiodła się: {error}"
 
-#: linux/app/src/window.rs:239
+#: linux/app/src/window.rs:243
+#, rust-format
+msgid ""
+"“{title}” is open in an editor on the server, which locks it: your change "
+"goes up once it is closed"
+msgstr ""
+"Notatka „{title}” jest otwarta w edytorze na serwerze, który ją blokuje: twoja "
+"zmiana zostanie wysłana, gdy zostanie zamknięta"
+
+#: linux/app/src/window.rs:247
+#, rust-format
+msgid ""
+"{n} note is open in an editor on the server, which locks it: your changes go "
+"up once it is closed"
+msgid_plural ""
+"{n} notes are open in an editor on the server, which locks them: your "
+"changes go up once they are closed"
+msgstr[0] ""
+"{n} notatka jest otwarta w edytorze na serwerze, który ją blokuje: twoje "
+"zmiany zostaną wysłane, gdy zostanie zamknięta"
+msgstr[1] ""
+"{n} notatki są otwarte w edytorze na serwerze, który je blokuje: twoje "
+"zmiany zostaną wysłane, gdy zostaną zamknięte"
+msgstr[2] ""
+"{n} notatek jest otwartych w edytorze na serwerze, który je blokuje: twoje "
+"zmiany zostaną wysłane, gdy zostaną zamknięte"
+
+#: linux/app/src/window.rs:258
 #, rust-format
 msgid ""
 "“{title}” was changed elsewhere too: your version is kept next to it as a "
@@ -135,7 +162,7 @@ msgstr ""
 "Notatka „{title}” została zmieniona także gdzie indziej: twoja wersja "
 "została zachowana obok jako kopia"
 
-#: linux/app/src/window.rs:243
+#: linux/app/src/window.rs:262
 #, rust-format
 msgid ""
 "{n} note was changed elsewhere too: your version is kept next to it as a copy"
@@ -152,94 +179,94 @@ msgstr[2] ""
 "{n} notatek zostało zmienionych także gdzie indziej: twoje wersje zostały "
 "zachowane obok jako kopie"
 
-#: linux/app/src/window.rs:800
+#: linux/app/src/window.rs:820
 #, rust-format
 msgid "Cannot save the note: {error}"
 msgstr "Nie można zapisać notatki: {error}"
 
-#: linux/app/src/window.rs:850
+#: linux/app/src/window.rs:870
 msgid "A note with this name exists already"
 msgstr "Notatka o tej nazwie już istnieje"
 
-#: linux/app/src/window.rs:867
+#: linux/app/src/window.rs:887
 msgid "Untitled"
 msgstr "Bez tytułu"
 
-#: linux/app/src/window.rs:892
+#: linux/app/src/window.rs:912
 msgid "Delete Note?"
 msgstr "Usunąć notatkę?"
 
-#: linux/app/src/window.rs:894
+#: linux/app/src/window.rs:914
 #, rust-format
 msgid "“{title}” will be deleted on every device."
 msgstr "Notatka „{title}” zostanie usunięta na wszystkich urządzeniach."
 
-#: linux/app/src/window.rs:899 linux/app/src/window.rs:939
+#: linux/app/src/window.rs:919 linux/app/src/window.rs:959
 msgid "Delete"
 msgstr "Usuń"
 
-#: linux/app/src/window.rs:1085
+#: linux/app/src/window.rs:1091
 msgid "A note with this name exists in that folder already"
 msgstr "Notatka o tej nazwie już istnieje w tym folderze"
 
-#: linux/app/src/window.rs:1134
+#: linux/app/src/window.rs:1172
 msgid "Connect with a Nextcloud account from GNOME Settings"
 msgstr "Połącz się z kontem Nextcloud z Ustawień GNOME"
 
-#: linux/app/src/window.rs:1137 linux/app/ui/window.blp:58
+#: linux/app/src/window.rs:1175 linux/app/ui/window.blp:58
 msgid "Nextcloud Server"
 msgstr "Serwer Nextcloud"
 
-#: linux/app/src/window.rs:1140
+#: linux/app/src/window.rs:1178
 msgid "Sign in to your Nextcloud; Notav gets an app password of its own"
 msgstr ""
 "Zaloguj się do swojego Nextcloud; Notav dostanie własne hasło aplikacji"
 
-#: linux/app/src/window.rs:1221
+#: linux/app/src/window.rs:1259
 msgid "Enter the Nextcloud server first"
 msgstr "Najpierw podaj serwer Nextcloud"
 
-#: linux/app/src/window.rs:1337 linux/app/ui/settings.blp:87
+#: linux/app/src/window.rs:1375 linux/app/ui/settings.blp:87
 #: linux/app/ui/window.blp:110
 msgid "Sign In with Browser"
 msgstr "Zaloguj się w przeglądarce"
 
-#: linux/app/src/window.rs:1351
+#: linux/app/src/window.rs:1389
 msgid "Cannot start login"
 msgstr "Nie można rozpocząć logowania"
 
-#: linux/app/src/window.rs:1352
+#: linux/app/src/window.rs:1390
 #, rust-format
 msgid "Cannot start login: {error}"
 msgstr "Nie można rozpocząć logowania: {error}"
 
-#: linux/app/src/window.rs:1360
+#: linux/app/src/window.rs:1398
 msgid "Login link copied to clipboard"
 msgstr "Skopiowano odnośnik logowania do schowka"
 
-#: linux/app/src/window.rs:1380
+#: linux/app/src/window.rs:1418
 #, rust-format
 msgid "Login failed: {error}"
 msgstr "Logowanie nie powiodło się: {error}"
 
-#: linux/app/src/window.rs:1382
+#: linux/app/src/window.rs:1420
 msgid "Login failed"
 msgstr "Logowanie nie powiodło się"
 
-#: linux/app/src/window.rs:1385
+#: linux/app/src/window.rs:1423
 msgid "Login timed out"
 msgstr "Upłynął czas na zalogowanie"
 
-#: linux/app/src/window.rs:1434
+#: linux/app/src/window.rs:1472
 msgid "Wrong login name or password"
 msgstr "Błędna nazwa użytkownika lub hasło"
 
-#: linux/app/src/window.rs:1435
+#: linux/app/src/window.rs:1473
 #, rust-format
 msgid "Sign-in failed: {error}"
 msgstr "Logowanie nie powiodło się: {error}"
 
-#: linux/app/src/window.rs:1436
+#: linux/app/src/window.rs:1474
 msgid "Sign-in failed"
 msgstr "Logowanie nie powiodło się"
 

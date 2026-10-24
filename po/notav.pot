@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notav\n"
 "Report-Msgid-Bugs-To: https://github.com/SelfRef/notav/issues\n"
-"POT-Creation-Date: 2026-10-25 00:10+0200\n"
+"POT-Creation-Date: 2026-10-25 00:16+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,29 +18,29 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: linux/app/src/connection.rs:39 linux/app/src/window.rs:1116
+#: linux/app/src/connection.rs:39 linux/app/src/window.rs:1154
 msgid "No Nextcloud account in Settings → Online Accounts"
 msgstr ""
 
-#: linux/app/src/main.rs:238
+#: linux/app/src/main.rs:243
 #, rust-format
 msgid "Cannot upload pending changes first: {error}"
 msgstr ""
 
-#: linux/app/src/main.rs:256
+#: linux/app/src/main.rs:261
 msgid "Disconnecting failed"
 msgstr ""
 
-#: linux/app/src/main.rs:275
+#: linux/app/src/main.rs:280
 msgid "Online Accounts has no password for this account"
 msgstr ""
 
-#: linux/app/src/main.rs:293
+#: linux/app/src/main.rs:298
 #, rust-format
 msgid "Cannot save password: {error}"
 msgstr ""
 
-#: linux/app/src/main.rs:307
+#: linux/app/src/main.rs:312
 msgid "Connecting failed"
 msgstr ""
 
@@ -55,7 +55,7 @@ msgid ""
 "notes in “{new}”?"
 msgstr ""
 
-#: linux/app/src/settings.rs:77 linux/app/src/window.rs:898
+#: linux/app/src/settings.rs:77 linux/app/src/window.rs:918
 #: linux/app/ui/password-login.blp:19 linux/app/ui/settings.blp:70
 #: linux/app/ui/window.blp:118
 msgid "Cancel"
@@ -74,7 +74,7 @@ msgstr ""
 msgid "Notes folder changed to “{folder}”"
 msgstr ""
 
-#: linux/app/src/settings.rs:103 linux/app/src/window.rs:1320
+#: linux/app/src/settings.rs:103 linux/app/src/window.rs:1358
 msgid "Not a folder name"
 msgstr ""
 
@@ -92,7 +92,7 @@ msgstr ""
 msgid "Connected as {name}"
 msgstr ""
 
-#: linux/app/src/settings.rs:142 linux/app/src/window.rs:1131
+#: linux/app/src/settings.rs:142 linux/app/src/window.rs:1169
 #: linux/app/ui/window.blp:43
 msgid "GNOME Online Accounts"
 msgstr ""
@@ -111,27 +111,45 @@ msgstr ""
 msgid "Disconnected"
 msgstr ""
 
-#: linux/app/src/settings.rs:242 linux/app/src/window.rs:1248
+#: linux/app/src/settings.rs:242 linux/app/src/window.rs:1286
 msgid "Waiting for Sign-In…"
 msgstr ""
 
-#: linux/app/src/settings.rs:244 linux/app/src/window.rs:1250
+#: linux/app/src/settings.rs:244 linux/app/src/window.rs:1288
 msgid "Waiting for Browser…"
 msgstr ""
 
-#: linux/app/src/window.rs:224
+#: linux/app/src/window.rs:227
 #, rust-format
 msgid "Sync failed: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:239
+#: linux/app/src/window.rs:243
+#, rust-format
+msgid ""
+"“{title}” is open in an editor on the server, which locks it: your change "
+"goes up once it is closed"
+msgstr ""
+
+#: linux/app/src/window.rs:247
+#, rust-format
+msgid ""
+"{n} note is open in an editor on the server, which locks it: your changes go "
+"up once it is closed"
+msgid_plural ""
+"{n} notes are open in an editor on the server, which locks them: your "
+"changes go up once they are closed"
+msgstr[0] ""
+msgstr[1] ""
+
+#: linux/app/src/window.rs:258
 #, rust-format
 msgid ""
 "“{title}” was changed elsewhere too: your version is kept next to it as a "
 "copy"
 msgstr ""
 
-#: linux/app/src/window.rs:243
+#: linux/app/src/window.rs:262
 #, rust-format
 msgid ""
 "{n} note was changed elsewhere too: your version is kept next to it as a copy"
@@ -141,93 +159,93 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: linux/app/src/window.rs:800
+#: linux/app/src/window.rs:820
 #, rust-format
 msgid "Cannot save the note: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:850
+#: linux/app/src/window.rs:870
 msgid "A note with this name exists already"
 msgstr ""
 
-#: linux/app/src/window.rs:867
+#: linux/app/src/window.rs:887
 msgid "Untitled"
 msgstr ""
 
-#: linux/app/src/window.rs:892
+#: linux/app/src/window.rs:912
 msgid "Delete Note?"
 msgstr ""
 
-#: linux/app/src/window.rs:894
+#: linux/app/src/window.rs:914
 #, rust-format
 msgid "“{title}” will be deleted on every device."
 msgstr ""
 
-#: linux/app/src/window.rs:899 linux/app/src/window.rs:939
+#: linux/app/src/window.rs:919 linux/app/src/window.rs:959
 msgid "Delete"
 msgstr ""
 
-#: linux/app/src/window.rs:1085
+#: linux/app/src/window.rs:1091
 msgid "A note with this name exists in that folder already"
 msgstr ""
 
-#: linux/app/src/window.rs:1134
+#: linux/app/src/window.rs:1172
 msgid "Connect with a Nextcloud account from GNOME Settings"
 msgstr ""
 
-#: linux/app/src/window.rs:1137 linux/app/ui/window.blp:58
+#: linux/app/src/window.rs:1175 linux/app/ui/window.blp:58
 msgid "Nextcloud Server"
 msgstr ""
 
-#: linux/app/src/window.rs:1140
+#: linux/app/src/window.rs:1178
 msgid "Sign in to your Nextcloud; Notav gets an app password of its own"
 msgstr ""
 
-#: linux/app/src/window.rs:1221
+#: linux/app/src/window.rs:1259
 msgid "Enter the Nextcloud server first"
 msgstr ""
 
-#: linux/app/src/window.rs:1337 linux/app/ui/settings.blp:87
+#: linux/app/src/window.rs:1375 linux/app/ui/settings.blp:87
 #: linux/app/ui/window.blp:110
 msgid "Sign In with Browser"
 msgstr ""
 
-#: linux/app/src/window.rs:1351
+#: linux/app/src/window.rs:1389
 msgid "Cannot start login"
 msgstr ""
 
-#: linux/app/src/window.rs:1352
+#: linux/app/src/window.rs:1390
 #, rust-format
 msgid "Cannot start login: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:1360
+#: linux/app/src/window.rs:1398
 msgid "Login link copied to clipboard"
 msgstr ""
 
-#: linux/app/src/window.rs:1380
+#: linux/app/src/window.rs:1418
 #, rust-format
 msgid "Login failed: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:1382
+#: linux/app/src/window.rs:1420
 msgid "Login failed"
 msgstr ""
 
-#: linux/app/src/window.rs:1385
+#: linux/app/src/window.rs:1423
 msgid "Login timed out"
 msgstr ""
 
-#: linux/app/src/window.rs:1434
+#: linux/app/src/window.rs:1472
 msgid "Wrong login name or password"
 msgstr ""
 
-#: linux/app/src/window.rs:1435
+#: linux/app/src/window.rs:1473
 #, rust-format
 msgid "Sign-in failed: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:1436
+#: linux/app/src/window.rs:1474
 msgid "Sign-in failed"
 msgstr ""
 

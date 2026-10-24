@@ -71,6 +71,8 @@ pub enum Event {
     SyncState(String),
     /// Conflict copies a sync made, by path.
     Conflicts(Vec<String>),
+    /// Notes whose change waits because they are locked on the server, by path (empty: none).
+    Locked(Vec<String>),
 }
 
 fn post(ev: Event) {
@@ -92,6 +94,9 @@ fn post(ev: Event) {
 fn set_state(r: &Result<notav_core::SyncReport, notav_core::Error>) {
     if let Some(report) = r.as_ref().ok().filter(|r| !r.conflicts.is_empty()) {
         post(Event::Conflicts(report.conflicts.clone()));
+    }
+    if let Ok(report) = r {
+        post(Event::Locked(report.locked.clone()));
     }
     post(Event::SyncState(match r {
         Ok(_) => "idle".into(),

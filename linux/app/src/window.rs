@@ -1038,10 +1038,23 @@ fn context_menu(ui: &Rc<Ui>) {
         }
         // Gone once closed.
         let menu = gtk::PopoverMenu::from_model(Some(&m));
-        menu.set_parent(&ui.tree_stack);
+        // On the row it is for, else the tree's stack (a list box takes no other children).
+        let parent: gtk::Widget = row
+            .as_ref()
+            .map_or(ui.tree_stack.clone().upcast(), |r| r.clone().upcast());
+        let at = ui
+            .tree_stack
+            .compute_point(&parent, &gtk::graphene::Point::new(x as f32, y as f32))
+            .unwrap_or_else(|| gtk::graphene::Point::new(x as f32, y as f32));
+        menu.set_parent(&parent);
         menu.set_has_arrow(false);
         menu.set_halign(gtk::Align::Start);
-        menu.set_pointing_to(Some(&gtk::gdk::Rectangle::new(x as i32, y as i32, 1, 1)));
+        menu.set_pointing_to(Some(&gtk::gdk::Rectangle::new(
+            at.x() as i32,
+            at.y() as i32,
+            1,
+            1,
+        )));
         menu.connect_closed(|m| {
             let m = m.clone();
             glib::idle_add_local_once(move || m.unparent());

@@ -430,14 +430,8 @@ fn connect(ui: &Rc<Ui>) {
         let Some(ui) = weak.upgrade() else { return };
         let item = ui.items.borrow().get(row.index() as usize).cloned();
         glib::idle_add_local_once(move || match item {
-            Some(Item::Folder(f)) => {
-                if !ui.expanded.borrow_mut().remove(&f) {
-                    ui.expanded.borrow_mut().insert(f.clone());
-                }
-                save_expanded(&ui);
-                *ui.target_folder.borrow_mut() = f;
-                refresh_tree(&ui);
-            }
+            // From the keyboard; clicks have their own gesture (`refresh_tree`).
+            Some(Item::Folder(f)) => toggle_folder(&ui, f),
             Some(Item::Note(n)) => {
                 ui.search_button.set_active(false);
                 open_note(&ui, &n);
@@ -534,6 +528,24 @@ fn refresh_tree(ui: &Rc<Ui>) {
     for (depth, item) in &items {
         let open = matches!(item, Item::Folder(f) if ui.expanded.borrow().contains(f));
         let row = tree_row(*depth, item, open);
+        if let Item::Folder(f) = item {
+            // Every click opens or closes it: the list's own activation skips the second and
+            // third press of a double or triple click.
+            let click = gtk::GestureClick::new();
+            click.set_button(gtk::gdk::BUTTON_PRIMARY);
+            click.connect_pressed(|g, _, _, _| {
+                g.set_state(gtk::EventSequenceState::Claimed);
+            });
+            let (weak, f) = (Rc::downgrade(ui), f.clone());
+            click.connect_released(move |_, _, _, _| {
+                if let Some(ui) = weak.upgrade() {
+                    let f = f.clone();
+                    // After the click, as that rebuilds the tree.
+                    glib::idle_add_local_once(move || toggle_folder(&ui, f));
+                }
+            });
+            row.add_controller(click);
+        }
         ui.tree.append(&row);
         if matches!(item, Item::Note(n) if Some(n.id) == current) {
             ui.tree.select_row(Some(&row));
@@ -607,6 +619,16 @@ fn tree_row(depth: usize, item: &Item, open: bool) -> gtk::ListBoxRow {
         row.set_tooltip_text(Some(f));
     }
     row
+}
+
+/// Open or close a folder in the tree; new notes go there.
+fn toggle_folder(ui: &Rc<Ui>, f: String) {
+    if !ui.expanded.borrow_mut().remove(&f) {
+        ui.expanded.borrow_mut().insert(f.clone());
+    }
+    save_expanded(ui);
+    *ui.target_folder.borrow_mut() = f;
+    refresh_tree(ui);
 }
 
 /// The open folders, kept on this device.

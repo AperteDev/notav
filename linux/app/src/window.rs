@@ -20,7 +20,7 @@ const CSS: &str = "
 .note-title { font-size: 20pt; font-weight: 800; }
 .note-text { font-size: 12pt; }
 .navigation-sidebar > row:drop(active), scrolledwindow:drop(active) { box-shadow: none; }
-.navigation-sidebar > row.drop-target { background-color: alpha(var(--accent-bg-color), 0.25); }
+.navigation-sidebar > row.drop-target { background-color: alpha(var(--accent-bg-color), 0.2); }
 .navigation-sidebar.drop-target { background-color: alpha(var(--accent-bg-color), 0.12); }
 .navigation-sidebar > row.dragged { opacity: 0.5; }
 .drag-card { padding: 6px 12px; border-radius: 6px; background-color: var(--popover-bg-color);
@@ -67,6 +67,8 @@ struct Ui {
     rows: RefCell<Vec<gtk::ListBoxRow>>,
     /// The note being dragged in the tree.
     dragging: RefCell<Option<Note>>,
+    /// The drop target whose folder is tinted (see `drop_target`); 0: none.
+    drop_mark: Cell<u64>,
     /// The items of `tree`'s rows, in order.
     items: RefCell<Vec<Item>>,
     /// Folders shown open in the tree (the device-only `expanded_folders` setting).
@@ -342,6 +344,7 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         tree_scroll: get(&b, "tree_scroll"),
         rows: RefCell::new(Vec::new()),
         dragging: RefCell::new(None),
+        drop_mark: Cell::new(0),
         items: RefCell::new(Vec::new()),
         expanded: RefCell::new(
             core()
@@ -435,7 +438,7 @@ fn connect(ui: &Rc<Ui>) {
     context_menu(ui);
     // Below the last row: out of the folders, to the top level.
     ui.tree_scroll
-        .add_controller(drop_target(ui, String::new(), None));
+        .add_controller(drop_target(ui, String::new()));
 
     // Shrinking keeps the open note.
     ui.split.connect_collapsed_notify(|s| {
@@ -551,7 +554,7 @@ fn refresh_tree(ui: &Rc<Ui>) {
         let row = tree_row(*depth, item, open);
         match item {
             Item::Folder(f) => {
-                row.add_controller(drop_target(ui, f.clone(), Some(row.clone())));
+                row.add_controller(drop_target(ui, f.clone()));
                 // Every click opens or closes it: the list's own activation skips the second
                 // and third press of a double or triple click.
                 let click = gtk::GestureClick::new();
@@ -572,8 +575,7 @@ fn refresh_tree(ui: &Rc<Ui>) {
             Item::Note(n) => {
                 connect_drag(ui, &row, n);
                 // Onto a note: into its folder.
-                let target = folder_row(ui, &items, &n.folder);
-                row.add_controller(drop_target(ui, n.folder.clone(), target));
+                row.add_controller(drop_target(ui, n.folder.clone()));
             }
         }
         ui.tree.append(&row);
@@ -1007,19 +1009,14 @@ fn connect_drag(ui: &Rc<Ui>, row: &gtk::ListBoxRow, n: &Note) {
     row.add_controller(drag);
 }
 
-/// The row of `folder` in the tree being built from `items`; None for the top level.
-fn folder_row(ui: &Ui, items: &[(usize, Item)], folder: &str) -> Option<gtk::ListBoxRow> {
-    let i = items
-        .iter()
-        .position(|(_, it)| matches!(it, Item::Folder(f) if f == folder))?;
-    // Folders come before their notes, so the row is already built.
-    ui.rows.borrow().get(i).cloned()
-}
-
-/// Dropping a note moves it into `folder` ("": the top level); `target` (its row; the tree for
-/// the top level) is tinted while it would go there. A note already there stays: the target
-/// still takes the drag, so it does not fall through to the tree's top level behind the row.
-fn drop_target(ui: &Rc<Ui>, folder: String, target: Option<gtk::ListBoxRow>) -> gtk::DropTarget {
+/// Dropping a note moves it into `folder` ("": the top level), tinted while it would go there
+/// (`mark_drop`). A note already there stays: the target still takes the drag, so it does not
+/// fall through to the tree's top level behind the row.
+fn drop_target(ui: &Rc<Ui>, folder: String) -> gtk::DropTarget {
+    // Which target tints: GTK may tell the one left after the one entered, and that must not
+    // clear the new tint.
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+    let me = NEXT.fetch_add(1, Ordering::Relaxed);
     let drop = gtk::DropTarget::new(glib::Type::STRING, gtk::gdk::DragAction::MOVE);
     let weak = Rc::downgrade(ui);
     drop.connect_accept(move |_, _| {
@@ -1034,17 +1031,17 @@ fn drop_target(ui: &Rc<Ui>, folder: String, target: Option<gtk::ListBoxRow>) -> 
                 .is_some_and(|ui| ui.dragging.borrow().as_ref().is_some_and(|n| n.folder != f))
         }
     };
-    let (weak, t, m) = (Rc::downgrade(ui), target.clone(), moves.clone());
+    let (weak, f, m) = (Rc::downgrade(ui), folder.clone(), moves.clone());
     let hover = move || {
         let Some(ui) = weak.upgrade() else {
             return gtk::gdk::DragAction::empty();
         };
+        ui.drop_mark.set(me);
         if !m() {
             mark_drop(&ui, None);
             return gtk::gdk::DragAction::empty();
         }
-        let w: &gtk::Widget = t.as_ref().map_or(ui.tree.upcast_ref(), |r| r.upcast_ref());
-        mark_drop(&ui, Some(w));
+        mark_drop(&ui, Some(&f));
         gtk::gdk::DragAction::MOVE
     };
     let h = hover.clone();
@@ -1052,7 +1049,10 @@ fn drop_target(ui: &Rc<Ui>, folder: String, target: Option<gtk::ListBoxRow>) -> 
     drop.connect_motion(move |_, _, _| hover());
     let weak = Rc::downgrade(ui);
     drop.connect_leave(move |_| {
-        if let Some(ui) = weak.upgrade() {
+        if let Some(ui) = weak.upgrade()
+            && ui.drop_mark.get() == me
+        {
+            ui.drop_mark.set(0);
             mark_drop(&ui, None);
         }
     });
@@ -1092,14 +1092,29 @@ fn drop_target(ui: &Rc<Ui>, folder: String, target: Option<gtk::ListBoxRow>) -> 
     drop
 }
 
-/// Tint where a dragged note would go: a folder's row, or the tree for the top level.
-fn mark_drop(ui: &Ui, on: Option<&gtk::Widget>) {
-    for r in ui.rows.borrow().iter() {
-        r.remove_css_class("drop-target");
+/// Tint where a dragged note would go: a folder's row with what shows of it below, or the
+/// whole tree for the top level ("").
+fn mark_drop(ui: &Ui, folder: Option<&str>) {
+    if folder == Some("") {
+        ui.tree.add_css_class("drop-target");
+    } else {
+        ui.tree.remove_css_class("drop-target");
     }
-    ui.tree.remove_css_class("drop-target");
-    if let Some(w) = on {
-        w.add_css_class("drop-target");
+    for (row, item) in ui.rows.borrow().iter().zip(ui.items.borrow().iter()) {
+        if folder.is_some_and(|f| !f.is_empty() && within(item, f)) {
+            row.add_css_class("drop-target");
+        } else {
+            row.remove_css_class("drop-target");
+        }
+    }
+}
+
+/// `item` is the folder `folder` or inside it.
+fn within(item: &Item, folder: &str) -> bool {
+    let inside = |p: &str| p == folder || p.starts_with(&format!("{folder}/"));
+    match item {
+        Item::Folder(f) => inside(f),
+        Item::Note(n) => inside(&n.folder),
     }
 }
 
@@ -1457,6 +1472,14 @@ mod tests {
             modified: 0,
             pending: false,
         }
+    }
+
+    #[test]
+    fn a_folder_holds_its_notes_and_folders_at_any_depth() {
+        let folder = |f: &str| Item::Folder(f.into());
+        assert!(within(&folder("Work"), "Work") && within(&folder("Work/Old"), "Work"));
+        assert!(within(&Item::Note(note("Work/Old/x.md")), "Work"));
+        assert!(!within(&folder("Workshop"), "Work") && !within(&Item::Note(note("x.md")), "Work"));
     }
 
     #[test]

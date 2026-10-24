@@ -126,6 +126,8 @@ pub enum Error {
     Exists(String),
     /// Not a name a note or folder can have.
     Invalid(String),
+    /// Locked on the server (HTTP 423), by an editor that has it open.
+    Locked(String),
     Http(u16, String),
     Net(String),
     Parse(String),
@@ -141,12 +143,19 @@ impl std::fmt::Display for Error {
             Error::NotFound(s) => write!(f, "not found: {s}"),
             Error::Exists(s) => write!(f, "exists already: {s}"),
             Error::Invalid(s) => write!(f, "invalid name: {s}"),
-            // A WebDAV error body is XML: its <s:message> is the part worth reading.
+            Error::Locked(s) => write!(f, "locked on the server: {s}"),
+            // A WebDAV error body is XML: its <s:message> is the part worth reading, else (it
+            // can be empty) the exception's name.
             Error::Http(code, body) => {
-                let message = body
-                    .split_once("<s:message>")
-                    .and_then(|(_, m)| m.split_once("</s:message>"))
-                    .map_or(body.as_str(), |(m, _)| m);
+                let tag = |t: &str| {
+                    body.split_once(&format!("<s:{t}>"))
+                        .and_then(|(_, m)| m.split_once(&format!("</s:{t}>")))
+                        .map(|(m, _)| m.trim())
+                        .filter(|m| !m.is_empty())
+                };
+                let message = tag("message")
+                    .or_else(|| tag("exception").map(|e| e.rsplit('\\').next().unwrap_or(e)))
+                    .unwrap_or(body.as_str());
                 let short: String = message.chars().take(300).collect();
                 write!(f, "HTTP {code}: {}", short.trim())
             }
@@ -190,4 +199,31 @@ pub fn b64encode(data: &[u8], url: bool) -> String {
         }
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn http_errors_show_the_server_message_or_exception() {
+        let body = |inner: &str| {
+            format!(
+                "<?xml version=\"1.0\"?>\n<d:error xmlns:d=\"DAV:\" xmlns:s=\"http://sabredav.org/ns\">{inner}</d:error>"
+            )
+        };
+        let shown = |inner: &str| Error::Http(423, body(inner)).to_string();
+        assert_eq!(
+            shown("<s:exception>Sabre\\DAV\\Exception\\Locked</s:exception><s:message/>"),
+            "HTTP 423: Locked"
+        );
+        assert_eq!(
+            shown("<s:exception>X</s:exception><s:message>Plan.md is locked</s:message>"),
+            "HTTP 423: Plan.md is locked"
+        );
+        assert_eq!(
+            Error::Http(500, "oops".into()).to_string(),
+            "HTTP 500: oops"
+        );
+    }
 }

@@ -253,3 +253,47 @@ fn notes_folder_moves_with_its_notes() {
     f.a.sync().unwrap();
     assert!(f.a.notes().is_empty());
 }
+
+#[test]
+fn a_note_locked_on_the_server_waits_and_the_rest_syncs() {
+    let f = Fixture::new("locked");
+    let locked = f.a.add_note("".into(), "Open".into(), "v1".into()).unwrap();
+    let other =
+        f.a.add_note("".into(), "Other".into(), "v1".into())
+            .unwrap();
+    f.a.sync().unwrap();
+    // As the Nextcloud Text editor does while it has the note open.
+    let href = format!("{}Open.md", f.root);
+    let body = r#"<?xml version="1.0"?><d:lockinfo xmlns:d="DAV:"><d:lockscope><d:exclusive/></d:lockscope><d:locktype><d:write/></d:locktype><d:owner>it</d:owner></d:lockinfo>"#;
+    let r = f
+        .dav
+        .request("LOCK", &href, &[("Timeout", "Second-120")], body)
+        .unwrap();
+    assert_eq!(r.status, 200, "{}", r.body);
+    let token = r
+        .body
+        .split_once("<d:href>opaquelocktoken:")
+        .and_then(|(_, t)| t.split_once('<'))
+        .map(|(t, _)| format!("<opaquelocktoken:{t}>"))
+        .expect("lock token");
+
+    f.a.move_note(locked.id, "Work".into(), "Open".into())
+        .unwrap();
+    f.a.set_text(other.id, "v2".into()).unwrap();
+    let r = f.a.sync().unwrap();
+    assert_eq!(r.locked, ["Work/Open.md"]);
+    assert_eq!(r.uploaded, 1);
+    assert_eq!(f.server_text("Other.md").unwrap(), "v2");
+    assert!(f.a.pending());
+    assert!(f.server_text("Open.md").is_some());
+
+    let r = f
+        .dav
+        .request("UNLOCK", &href, &[("Lock-Token", &token)], "")
+        .unwrap();
+    assert!(r.status < 300, "UNLOCK {}", r.status);
+    let r = f.a.sync().unwrap();
+    assert!(r.locked.is_empty());
+    assert!(!f.a.pending());
+    assert_eq!(f.server_text("Work/Open.md").unwrap(), "v1");
+}

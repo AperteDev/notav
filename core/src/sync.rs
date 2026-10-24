@@ -18,6 +18,9 @@ pub struct SyncReport {
     pub removed: u32,
     /// Conflict copies made: notes changed here and on the server (paths of the copies).
     pub conflicts: Vec<String>,
+    /// Notes whose change could not go up: locked on the server, by an editor that has them
+    /// open (paths). They stay changed here, for the next sync.
+    pub locked: Vec<String>,
 }
 
 /// The notes folder unless set: Nextcloud Notes' default.
@@ -160,42 +163,61 @@ impl Client {
             store::rows(&db, "dirty != ?", [CLEAN])?
         };
         for r in rows {
-            if r.dirty == DELETED {
-                let href = format!("{root}{}", r.server_path.as_ref().unwrap_or(&r.path));
-                match dav.delete(&href, r.etag.as_deref()) {
-                    Ok(()) => {
-                        let db = self.db.lock().unwrap();
-                        db.execute(
-                            "DELETE FROM notes WHERE id = ? AND dirty = ?",
-                            params![r.id, DELETED],
-                        )?;
-                    }
-                    // Changed on the server since: that version stays, and comes back here.
-                    Err(Error::Conflict) => {
-                        let db = self.db.lock().unwrap();
-                        db.execute(
-                            "UPDATE notes SET dirty = ?, etag = NULL, server_path = NULL,
-                               path = coalesce(server_path, path) WHERE id = ?",
-                            params![CLEAN, r.id],
-                        )?;
-                    }
-                    Err(e) => return Err(e),
+            let path = r.path.clone();
+            match self.push_note(dav, root, r, report, changed) {
+                // Open in an editor that locks it (Nextcloud Text, a WebDAV LOCK): it stays
+                // changed here, and the next sync tries again.
+                Err(Error::Locked(_)) => report.locked.push(path),
+                r => r?,
+            }
+        }
+        Ok(())
+    }
+
+    /// Upload one note's change: its deletion, move or text.
+    fn push_note(
+        &self,
+        dav: &Dav,
+        root: &str,
+        r: Row,
+        report: &mut SyncReport,
+        changed: &mut Vec<String>,
+    ) -> Result<()> {
+        if r.dirty == DELETED {
+            let href = format!("{root}{}", r.server_path.as_ref().unwrap_or(&r.path));
+            match dav.delete(&href, r.etag.as_deref()) {
+                Ok(()) => {
+                    let db = self.db.lock().unwrap();
+                    db.execute(
+                        "DELETE FROM notes WHERE id = ? AND dirty = ?",
+                        params![r.id, DELETED],
+                    )?;
                 }
-                continue;
+                // Changed on the server since: that version stays, and comes back here.
+                Err(Error::Conflict) => {
+                    let db = self.db.lock().unwrap();
+                    db.execute(
+                        "UPDATE notes SET dirty = ?, etag = NULL, server_path = NULL,
+                           path = coalesce(server_path, path) WHERE id = ?",
+                        params![CLEAN, r.id],
+                    )?;
+                }
+                Err(e) => return Err(e),
             }
-            let mut r = r;
-            if let Some(from) = r.server_path.clone() {
-                r = self.push_move(dav, root, r, &from, changed)?;
-            }
-            if r.base.as_deref() != Some(&r.text) || r.fileid.is_none() {
-                self.upload(dav, root, &r, report, changed)?;
-            } else {
-                let db = self.db.lock().unwrap();
-                db.execute(
-                    "UPDATE notes SET dirty = ? WHERE id = ? AND text = ? AND server_path IS NULL",
-                    params![CLEAN, r.id, r.text],
-                )?;
-            }
+            return Ok(());
+        }
+        let mut r = r;
+        if let Some(from) = r.server_path.clone() {
+            r = self.push_move(dav, root, r, &from, changed)?;
+        }
+        if r.base.as_deref() != Some(&r.text) || r.fileid.is_none() {
+            self.upload(dav, root, &r, report, changed)?;
+        } else {
+            let db = self.db.lock().unwrap();
+            db.execute(
+                "UPDATE notes SET dirty = ? WHERE id = ? AND text = ? AND server_path IS NULL",
+                params![CLEAN, r.id, r.text],
+            )?;
         }
         Ok(())
     }

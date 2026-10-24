@@ -423,6 +423,7 @@ impl Dav {
             200..=299 => Ok((r.etag, r.fileid)),
             412 => Err(Error::Conflict),
             404 | 409 => Err(Error::NotFound(href.into())),
+            423 => Err(Error::Locked(href.into())),
             s => Err(Error::Http(s, r.body)),
         }
     }
@@ -434,6 +435,7 @@ impl Dav {
         match r.status {
             200..=299 | 404 => Ok(()),
             412 => Err(Error::Conflict),
+            423 => Err(Error::Locked(href.into())),
             s => Err(Error::Http(s, r.body)),
         }
     }
@@ -467,6 +469,7 @@ impl Dav {
             200..=299 => Ok(()),
             412 => Err(Error::Conflict),
             404 | 409 => Err(Error::NotFound(from.into())),
+            423 => Err(Error::Locked(from.into())),
             s => Err(Error::Http(s, r.body)),
         }
     }

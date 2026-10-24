@@ -28,7 +28,8 @@ notes and links to Todav's tasks are next (see the [plan](docs/ARCHITECTURE.md#p
 - A note edited on two devices at once is never lost: the other version is kept next to it as
   a conflict copy.
 - A Markdown editor that saves as you type; the title is the file name.
-- Search through titles and text, ignoring case and accents; a folder filter.
+- Your folders and notes as a tree, as in Obsidian; search through titles and text, ignoring
+  case and accents.
 - Sign-in through GNOME Online Accounts, the browser, or a login name and app password.
 - Settings synced between your devices.
 

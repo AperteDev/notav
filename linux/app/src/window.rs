@@ -8,6 +8,7 @@ use gtk::{gio, glib};
 use notav_core::Note;
 use sourceview5::prelude::*;
 use std::cell::{Cell, RefCell};
+use std::collections::HashSet;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -16,6 +17,16 @@ const CSS: &str = "
 .note-title { font-size: 20pt; font-weight: 800; }
 .note-text { font-size: 12pt; }
 ";
+
+/// How far each folder level is indented in the tree, and the width of a folder's arrow.
+const INDENT: i32 = 16;
+
+/// A row of the sidebar's tree.
+#[derive(Debug, Clone, PartialEq)]
+enum Item {
+    Folder(String),
+    Note(Note),
+}
 
 /// How long typing pauses before the text is saved (and the sync asked for).
 const SAVE_AFTER: std::time::Duration = std::time::Duration::from_millis(800);
@@ -34,17 +45,20 @@ struct Ui {
     folder: adw::EntryRow,
     folder_done: gtk::Button,
     sync_state: gtk::Stack,
-    search_bar: gtk::SearchBar,
+    search_button: gtk::ToggleButton,
     search: gtk::SearchEntry,
-    folder_filter: gtk::DropDown,
-    folder_names: gtk::StringList,
-    /// The folder of each `folder_filter` entry after "All Notes".
-    folders: RefCell<Vec<String>>,
-    notes: gtk::ListBox,
-    list_stack: gtk::Stack,
-    list_empty: adw::StatusPage,
-    /// The notes of `notes`' rows, in order.
-    shown: RefCell<Vec<Note>>,
+    /// The notes matching the search, in the editor's place.
+    results: gtk::ListBox,
+    results_stack: gtk::Stack,
+    found: RefCell<Vec<Note>>,
+    tree: gtk::ListBox,
+    tree_stack: gtk::Stack,
+    /// The items of `tree`'s rows, in order.
+    items: RefCell<Vec<Item>>,
+    /// Folders shown open in the tree (the device-only `expanded_folders` setting).
+    expanded: RefCell<HashSet<String>>,
+    /// Where a new note goes: the folder last opened in the tree, or the open note's.
+    target_folder: RefCell<String>,
     note_title: adw::WindowTitle,
     note_menu: gtk::MenuButton,
     note_stack: gtk::Stack,
@@ -128,7 +142,7 @@ pub fn present(app: &adw::Application) {
     crate::stay();
     if crate::ready() {
         ui.stack.set_visible_child_name("main");
-        refresh_list(&ui);
+        refresh(&ui);
     } else {
         ui.stack.set_visible_child_name("welcome");
         // Connected before, the folder not chosen yet (the app quit on that step).
@@ -145,7 +159,7 @@ pub fn show_welcome() {
         close_note(&ui);
         ui.welcome.pop_to_tag("choose");
         ui.stack.set_visible_child_name("welcome");
-        refresh_list(&ui); // empties the list
+        refresh(&ui); // empties the tree
     }
 }
 
@@ -154,7 +168,7 @@ pub fn account_changed() {
     if let Some(ui) = ui() {
         close_note(&ui);
         ui.stack.set_visible_child_name("main");
-        refresh_list(&ui);
+        refresh(&ui);
     }
 }
 
@@ -184,7 +198,7 @@ pub fn on_event(ev: &Event) {
         Event::Changed(_) | Event::SettingsChanged => {
             // Rebuild outside the signal handler that caused the change.
             glib::idle_add_local_once(move || {
-                refresh_list(&ui);
+                refresh(&ui);
                 reload_current(&ui);
             });
         }
@@ -305,15 +319,23 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         folder: get(&b, "folder"),
         folder_done: get(&b, "folder_done"),
         sync_state: get(&b, "sync_state"),
-        search_bar: get(&b, "search_bar"),
+        search_button: get(&b, "search_button"),
         search: get(&b, "search"),
-        folder_filter: get(&b, "folder_filter"),
-        folder_names: get(&b, "folder_names"),
-        folders: RefCell::new(Vec::new()),
-        notes: get(&b, "notes"),
-        list_stack: get(&b, "list_stack"),
-        list_empty: get(&b, "list_empty"),
-        shown: RefCell::new(Vec::new()),
+        results: get(&b, "results"),
+        results_stack: get(&b, "results_stack"),
+        found: RefCell::new(Vec::new()),
+        tree: get(&b, "tree"),
+        tree_stack: get(&b, "tree_stack"),
+        items: RefCell::new(Vec::new()),
+        expanded: RefCell::new(
+            core()
+                .setting("expanded_folders".into())
+                .unwrap_or_default()
+                .lines()
+                .map(str::to_string)
+                .collect(),
+        ),
+        target_folder: RefCell::new(String::new()),
         note_title: get(&b, "note_title"),
         note_menu: get(&b, "note_menu"),
         note_stack: get(&b, "note_stack"),
@@ -326,7 +348,6 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         loading: Cell::new(false),
         last_error: RefCell::new(String::new()),
     });
-    ui.folder_names.append(&gettext("All Notes"));
     ui.conn.attach(&get(&b, "login_group"));
     close_note(&ui);
     connect(&ui);
@@ -371,7 +392,7 @@ fn connect(ui: &Rc<Ui>) {
     add("preferences", |ui| crate::settings::present(&ui.window));
     let new = add("new-note", new_note);
     let search = add("search", |ui| {
-        ui.search_bar.set_search_mode(true);
+        ui.search_button.set_active(true);
         ui.search.grab_focus();
     });
     let move_note = add("move-note", move_dialog);
@@ -403,38 +424,48 @@ fn connect(ui: &Rc<Ui>) {
         }
     });
 
+    // A folder opens or closes, a note opens; after the click, as that rebuilds the tree.
     let weak = Rc::downgrade(ui);
-    ui.notes.connect_row_selected(move |_, row| {
-        let (Some(ui), Some(row)) = (weak.upgrade(), row) else {
-            return;
-        };
-        if ui.loading.get() {
-            return;
-        }
-        let n = ui.shown.borrow().get(row.index() as usize).cloned();
-        if let Some(n) = n {
-            open_note(&ui, &n);
-        }
-    });
-    let weak = Rc::downgrade(ui);
-    ui.notes.connect_row_activated(move |_, _| {
-        if let Some(ui) = weak.upgrade() {
-            ui.split.set_show_content(true);
-        }
+    ui.tree.connect_row_activated(move |_, row| {
+        let Some(ui) = weak.upgrade() else { return };
+        let item = ui.items.borrow().get(row.index() as usize).cloned();
+        glib::idle_add_local_once(move || match item {
+            Some(Item::Folder(f)) => {
+                if !ui.expanded.borrow_mut().remove(&f) {
+                    ui.expanded.borrow_mut().insert(f.clone());
+                }
+                save_expanded(&ui);
+                *ui.target_folder.borrow_mut() = f;
+                refresh_tree(&ui);
+            }
+            Some(Item::Note(n)) => {
+                ui.search_button.set_active(false);
+                open_note(&ui, &n);
+                ui.split.set_show_content(true);
+            }
+            None => {}
+        });
     });
 
     let weak = Rc::downgrade(ui);
     ui.search.connect_search_changed(move |_| {
         if let Some(ui) = weak.upgrade() {
-            refresh_list(&ui);
+            refresh_results(&ui);
         }
     });
     let weak = Rc::downgrade(ui);
-    ui.folder_filter.connect_selected_notify(move |_| {
-        if let Some(ui) = weak.upgrade()
-            && !ui.loading.get()
-        {
-            refresh_list(&ui);
+    ui.search_button.connect_active_notify(move |_| {
+        if let Some(ui) = weak.upgrade() {
+            refresh_results(&ui);
+        }
+    });
+    let weak = Rc::downgrade(ui);
+    ui.results.connect_row_activated(move |_, row| {
+        let Some(ui) = weak.upgrade() else { return };
+        let n = ui.found.borrow().get(row.index() as usize).cloned();
+        if let Some(n) = n {
+            ui.search_button.set_active(false);
+            open_note(&ui, &n);
         }
     });
 
@@ -484,75 +515,154 @@ fn connect(ui: &Rc<Ui>) {
     });
 }
 
-/// Rebuild the folder filter and the notes list (search and folder applied), newest first,
-/// keeping the open note selected.
-fn refresh_list(ui: &Rc<Ui>) {
-    ui.loading.set(true);
-    // The folder filter, keeping the folder picked.
-    let folders = if crate::ready() {
-        core().folders()
+/// Rebuild the tree and the search results after the notes changed.
+fn refresh(ui: &Rc<Ui>) {
+    refresh_tree(ui);
+    refresh_results(ui);
+}
+
+/// Rebuild the sidebar's tree, the open note's row selected.
+fn refresh_tree(ui: &Rc<Ui>) {
+    let (folders, notes) = if crate::ready() {
+        (core().folders(), core().notes())
+    } else {
+        Default::default()
+    };
+    let items = tree(&folders, &notes, &ui.expanded.borrow());
+    ui.tree.remove_all();
+    let current = ui.current.borrow().as_ref().map(|n| n.id);
+    for (depth, item) in &items {
+        let open = matches!(item, Item::Folder(f) if ui.expanded.borrow().contains(f));
+        let row = tree_row(*depth, item, open);
+        ui.tree.append(&row);
+        if matches!(item, Item::Note(n) if Some(n.id) == current) {
+            ui.tree.select_row(Some(&row));
+        }
+    }
+    ui.tree_stack
+        .set_visible_child_name(if items.is_empty() { "empty" } else { "tree" });
+    *ui.items.borrow_mut() = items.into_iter().map(|(_, i)| i).collect();
+}
+
+/// The tree's rows: each folder's folders, then its notes, by name; what is in a folder only
+/// while it is open. With each row its depth.
+fn tree(folders: &[String], notes: &[Note], expanded: &HashSet<String>) -> Vec<(usize, Item)> {
+    fn add(
+        out: &mut Vec<(usize, Item)>,
+        folder: &str,
+        depth: usize,
+        folders: &[String],
+        notes: &[Note],
+        expanded: &HashSet<String>,
+    ) {
+        let parent = |f: &str| f.rsplit_once('/').map_or("", |(p, _)| p).to_string();
+        let mut subs: Vec<&String> = folders.iter().filter(|f| parent(f) == folder).collect();
+        subs.sort_by(|a, b| by_name(a.rsplit('/').next().unwrap(), b.rsplit('/').next().unwrap()));
+        for f in subs {
+            out.push((depth, Item::Folder(f.clone())));
+            if expanded.contains(f) {
+                add(out, f, depth + 1, folders, notes, expanded);
+            }
+        }
+        let mut here: Vec<&Note> = notes.iter().filter(|n| n.folder == folder).collect();
+        here.sort_by(|a, b| by_name(&a.title, &b.title));
+        out.extend(here.into_iter().map(|n| (depth, Item::Note(n.clone()))));
+    }
+    let mut out = Vec::new();
+    add(&mut out, "", 0, folders, notes, expanded);
+    out
+}
+
+/// Names in the locale's order, case ignored.
+fn by_name(a: &str, b: &str) -> std::cmp::Ordering {
+    glib::casefold(a).as_gstr().collate(glib::casefold(b))
+}
+
+/// A folder (its arrow showing whether it is open) or a note, indented by its depth.
+fn tree_row(depth: usize, item: &Item, open: bool) -> gtk::ListBoxRow {
+    let line = gtk::Box::new(gtk::Orientation::Horizontal, 4);
+    line.set_margin_start(INDENT * depth as i32);
+    let (name, folder) = match item {
+        Item::Folder(f) => (f.rsplit('/').next().unwrap_or(f), true),
+        Item::Note(n) => (n.title.as_str(), false),
+    };
+    let arrow = gtk::Image::new();
+    arrow.set_pixel_size(INDENT);
+    if folder {
+        arrow.set_icon_name(Some(if open {
+            "pan-down-symbolic"
+        } else {
+            "pan-end-symbolic"
+        }));
+    }
+    line.append(&arrow);
+    let label = gtk::Label::new(Some(name));
+    label.set_xalign(0.0);
+    label.set_ellipsize(gtk::pango::EllipsizeMode::End);
+    line.append(&label);
+    let row = gtk::ListBoxRow::new();
+    row.set_child(Some(&line));
+    row.set_selectable(!folder);
+    if let Item::Folder(f) = item {
+        row.set_tooltip_text(Some(f));
+    }
+    row
+}
+
+/// The open folders, kept on this device.
+fn save_expanded(ui: &Ui) {
+    let mut open: Vec<String> = ui.expanded.borrow().iter().cloned().collect();
+    open.sort();
+    let _ = core().set_setting("expanded_folders".into(), open.join("\n"));
+}
+
+/// Open the folders above `folder`, so a note in it shows in the tree.
+fn reveal(ui: &Ui, folder: &str) {
+    let mut f = folder;
+    let mut changed = false;
+    while !f.is_empty() {
+        changed |= ui.expanded.borrow_mut().insert(f.to_string());
+        f = f.rsplit_once('/').map_or("", |(p, _)| p);
+    }
+    if changed {
+        save_expanded(ui);
+    }
+}
+
+/// The notes matching the search in the editor's place, while something is typed.
+fn refresh_results(ui: &Rc<Ui>) {
+    let query = ui.search.text().trim().to_string();
+    let searching = ui.search_button.is_active() && !query.is_empty() && crate::ready();
+    let mut found = if searching {
+        core().search(query)
     } else {
         Vec::new()
     };
-    if *ui.folders.borrow() != folders {
-        let picked = selected_folder(ui);
-        ui.folder_names
-            .splice(1, ui.folder_names.n_items() - 1, &[] as &[&str]);
-        for f in &folders {
-            ui.folder_names.append(f);
-        }
-        let pos = picked.and_then(|p| folders.iter().position(|f| *f == p));
-        ui.folder_filter
-            .set_selected(pos.map_or(0, |p| p as u32 + 1));
-        *ui.folders.borrow_mut() = folders;
-    }
-    ui.folder_filter
-        .set_visible(!ui.folders.borrow().is_empty());
-
-    let query = ui.search.text().trim().to_string();
-    let mut notes = match () {
-        _ if !crate::ready() => Vec::new(),
-        _ if query.is_empty() => core().notes(),
-        _ => core().search(query.clone()),
-    };
-    if let Some(f) = selected_folder(ui) {
-        notes.retain(|n| n.folder == f || n.folder.starts_with(&format!("{f}/")));
-    }
-    notes.sort_by(|a, b| b.modified.cmp(&a.modified).then(a.path.cmp(&b.path)));
-
-    ui.notes.remove_all();
-    let current = ui.current.borrow().as_ref().map(|n| n.id);
-    for n in &notes {
+    found.sort_by(|a, b| b.modified.cmp(&a.modified).then(a.path.cmp(&b.path)));
+    ui.results.remove_all();
+    for n in &found {
         let row = adw::ActionRow::builder()
             .title(&n.title)
             .subtitle(subtitle(n))
             .use_markup(false)
+            .activatable(true)
             .build();
-        ui.notes.append(&row);
-        if Some(n.id) == current {
-            ui.notes.select_row(Some(&row));
-        }
+        ui.results.append(&row);
     }
-    *ui.shown.borrow_mut() = notes;
-    let empty = ui.shown.borrow().is_empty();
-    ui.list_stack
-        .set_visible_child_name(if empty { "empty" } else { "notes" });
-    if !query.is_empty() {
-        ui.list_empty.set_title(&gettext("No Results"));
-        ui.list_empty.set_description(None);
-    } else {
-        ui.list_empty.set_title(&gettext("No Notes"));
-        ui.list_empty
-            .set_description(Some(&gettext("Add one with Ctrl+N")));
-    }
-    ui.loading.set(false);
+    ui.results_stack
+        .set_visible_child_name(if found.is_empty() { "none" } else { "list" });
+    *ui.found.borrow_mut() = found;
+    show_page(ui);
 }
 
-/// The folder the list is narrowed to; None: all notes.
-fn selected_folder(ui: &Ui) -> Option<String> {
-    let i = ui.folder_filter.selected() as usize;
-    i.checked_sub(1)
-        .and_then(|i| ui.folders.borrow().get(i).cloned())
+/// The search results while searching, else the open note (or that none is).
+fn show_page(ui: &Ui) {
+    let searching = ui.search_button.is_active() && !ui.search.text().trim().is_empty();
+    ui.note_stack.set_visible_child_name(match () {
+        _ if searching => "results",
+        _ if ui.current.borrow().is_some() => "note",
+        _ => "none",
+    });
 }
 
 /// "Folder · date" under a note's title (the date in the locale's format).
@@ -579,7 +689,10 @@ fn open_note(ui: &Rc<Ui>, n: &Note) {
     set_text(ui, &text, false);
     ui.buffer.place_cursor(&ui.buffer.start_iter());
     show_heading(ui, n);
-    ui.note_stack.set_visible_child_name("note");
+    show_page(ui);
+    *ui.target_folder.borrow_mut() = n.folder.clone();
+    reveal(ui, &n.folder);
+    refresh_tree(ui);
     let _ = core().set_setting("last_note".into(), n.path.clone());
 }
 
@@ -595,8 +708,8 @@ fn close_note(ui: &Rc<Ui>) {
     ui.title.set_text("");
     ui.note_title.set_title("");
     ui.note_title.set_subtitle("");
-    ui.note_stack.set_visible_child_name("none");
-    ui.notes.unselect_all();
+    show_page(ui);
+    ui.tree.unselect_all();
 }
 
 /// Replace the editor's text without saving it back; `keep_cursor`: where it was, as far as
@@ -691,16 +804,17 @@ fn rename(ui: &Rc<Ui>) {
     }
 }
 
-/// A new note in the folder the list is narrowed to, its title selected for typing over.
+/// A new note in the folder last opened in the tree or the open note's (at the top if that
+/// is gone), its title selected for typing over.
 fn new_note(ui: &Rc<Ui>) {
     save_now(ui);
-    let folder = selected_folder(ui).unwrap_or_default();
+    let folder = Some(ui.target_folder.borrow().clone())
+        .filter(|f| core().folders().contains(f))
+        .unwrap_or_default();
     match core().add_note(folder, gettext("Untitled"), String::new()) {
         Ok(n) => {
-            ui.search_bar.set_search_mode(false);
-            refresh_list(ui);
+            ui.search_button.set_active(false);
             open_note(ui, &n);
-            refresh_list(ui); // selects it
             ui.split.set_show_content(true);
             // Once its page is shown: selecting earlier does not stick.
             let title = ui.title.clone();
@@ -740,7 +854,7 @@ fn delete_note(ui: &Rc<Ui>) {
         match core().delete_note(n.id) {
             Ok(()) => {
                 close_note(&ui);
-                refresh_list(&ui);
+                refresh(&ui);
                 request_sync();
             }
             Err(e) => toast(&e.to_string()),
@@ -782,7 +896,7 @@ fn move_dialog(ui: &Rc<Ui>) {
         save_now(&ui);
         match core().move_note(n.id, folder, n.title.clone()) {
             Ok(_) => {
-                refresh_list(&ui);
+                refresh(&ui);
                 reload_current(&ui);
                 request_sync();
             }
@@ -1006,7 +1120,7 @@ fn choose_folder(ui: &Rc<Ui>) {
             Ok(Ok(())) => {
                 crate::start_background();
                 ui.stack.set_visible_child_name("main");
-                refresh_list(&ui);
+                refresh(&ui);
             }
             Ok(Err(notav_core::Error::Invalid(_))) => toast(&gettext("Not a folder name")),
             Ok(Err(e)) => toast(&e.to_string()),
@@ -1132,4 +1246,62 @@ pub fn password_login(
         });
     });
     dialog.present(Some(parent));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn note(path: &str) -> Note {
+        let (folder, file) = path.rsplit_once('/').unwrap_or(("", path));
+        Note {
+            id: 0,
+            path: path.into(),
+            title: file.trim_end_matches(".md").into(),
+            folder: folder.into(),
+            modified: 0,
+            pending: false,
+        }
+    }
+
+    #[test]
+    fn tree_lists_folders_first_and_only_open_ones_contents() {
+        let folders: Vec<String> = ["Work", "Work/Old", "archive"].map(String::from).into();
+        let notes = [
+            "b.md",
+            "A.md",
+            "Work/Plan.md",
+            "Work/Old/x.md",
+            "archive/y.md",
+        ]
+        .map(note);
+        let names = |open: &[&str]| -> Vec<(usize, String)> {
+            let open = open.iter().map(|s| s.to_string()).collect();
+            tree(&folders, &notes, &open)
+                .into_iter()
+                .map(|(d, i)| match i {
+                    Item::Folder(f) => (d, format!("{f}/")),
+                    Item::Note(n) => (d, n.title),
+                })
+                .collect()
+        };
+        let s = |d: usize, n: &str| (d, n.to_string());
+        // Case does not decide the order: "archive" before "Work", "A" before "b".
+        assert_eq!(
+            names(&[]),
+            [s(0, "archive/"), s(0, "Work/"), s(0, "A"), s(0, "b")]
+        );
+        assert_eq!(
+            names(&["Work", "Work/Old"]),
+            [
+                s(0, "archive/"),
+                s(0, "Work/"),
+                s(1, "Work/Old/"),
+                s(2, "x"),
+                s(1, "Plan"),
+                s(0, "A"),
+                s(0, "b")
+            ]
+        );
+    }
 }

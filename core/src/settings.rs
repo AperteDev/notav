@@ -15,6 +15,7 @@ pub const DEVICE_ONLY: &[&str] = &[
     "manual_user",
     // UI state.
     "last_note",
+    "expanded_folders",
     "window_size",
     "window_maximized",
 ];

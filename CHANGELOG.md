@@ -13,7 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Nextcloud Notes app), synced over WebDAV; Notav works from a local copy, also offline
 - Sign-in through GNOME Online Accounts, the browser, or a login name and app password, then
   the notes folder to use
-- Notes list with search (titles and text, ignoring case and accents) and a folder filter
+- The notes folder as a tree of folders and notes in the sidebar, as in Obsidian
+- Search through titles and text, ignoring case and accents
 - Markdown editor that saves as you type; the title renames the note; move to a folder, delete
 - A note changed on two devices at once keeps both versions: yours as a conflict copy next to it
 - Preferences: style, notes folder (moving the notes there or not), account, settings sync

@@ -177,19 +177,14 @@ Adw.ApplicationWindow window {
           min-sidebar-width: 260;
           max-sidebar-width: 340;
 
+          // The notes as a tree of folders and files, as Obsidian shows them (src/window.rs
+          // `refresh_tree`).
           sidebar: Adw.NavigationPage {
             title: "Notav";
 
             child: Adw.ToolbarView {
               [top]
               Adw.HeaderBar {
-                [start]
-                Gtk.Button {
-                  icon-name: "list-add-symbolic";
-                  tooltip-text: _("New Note");
-                  action-name: "win.new-note";
-                }
-
                 [end]
                 Gtk.MenuButton {
                   icon-name: "open-menu-symbolic";
@@ -197,11 +192,62 @@ Adw.ApplicationWindow window {
                   tooltip-text: _("Main Menu");
                   primary: true;
                 }
+              }
+
+              content: Gtk.Stack tree_stack {
+                Gtk.StackPage {
+                  name: "tree";
+                  child: Gtk.ScrolledWindow {
+                    vexpand: true;
+                    hscrollbar-policy: never;
+
+                    Gtk.ListBox tree {
+                      styles ["navigation-sidebar"]
+                    }
+                  };
+                }
+
+                Gtk.StackPage {
+                  name: "empty";
+                  child: Adw.StatusPage {
+                    icon-name: "folder-documents-symbolic";
+                    title: _("No Notes");
+                    description: _("Add one with Ctrl+N");
+                    styles ["compact"]
+                  };
+                }
+              };
+            };
+          };
+
+          content: Adw.NavigationPage {
+            title: _("Note");
+
+            child: Adw.ToolbarView {
+              [top]
+              Adw.HeaderBar {
+                title-widget: Adw.WindowTitle note_title {};
+
+                [start]
+                Gtk.Button {
+                  icon-name: "document-new-symbolic";
+                  tooltip-text: _("New Note (Ctrl+N)");
+                  action-name: "win.new-note";
+                }
 
                 [end]
+                Gtk.MenuButton note_menu {
+                  icon-name: "view-more-symbolic";
+                  menu-model: note_menu_model;
+                  tooltip-text: _("Note Menu");
+                }
+
+                // The icon, or a spinner while syncing.
+                [end]
                 Gtk.Button {
+                  tooltip-text: _("Sync (F5)");
                   action-name: "app.sync";
-                  tooltip-text: _("Sync");
+                  styles ["image-button"]
 
                   Gtk.Stack sync_state {
                     transition-type: crossfade;
@@ -223,64 +269,23 @@ Adw.ApplicationWindow window {
                 [end]
                 Gtk.ToggleButton search_button {
                   icon-name: "system-search-symbolic";
-                  tooltip-text: _("Search");
-                  active: bind search_bar.search-mode-enabled bidirectional;
+                  tooltip-text: _("Search (Ctrl+F)");
                 }
               }
 
+              // While something is typed, the matching notes take the editor's place.
               [top]
               Gtk.SearchBar search_bar {
-                Gtk.SearchEntry search {
-                  placeholder-text: _("Search notes");
+                search-mode-enabled: bind search_button.active bidirectional;
+
+                Adw.Clamp {
+                  maximum-size: 860;
                   hexpand: true;
-                }
-              }
 
-              [top]
-              Gtk.DropDown folder_filter {
-                margin-start: 12;
-                margin-end: 12;
-                margin-bottom: 6;
-                tooltip-text: _("Folder");
-                model: Gtk.StringList folder_names {};
-              }
-
-              content: Gtk.Stack list_stack {
-                Gtk.StackPage {
-                  name: "notes";
-                  child: Gtk.ScrolledWindow {
-                    vexpand: true;
-
-                    Gtk.ListBox notes {
-                      styles ["navigation-sidebar"]
-                    }
-                  };
-                }
-
-                Gtk.StackPage {
-                  name: "empty";
-                  child: Adw.StatusPage list_empty {
-                    icon-name: "folder-documents-symbolic";
-                    styles ["compact"]
-                  };
-                }
-              };
-            };
-          };
-
-          content: Adw.NavigationPage {
-            title: _("Note");
-
-            child: Adw.ToolbarView {
-              [top]
-              Adw.HeaderBar {
-                title-widget: Adw.WindowTitle note_title {};
-
-                [end]
-                Gtk.MenuButton note_menu {
-                  icon-name: "view-more-symbolic";
-                  menu-model: note_menu_model;
-                  tooltip-text: _("Note Menu");
+                  Gtk.SearchEntry search {
+                    placeholder-text: _("Search notes");
+                    hexpand: true;
+                  }
                 }
               }
 
@@ -291,6 +296,40 @@ Adw.ApplicationWindow window {
                     icon-name: "io.github.selfref.Notav-symbolic";
                     title: _("No Note Selected");
                     description: _("Pick a note or add one with Ctrl+N");
+                  };
+                }
+
+                Gtk.StackPage {
+                  name: "results";
+                  child: Gtk.Stack results_stack {
+                    Gtk.StackPage {
+                      name: "list";
+                      child: Gtk.ScrolledWindow {
+                        vexpand: true;
+
+                        Adw.Clamp {
+                          maximum-size: 860;
+
+                          Gtk.ListBox results {
+                            selection-mode: none;
+                            valign: start;
+                            margin-top: 12;
+                            margin-bottom: 24;
+                            margin-start: 12;
+                            margin-end: 12;
+                            styles ["boxed-list"]
+                          }
+                        }
+                      };
+                    }
+
+                    Gtk.StackPage {
+                      name: "none";
+                      child: Adw.StatusPage {
+                        icon-name: "system-search-symbolic";
+                        title: _("No Results");
+                      };
+                    }
                   };
                 }
 

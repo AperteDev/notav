@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notav\n"
 "Report-Msgid-Bugs-To: https://github.com/SelfRef/notav/issues\n"
-"POT-Creation-Date: 2026-10-24 20:03+0200\n"
+"POT-Creation-Date: 2026-10-24 22:31+0200\n"
 "PO-Revision-Date: 2026-10-24 20:03+0200\n"
 "Last-Translator: SelfRef\n"
 "Language-Team: Polish\n"
@@ -18,7 +18,7 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 "
 "|| n%100>=20) ? 1 : 2);\n"
 
-#: linux/app/src/connection.rs:39 linux/app/src/window.rs:807
+#: linux/app/src/connection.rs:39 linux/app/src/window.rs:921
 msgid "No Nextcloud account in Settings → Online Accounts"
 msgstr "Brak konta Nextcloud w Ustawienia → Konta online"
 
@@ -57,7 +57,7 @@ msgstr ""
 "Przenieść notatki z „{old}” do „{new}”, czy zostawić je tam i pokazać "
 "notatki z „{new}”?"
 
-#: linux/app/src/settings.rs:77 linux/app/src/window.rs:730
+#: linux/app/src/settings.rs:77 linux/app/src/window.rs:844
 #: linux/app/ui/move-note.blp:11 linux/app/ui/password-login.blp:19
 #: linux/app/ui/settings.blp:70 linux/app/ui/window.blp:118
 msgid "Cancel"
@@ -76,7 +76,7 @@ msgstr "Przenieś"
 msgid "Notes folder changed to “{folder}”"
 msgstr "Zmieniono folder notatek na „{folder}”"
 
-#: linux/app/src/settings.rs:103 linux/app/src/window.rs:1011
+#: linux/app/src/settings.rs:103 linux/app/src/window.rs:1125
 msgid "Not a folder name"
 msgstr "To nie jest poprawna nazwa folderu"
 
@@ -94,7 +94,7 @@ msgstr "Nie zmieniono folderu notatek"
 msgid "Connected as {name}"
 msgstr "Połączono jako {name}"
 
-#: linux/app/src/settings.rs:142 linux/app/src/window.rs:822
+#: linux/app/src/settings.rs:142 linux/app/src/window.rs:936
 #: linux/app/ui/window.blp:43
 msgid "GNOME Online Accounts"
 msgstr "Konta online GNOME"
@@ -113,20 +113,20 @@ msgstr "Nie zalogowano"
 msgid "Disconnected"
 msgstr "Rozłączono"
 
-#: linux/app/src/settings.rs:242 linux/app/src/window.rs:939
+#: linux/app/src/settings.rs:242 linux/app/src/window.rs:1053
 msgid "Waiting for Sign-In…"
 msgstr "Oczekiwanie na zalogowanie…"
 
-#: linux/app/src/settings.rs:244 linux/app/src/window.rs:941
+#: linux/app/src/settings.rs:244 linux/app/src/window.rs:1055
 msgid "Waiting for Browser…"
 msgstr "Oczekiwanie na przeglądarkę…"
 
-#: linux/app/src/window.rs:197
+#: linux/app/src/window.rs:211
 #, rust-format
 msgid "Sync failed: {error}"
 msgstr "Synchronizacja nie powiodła się: {error}"
 
-#: linux/app/src/window.rs:212
+#: linux/app/src/window.rs:226
 #, rust-format
 msgid ""
 "“{title}” was changed elsewhere too: your version is kept next to it as a "
@@ -135,7 +135,7 @@ msgstr ""
 "Notatka „{title}” została zmieniona także gdzie indziej: twoja wersja "
 "została zachowana obok jako kopia"
 
-#: linux/app/src/window.rs:216
+#: linux/app/src/window.rs:230
 #, rust-format
 msgid ""
 "{n} note was changed elsewhere too: your version is kept next to it as a copy"
@@ -152,114 +152,98 @@ msgstr[2] ""
 "{n} notatek zostało zmienionych także gdzie indziej: twoje wersje zostały "
 "zachowane obok jako kopie"
 
-#: linux/app/src/window.rs:329
-msgid "All Notes"
-msgstr "Wszystkie notatki"
-
-#: linux/app/src/window.rs:541
-msgid "No Results"
-msgstr "Brak wyników"
-
-#: linux/app/src/window.rs:544
-msgid "No Notes"
-msgstr "Brak notatek"
-
-#: linux/app/src/window.rs:546
-msgid "Add one with Ctrl+N"
-msgstr "Dodaj ją skrótem Ctrl+N"
-
-#: linux/app/src/window.rs:634
+#: linux/app/src/window.rs:747
 #, rust-format
 msgid "Cannot save the note: {error}"
 msgstr "Nie można zapisać notatki: {error}"
 
-#: linux/app/src/window.rs:684
+#: linux/app/src/window.rs:797
 msgid "A note with this name exists already"
 msgstr "Notatka o tej nazwie już istnieje"
 
-#: linux/app/src/window.rs:698
+#: linux/app/src/window.rs:814
 msgid "Untitled"
 msgstr "Bez tytułu"
 
-#: linux/app/src/window.rs:724
+#: linux/app/src/window.rs:838
 msgid "Delete Note?"
 msgstr "Usunąć notatkę?"
 
-#: linux/app/src/window.rs:726
+#: linux/app/src/window.rs:840
 #, rust-format
 msgid "“{title}” will be deleted on every device."
 msgstr "Notatka „{title}” zostanie usunięta na wszystkich urządzeniach."
 
-#: linux/app/src/window.rs:731 linux/app/ui/window.blp:362
+#: linux/app/src/window.rs:845 linux/app/ui/window.blp:401
 msgid "Delete"
 msgstr "Usuń"
 
-#: linux/app/src/window.rs:762
+#: linux/app/src/window.rs:876
 msgid "Top Level"
 msgstr "Najwyższy poziom"
 
-#: linux/app/src/window.rs:790
+#: linux/app/src/window.rs:904
 msgid "A note with this name exists in that folder already"
 msgstr "Notatka o tej nazwie już istnieje w tym folderze"
 
-#: linux/app/src/window.rs:825
+#: linux/app/src/window.rs:939
 msgid "Connect with a Nextcloud account from GNOME Settings"
 msgstr "Połącz się z kontem Nextcloud z Ustawień GNOME"
 
-#: linux/app/src/window.rs:828 linux/app/ui/window.blp:58
+#: linux/app/src/window.rs:942 linux/app/ui/window.blp:58
 msgid "Nextcloud Server"
 msgstr "Serwer Nextcloud"
 
-#: linux/app/src/window.rs:831
+#: linux/app/src/window.rs:945
 msgid "Sign in to your Nextcloud; Notav gets an app password of its own"
 msgstr ""
 "Zaloguj się do swojego Nextcloud; Notav dostanie własne hasło aplikacji"
 
-#: linux/app/src/window.rs:912
+#: linux/app/src/window.rs:1026
 msgid "Enter the Nextcloud server first"
 msgstr "Najpierw podaj serwer Nextcloud"
 
-#: linux/app/src/window.rs:1028 linux/app/ui/settings.blp:87
+#: linux/app/src/window.rs:1142 linux/app/ui/settings.blp:87
 #: linux/app/ui/window.blp:110
 msgid "Sign In with Browser"
 msgstr "Zaloguj się w przeglądarce"
 
-#: linux/app/src/window.rs:1042
+#: linux/app/src/window.rs:1156
 msgid "Cannot start login"
 msgstr "Nie można rozpocząć logowania"
 
-#: linux/app/src/window.rs:1043
+#: linux/app/src/window.rs:1157
 #, rust-format
 msgid "Cannot start login: {error}"
 msgstr "Nie można rozpocząć logowania: {error}"
 
-#: linux/app/src/window.rs:1051
+#: linux/app/src/window.rs:1165
 msgid "Login link copied to clipboard"
 msgstr "Skopiowano odnośnik logowania do schowka"
 
-#: linux/app/src/window.rs:1071
+#: linux/app/src/window.rs:1185
 #, rust-format
 msgid "Login failed: {error}"
 msgstr "Logowanie nie powiodło się: {error}"
 
-#: linux/app/src/window.rs:1073
+#: linux/app/src/window.rs:1187
 msgid "Login failed"
 msgstr "Logowanie nie powiodło się"
 
-#: linux/app/src/window.rs:1076
+#: linux/app/src/window.rs:1190
 msgid "Login timed out"
 msgstr "Upłynął czas na zalogowanie"
 
-#: linux/app/src/window.rs:1125
+#: linux/app/src/window.rs:1239
 msgid "Wrong login name or password"
 msgstr "Błędna nazwa użytkownika lub hasło"
 
-#: linux/app/src/window.rs:1126
+#: linux/app/src/window.rs:1240
 #, rust-format
 msgid "Sign-in failed: {error}"
 msgstr "Logowanie nie powiodło się: {error}"
 
-#: linux/app/src/window.rs:1127
+#: linux/app/src/window.rs:1241
 msgid "Sign-in failed"
 msgstr "Logowanie nie powiodło się"
 
@@ -280,7 +264,6 @@ msgid "Move to Folder"
 msgstr "Przenieś do folderu"
 
 #: linux/app/ui/move-note.blp:17 linux/app/ui/window.blp:155
-#: linux/app/ui/window.blp:244
 msgid "Folder"
 msgstr "Folder"
 
@@ -360,7 +343,6 @@ msgid "More Sign-In Options"
 msgstr "Więcej opcji logowania"
 
 #: linux/app/ui/settings.blp:96 linux/app/ui/shortcuts.blp:20
-#: linux/app/ui/window.blp:204
 msgid "Sync"
 msgstr "Synchronizacja"
 
@@ -373,28 +355,28 @@ msgid "The Nextcloud server always stays on this device"
 msgstr "Serwer Nextcloud zawsze pozostaje tylko na tym urządzeniu"
 
 #: linux/app/ui/settings.blp:109 linux/app/ui/settings.blp:114
-#: linux/app/ui/window.blp:366
+#: linux/app/ui/window.blp:405
 msgid "Copy Login Link"
 msgstr "Skopiuj odnośnik logowania"
 
 #: linux/app/ui/settings.blp:110 linux/app/ui/settings.blp:115
-#: linux/app/ui/window.blp:367
+#: linux/app/ui/window.blp:406
 msgid "Sign In with Password…"
 msgstr "Zaloguj się hasłem…"
 
-#: linux/app/ui/shortcuts.blp:10 linux/app/ui/window.blp:189
+#: linux/app/ui/shortcuts.blp:10
 msgid "New Note"
 msgstr "Nowa notatka"
 
-#: linux/app/ui/shortcuts.blp:15 linux/app/ui/window.blp:226
+#: linux/app/ui/shortcuts.blp:15
 msgid "Search"
 msgstr "Wyszukaj"
 
-#: linux/app/ui/shortcuts.blp:25 linux/app/ui/window.blp:354
+#: linux/app/ui/shortcuts.blp:25 linux/app/ui/window.blp:393
 msgid "Preferences"
 msgstr "Preferencje"
 
-#: linux/app/ui/shortcuts.blp:30 linux/app/ui/window.blp:355
+#: linux/app/ui/shortcuts.blp:30 linux/app/ui/window.blp:394
 msgid "Keyboard Shortcuts"
 msgstr "Skróty klawiszowe"
 
@@ -402,7 +384,7 @@ msgstr "Skróty klawiszowe"
 msgid "Close Window"
 msgstr "Zamknij okno"
 
-#: linux/app/ui/shortcuts.blp:40 linux/app/ui/window.blp:357
+#: linux/app/ui/shortcuts.blp:40 linux/app/ui/window.blp:396
 msgid "Quit"
 msgstr "Zakończ"
 
@@ -446,39 +428,63 @@ msgstr ""
 msgid "Continue"
 msgstr "Dalej"
 
-#: linux/app/ui/window.blp:197
+#: linux/app/ui/window.blp:192
 msgid "Main Menu"
 msgstr "Menu główne"
 
-#: linux/app/ui/window.blp:234
-msgid "Search notes"
-msgstr "Szukaj w notatkach"
+#: linux/app/ui/window.blp:214
+msgid "No Notes"
+msgstr "Brak notatek"
 
-#: linux/app/ui/window.blp:272
+#: linux/app/ui/window.blp:215
+msgid "Add one with Ctrl+N"
+msgstr "Dodaj ją skrótem Ctrl+N"
+
+#: linux/app/ui/window.blp:224
 msgid "Note"
 msgstr "Notatka"
 
-#: linux/app/ui/window.blp:283
+#: linux/app/ui/window.blp:234
+msgid "New Note (Ctrl+N)"
+msgstr "Nowa notatka (Ctrl+N)"
+
+#: linux/app/ui/window.blp:242
 msgid "Note Menu"
 msgstr "Menu notatki"
 
-#: linux/app/ui/window.blp:292
+#: linux/app/ui/window.blp:248
+msgid "Sync (F5)"
+msgstr "Synchronizuj (F5)"
+
+#: linux/app/ui/window.blp:272
+msgid "Search (Ctrl+F)"
+msgstr "Wyszukaj (Ctrl+F)"
+
+#: linux/app/ui/window.blp:286
+msgid "Search notes"
+msgstr "Szukaj w notatkach"
+
+#: linux/app/ui/window.blp:297
 msgid "No Note Selected"
 msgstr "Nie wybrano notatki"
 
-#: linux/app/ui/window.blp:293
+#: linux/app/ui/window.blp:298
 msgid "Pick a note or add one with Ctrl+N"
 msgstr "Wybierz notatkę lub dodaj nową skrótem Ctrl+N"
 
-#: linux/app/ui/window.blp:318
+#: linux/app/ui/window.blp:330
+msgid "No Results"
+msgstr "Brak wyników"
+
+#: linux/app/ui/window.blp:357
 msgid "Title"
 msgstr "Tytuł"
 
-#: linux/app/ui/window.blp:356
+#: linux/app/ui/window.blp:395
 msgid "About Notav"
 msgstr "O programie Notav"
 
-#: linux/app/ui/window.blp:361
+#: linux/app/ui/window.blp:400
 msgid "Move to Folder…"
 msgstr "Przenieś do folderu…"
 

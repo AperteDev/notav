@@ -1,6 +1,6 @@
 //! Translations and the locale, through glibc: gettext with the `notav` domain (catalogs in
 //! `po/`, refreshed by `scripts/i18n.sh`). Mark text with `gettext`, `ngettext` for counts;
-//! xgettext finds these calls. Placeholders are named (`{title}`) and filled with `replace`.
+//! `gettext_noop` for text in a `const`; xgettext finds these calls. Placeholders are named (`{title}`) and filled with `replace`.
 
 use std::ffi::{CStr, CString, c_char, c_ulong};
 
@@ -64,4 +64,9 @@ pub fn gettext(msgid: &str) -> String {
 pub fn ngettext(one: &str, many: &str, n: u64) -> String {
     let (o, m) = (c(one), c(many));
     owned(unsafe { c_ngettext(o.as_ptr(), m.as_ptr(), n as c_ulong) })
+}
+
+/// Marks text in a constant for xgettext; `gettext` translates it where it is shown.
+pub const fn gettext_noop(msgid: &str) -> &str {
+    msgid
 }

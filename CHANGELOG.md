@@ -26,5 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Preferences: style, notes folder (moving the notes there or not), account, settings sync
 - Settings synced between devices through `.config/notav/settings.json`
 - Polish translation
+- About has a Support page with where to support Notav's development: Ko-fi, GitHub Sponsors
+  and Liberapay
 
 [Unreleased]: https://github.com/AperteDev/notav/commits/HEAD

@@ -19,6 +19,13 @@ tasks and calendar app.
 Notav is at an early stage: notes, folders, search and sync work; the journal, links between
 notes and links to Todav's tasks are next (see the [plan](docs/ARCHITECTURE.md#plan)).
 
+Notav is developed in my free time. If it keeps your notes in order, you can support its
+development:
+
+[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/N5E229GJPZ)
+[![Sponsor on GitHub](https://img.shields.io/badge/Sponsor-EA4AAA?style=for-the-badge&logo=githubsponsors&logoColor=white)](https://github.com/sponsors/SelfRef)
+[![Donate using Liberapay](https://liberapay.com/assets/widgets/donate.svg)](https://liberapay.com/SelfRef/donate)
+
 ## Features
 
 - Notes as Markdown files in a folder of your Nextcloud Files: `Notes/` by default, the

@@ -1,7 +1,7 @@
 //! Main window: the welcome page (sign-in, then the notes folder), the notes sidebar and the
 //! editor.
 
-use crate::i18n::{gettext, ngettext};
+use crate::i18n::{gettext, gettext_noop, ngettext};
 use crate::{Event, core, request_sync};
 use adw::prelude::*;
 use gtk::{gio, glib};
@@ -46,6 +46,22 @@ enum Item {
 
 /// How long typing pauses before the text is saved (and the sync asked for).
 const SAVE_AFTER: std::time::Duration = std::time::Duration::from_millis(800);
+
+/// Where to support development, listed in About (and in the README), as in Todav.
+const DONATIONS: [(&str, &str); 3] = [
+    (
+        gettext_noop("Support on Ko-fi"),
+        "https://ko-fi.com/N5E229GJPZ",
+    ),
+    (
+        gettext_noop("Sponsor on GitHub"),
+        "https://github.com/sponsors/SelfRef",
+    ),
+    (
+        gettext_noop("Donate on Liberapay"),
+        "https://liberapay.com/SelfRef/donate",
+    ),
+];
 
 struct Ui {
     window: adw::ApplicationWindow,
@@ -141,6 +157,7 @@ pub fn setup_actions(app: &adw::Application) {
             Some(env!("CARGO_PKG_VERSION")),
         );
         d.set_copyright("© 2026 SelfRef");
+        about_support(&d);
         d.present(Some(&ui.window));
     });
     for a in [&sync, &quit, &shortcuts, &about] {
@@ -154,6 +171,72 @@ pub fn setup_actions(app: &adw::Application) {
     app.set_accels_for_action("win.preferences", &["<Control>comma"]);
     app.set_accels_for_action("win.new-note", &["<Control>n"]);
     app.set_accels_for_action("win.search", &["<Control>f"]);
+}
+
+/// Turns About's Details page into Support: a note and the donation links instead of the
+/// description, with the website left on the main page. AdwAboutDialog has no API for that, so
+/// this finds its rows (the same in libadwaita 1.8 to 1.10); if they move, About keeps a Details
+/// page with the note and the links.
+fn about_support(d: &adw::AboutDialog) {
+    d.set_comments(&glib::markup_escape_text(&gettext(
+        "Notav is developed in my free time. If it keeps your notes in order, you can support its \
+         development.",
+    )));
+    let titles: Vec<String> = DONATIONS.iter().map(|(t, _)| gettext(t)).collect();
+    for ((_, uri), title) in DONATIONS.iter().zip(&titles) {
+        d.add_link(title, uri);
+    }
+    // Its content: the dialog itself has no children until presented.
+    let Some(content) = d.child() else { return };
+    let widgets = descendants(&content);
+    // The row that opens the page, followed by the website's own (hidden with a Details page).
+    let Some(row) = widgets
+        .iter()
+        .filter_map(|w| w.downcast_ref::<adw::ActionRow>())
+        .find(|r| {
+            r.action_name().as_deref() == Some("navigation.push")
+                && r.action_target_value()
+                    .is_some_and(|v| v.str() == Some("details"))
+        })
+    else {
+        return;
+    };
+    let Some(page) = widgets
+        .iter()
+        .find_map(|w| w.downcast_ref::<adw::NavigationView>())
+        .and_then(|v| v.find_page("details"))
+    else {
+        return;
+    };
+    // Translators: the About row that opens the page with the donation links.
+    row.set_title(&gettext("_Support"));
+    // Translators: title of About's page with the donation links.
+    page.set_title(&gettext("Support"));
+    if let Some(website) = row.next_sibling() {
+        website.set_visible(true);
+    }
+    for r in descendants(page.upcast_ref()) {
+        if let Some(r) = r.downcast_ref::<adw::PreferencesRow>()
+            && !titles.iter().any(|t| *t == r.title())
+        {
+            r.set_visible(false);
+        }
+    }
+}
+
+/// `w` and every widget inside it.
+fn descendants(w: &gtk::Widget) -> Vec<gtk::Widget> {
+    let mut all = vec![w.clone()];
+    let mut i = 0;
+    while let Some(w) = all.get(i).cloned() {
+        let mut child = w.first_child();
+        while let Some(c) = child {
+            child = c.next_sibling();
+            all.push(c);
+        }
+        i += 1;
+    }
+    all
 }
 
 pub fn present(app: &adw::Application) {

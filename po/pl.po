@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notav\n"
 "Report-Msgid-Bugs-To: https://github.com/AperteDev/notav/issues\n"
-"POT-Creation-Date: 2026-10-25 11:47+0100\n"
+"POT-Creation-Date: 2026-10-25 22:39+0100\n"
 "PO-Revision-Date: 2026-10-24 20:03+0200\n"
 "Last-Translator: SelfRef\n"
 "Language-Team: Polish\n"
@@ -18,7 +18,7 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 "
 "|| n%100>=20) ? 1 : 2);\n"
 
-#: linux/app/src/connection.rs:39 linux/app/src/window.rs:1364
+#: linux/app/src/connection.rs:39 linux/app/src/window.rs:1443
 msgid "No Nextcloud account in Settings → Online Accounts"
 msgstr "Brak konta Nextcloud w Ustawienia → Konta online"
 
@@ -57,8 +57,8 @@ msgstr ""
 "Przenieść notatki z „{old}” do „{new}”, czy zostawić je tam i pokazać "
 "notatki z „{new}”?"
 
-#: linux/app/src/settings.rs:77 linux/app/src/window.rs:313
-#: linux/app/src/window.rs:1054 linux/app/ui/new-folder.blp:11
+#: linux/app/src/settings.rs:77 linux/app/src/window.rs:396
+#: linux/app/src/window.rs:1133 linux/app/ui/new-folder.blp:11
 #: linux/app/ui/password-login.blp:19 linux/app/ui/settings.blp:70
 #: linux/app/ui/window.blp:118
 msgid "Cancel"
@@ -77,8 +77,8 @@ msgstr "Przenieś"
 msgid "Notes folder changed to “{folder}”"
 msgstr "Zmieniono folder notatek na „{folder}”"
 
-#: linux/app/src/settings.rs:103 linux/app/src/window.rs:1034
-#: linux/app/src/window.rs:1568
+#: linux/app/src/settings.rs:103 linux/app/src/window.rs:1113
+#: linux/app/src/window.rs:1647
 msgid "Not a folder name"
 msgstr "To nie jest poprawna nazwa folderu"
 
@@ -96,7 +96,7 @@ msgstr "Nie zmieniono folderu notatek"
 msgid "Connected as {name}"
 msgstr "Połączono jako {name}"
 
-#: linux/app/src/settings.rs:142 linux/app/src/window.rs:1379
+#: linux/app/src/settings.rs:142 linux/app/src/window.rs:1458
 #: linux/app/ui/window.blp:43
 msgid "GNOME Online Accounts"
 msgstr "Konta online GNOME"
@@ -115,20 +115,50 @@ msgstr "Nie zalogowano"
 msgid "Disconnected"
 msgstr "Rozłączono"
 
-#: linux/app/src/settings.rs:242 linux/app/src/window.rs:1496
+#: linux/app/src/settings.rs:242 linux/app/src/window.rs:1575
 msgid "Waiting for Sign-In…"
 msgstr "Oczekiwanie na zalogowanie…"
 
-#: linux/app/src/settings.rs:244 linux/app/src/window.rs:1498
+#: linux/app/src/settings.rs:244 linux/app/src/window.rs:1577
 msgid "Waiting for Browser…"
 msgstr "Oczekiwanie na przeglądarkę…"
 
-#: linux/app/src/window.rs:234
+#: linux/app/src/window.rs:53
+msgid "Support on Ko-fi"
+msgstr "Wesprzyj na Ko-fi"
+
+#: linux/app/src/window.rs:57
+msgid "Sponsor on GitHub"
+msgstr "Wesprzyj na GitHubie"
+
+#: linux/app/src/window.rs:61
+msgid "Donate on Liberapay"
+msgstr "Przekaż darowiznę na Liberapay"
+
+#: linux/app/src/window.rs:182
+msgid ""
+"Notav is developed in my free time. If it keeps your notes in order, you can "
+"support its development."
+msgstr ""
+"Notav rozwijam w wolnym czasie. Jeśli pomaga Ci uporządkować notatki, możesz "
+"wesprzeć jego rozwój."
+
+#. Translators: the About row that opens the page with the donation links.
+#: linux/app/src/window.rs:212
+msgid "_Support"
+msgstr "_Wsparcie"
+
+#. Translators: title of About's page with the donation links.
+#: linux/app/src/window.rs:214
+msgid "Support"
+msgstr "Wsparcie"
+
+#: linux/app/src/window.rs:317
 #, rust-format
 msgid "Sync failed: {error}"
 msgstr "Synchronizacja nie powiodła się: {error}"
 
-#: linux/app/src/window.rs:251
+#: linux/app/src/window.rs:334
 #, rust-format
 msgid ""
 "“{title}” was changed elsewhere too: your version is kept next to it as a "
@@ -137,7 +167,7 @@ msgstr ""
 "Notatka „{title}” została zmieniona także gdzie indziej: twoja wersja "
 "została zachowana obok jako kopia"
 
-#: linux/app/src/window.rs:255
+#: linux/app/src/window.rs:338
 #, rust-format
 msgid ""
 "{n} note was changed elsewhere too: your version is kept next to it as a copy"
@@ -154,36 +184,36 @@ msgstr[2] ""
 "{n} notatek zostało zmienionych także gdzie indziej: twoje wersje zostały "
 "zachowane obok jako kopie"
 
-#: linux/app/src/window.rs:281
+#: linux/app/src/window.rs:364
 #, rust-format
 msgid "Something in “{title}” is locked on the server"
 msgstr "Coś w folderze „{title}” jest zablokowane na serwerze"
 
-#: linux/app/src/window.rs:283
+#: linux/app/src/window.rs:366
 #, rust-format
 msgid "“{title}” is locked on the server by {owner} since {time}"
 msgstr "Notatka „{title}” jest zablokowana na serwerze przez {owner} od {time}"
 
-#: linux/app/src/window.rs:285
+#: linux/app/src/window.rs:368
 #, rust-format
 msgid "“{title}” is locked on the server by {owner}"
 msgstr "Notatka „{title}” jest zablokowana na serwerze przez {owner}"
 
-#: linux/app/src/window.rs:286
+#: linux/app/src/window.rs:369
 #, rust-format
 msgid "“{title}” is locked on the server"
 msgstr "Notatka „{title}” jest zablokowana na serwerze"
 
-#: linux/app/src/window.rs:294
+#: linux/app/src/window.rs:377
 msgid "Unlock…"
 msgstr "Odblokuj…"
 
-#: linux/app/src/window.rs:307
+#: linux/app/src/window.rs:390
 #, rust-format
 msgid "Unlock “{title}”?"
 msgstr "Odblokować „{title}”?"
 
-#: linux/app/src/window.rs:309
+#: linux/app/src/window.rs:392
 msgid ""
 "Your change to it waits for the lock. If it is still open in an editor, what "
 "is saved there afterwards may be lost: unlock it only if nobody is editing "
@@ -193,119 +223,119 @@ msgstr ""
 "edytorze, to, co zostanie tam potem zapisane, może przepaść: odblokuj ją "
 "tylko wtedy, gdy nikt jej nie edytuje."
 
-#: linux/app/src/window.rs:314
+#: linux/app/src/window.rs:397
 msgid "Unlock"
 msgstr "Odblokuj"
 
-#: linux/app/src/window.rs:328
+#: linux/app/src/window.rs:411
 #, rust-format
 msgid "Cannot unlock “{title}”: {error}"
 msgstr "Nie można odblokować „{title}”: {error}"
 
-#: linux/app/src/window.rs:916
+#: linux/app/src/window.rs:995
 #, rust-format
 msgid "Cannot save the note: {error}"
 msgstr "Nie można zapisać notatki: {error}"
 
-#: linux/app/src/window.rs:966
+#: linux/app/src/window.rs:1045
 msgid "A note with this name exists already"
 msgstr "Notatka o tej nazwie już istnieje"
 
-#: linux/app/src/window.rs:988
+#: linux/app/src/window.rs:1067
 msgid "Untitled"
 msgstr "Bez tytułu"
 
-#: linux/app/src/window.rs:1024
+#: linux/app/src/window.rs:1103
 msgid "A folder with this name exists already"
 msgstr "Folder o tej nazwie już istnieje"
 
-#: linux/app/src/window.rs:1048
+#: linux/app/src/window.rs:1127
 msgid "Delete Note?"
 msgstr "Usunąć notatkę?"
 
-#: linux/app/src/window.rs:1050
+#: linux/app/src/window.rs:1129
 #, rust-format
 msgid "“{title}” will be deleted on every device."
 msgstr "Notatka „{title}” zostanie usunięta na wszystkich urządzeniach."
 
-#: linux/app/src/window.rs:1055 linux/app/src/window.rs:1118
+#: linux/app/src/window.rs:1134 linux/app/src/window.rs:1197
 msgid "Delete"
 msgstr "Usuń"
 
-#: linux/app/src/window.rs:1110 linux/app/ui/shortcuts.blp:10
+#: linux/app/src/window.rs:1189 linux/app/ui/shortcuts.blp:10
 msgid "New Note"
 msgstr "Nowa notatka"
 
-#: linux/app/src/window.rs:1112 linux/app/ui/new-folder.blp:6
+#: linux/app/src/window.rs:1191 linux/app/ui/new-folder.blp:6
 msgid "New Folder"
 msgstr "Nowy folder"
 
-#: linux/app/src/window.rs:1266
+#: linux/app/src/window.rs:1345
 msgid "A note with this name exists in that folder already"
 msgstr "Notatka o tej nazwie już istnieje w tym folderze"
 
-#: linux/app/src/window.rs:1269
+#: linux/app/src/window.rs:1348
 msgid "A folder with this name exists in that folder already"
 msgstr "Folder o tej nazwie już istnieje w tym folderze"
 
-#: linux/app/src/window.rs:1382
+#: linux/app/src/window.rs:1461
 msgid "Connect with a Nextcloud account from GNOME Settings"
 msgstr "Połącz się z kontem Nextcloud z Ustawień GNOME"
 
-#: linux/app/src/window.rs:1385 linux/app/ui/window.blp:58
+#: linux/app/src/window.rs:1464 linux/app/ui/window.blp:58
 msgid "Nextcloud Server"
 msgstr "Serwer Nextcloud"
 
-#: linux/app/src/window.rs:1388
+#: linux/app/src/window.rs:1467
 msgid "Sign in to your Nextcloud; Notav gets an app password of its own"
 msgstr ""
 "Zaloguj się do swojego Nextcloud; Notav dostanie własne hasło aplikacji"
 
-#: linux/app/src/window.rs:1469
+#: linux/app/src/window.rs:1548
 msgid "Enter the Nextcloud server first"
 msgstr "Najpierw podaj serwer Nextcloud"
 
-#: linux/app/src/window.rs:1585 linux/app/ui/settings.blp:87
+#: linux/app/src/window.rs:1664 linux/app/ui/settings.blp:87
 #: linux/app/ui/window.blp:110
 msgid "Sign In with Browser"
 msgstr "Zaloguj się w przeglądarce"
 
-#: linux/app/src/window.rs:1599
+#: linux/app/src/window.rs:1678
 msgid "Cannot start login"
 msgstr "Nie można rozpocząć logowania"
 
-#: linux/app/src/window.rs:1600
+#: linux/app/src/window.rs:1679
 #, rust-format
 msgid "Cannot start login: {error}"
 msgstr "Nie można rozpocząć logowania: {error}"
 
-#: linux/app/src/window.rs:1608
+#: linux/app/src/window.rs:1687
 msgid "Login link copied to clipboard"
 msgstr "Skopiowano odnośnik logowania do schowka"
 
-#: linux/app/src/window.rs:1628
+#: linux/app/src/window.rs:1707
 #, rust-format
 msgid "Login failed: {error}"
 msgstr "Logowanie nie powiodło się: {error}"
 
-#: linux/app/src/window.rs:1630
+#: linux/app/src/window.rs:1709
 msgid "Login failed"
 msgstr "Logowanie nie powiodło się"
 
-#: linux/app/src/window.rs:1633
+#: linux/app/src/window.rs:1712
 msgid "Login timed out"
 msgstr "Upłynął czas na zalogowanie"
 
-#: linux/app/src/window.rs:1682
+#: linux/app/src/window.rs:1761
 msgid "Wrong login name or password"
 msgstr "Błędna nazwa użytkownika lub hasło"
 
-#: linux/app/src/window.rs:1683
+#: linux/app/src/window.rs:1762
 #, rust-format
 msgid "Sign-in failed: {error}"
 msgstr "Logowanie nie powiodło się: {error}"
 
-#: linux/app/src/window.rs:1684
+#: linux/app/src/window.rs:1763
 msgid "Sign-in failed"
 msgstr "Logowanie nie powiodło się"
 
@@ -530,7 +560,7 @@ msgstr "Wybierz notatkę lub dodaj nową skrótem Ctrl+N"
 msgid "No Results"
 msgstr "Brak wyników"
 
-#: linux/app/ui/window.blp:351
+#: linux/app/ui/window.blp:352
 msgid "Title"
 msgstr "Tytuł"
 

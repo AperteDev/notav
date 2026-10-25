@@ -18,7 +18,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 /// dragged note's row fades.
 const CSS: &str = "
 .note-title { font-size: 20pt; font-weight: 800; }
-.note-text { font-size: 12pt; }
+.note-text { font-size: 12pt; line-height: 1.4; }
 .navigation-sidebar > row:drop(active), scrolledwindow:drop(active) { box-shadow: none; }
 .navigation-sidebar > row.drop-target { background-color: alpha(var(--accent-bg-color), 0.2); }
 .navigation-sidebar.drop-target { background-color: alpha(var(--accent-bg-color), 0.12); }
@@ -400,7 +400,7 @@ fn build(app: &adw::Application) -> Rc<Ui> {
     let buffer = editor.buffer().downcast::<sourceview5::Buffer>().unwrap();
     buffer.set_language(
         sourceview5::LanguageManager::default()
-            .language("markdown")
+            .language("notav-markdown")
             .as_ref(),
     );
     follow_style(&buffer);
@@ -457,16 +457,12 @@ fn build(app: &adw::Application) -> Rc<Ui> {
     ui
 }
 
-/// The editor's colours follow the light or dark style.
+/// The editor's colours follow the light or dark style: Adwaita's, for prose (`sourceview/`).
 fn follow_style(buffer: &sourceview5::Buffer) {
     let apply = {
         let buffer = buffer.clone();
         move |sm: &adw::StyleManager| {
-            let name = if sm.is_dark() {
-                "Adwaita-dark"
-            } else {
-                "Adwaita"
-            };
+            let name = if sm.is_dark() { "notav-dark" } else { "notav" };
             buffer.set_style_scheme(
                 sourceview5::StyleSchemeManager::default()
                     .scheme(name)

@@ -14,4 +14,4 @@ gtk = { version = "0.11.5", package = "gtk4", features = ["v4_14"] }
 libc = "0.2.190"
 libsecret = "0.9.0"
 notav-core = { path = "../../core" }
-sourceview5 = "0.11.2"
+sourceview5 = { version = "0.11.2", features = ["v5_4"] }

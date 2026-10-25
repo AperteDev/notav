@@ -1,6 +1,6 @@
 //! Compiles the Blueprint views in `ui/` to GtkBuilder XML, the translations in `po/` (for a build
 //! run; installs compile their own, see the Makefile), and the icons in `icons/` with the
-//! translated metainfo to a resource bundle, in OUT_DIR.
+//! translated metainfo and the editor's Markdown in `sourceview/` to a resource bundle, in OUT_DIR.
 
 use std::process::Command;
 
@@ -60,9 +60,10 @@ fn main() {
         .success();
     assert!(ok, "blueprint-compiler failed");
 
-    // The app icon and the translated metainfo (for About, from OUT_DIR),
-    // embedded in the binary.
+    // The app icon, the translated metainfo (for About, from OUT_DIR) and the editor's
+    // Markdown, embedded in the binary.
     println!("cargo::rerun-if-changed=icons");
+    println!("cargo::rerun-if-changed=sourceview");
     println!("cargo::rerun-if-changed=../data/dev.aperte.Notav.svg");
     println!("cargo::rerun-if-changed={METAINFO}");
     let ok = Command::new("glib-compile-resources")

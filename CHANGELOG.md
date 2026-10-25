@@ -15,7 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the notes folder to use
 - The notes folder as a tree of folders and notes in the sidebar, as in Obsidian
 - Search through titles and text, ignoring case and accents
-- Markdown editor that saves as you type; the title renames the note
+- Markdown editor that saves as you type, styled for reading: headings sized by level, the
+  Markdown marks dimmed, a line of about 80 characters; the title renames the note
 - Drag notes and folders into and out of folders in the sidebar
 - Sidebar menu (right click): new note or folder inside a folder, next to a note, or at the top
   level; delete a note

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- GtkSourceView's Markdown with a style for each ATX heading level and one for its # marks, so
+     that the style schemes (notav.xml, notav-dark.xml) size the headings as Iotas does. -->
+<language id="notav-markdown" name="Markdown (Notav)" version="2.0" hidden="true">
+  <styles>
+    <style id="heading-markup" name="Heading Markup" map-to="markdown:header"/>
+    <style id="heading1" name="Heading 1" map-to="markdown:header"/>
+    <style id="heading2" name="Heading 2" map-to="markdown:header"/>
+    <style id="heading3" name="Heading 3" map-to="markdown:header"/>
+    <style id="heading4" name="Heading 4" map-to="markdown:header"/>
+    <style id="heading5" name="Heading 5" map-to="markdown:header"/>
+    <style id="heading6" name="Heading 6" map-to="markdown:header"/>
+  </styles>
+
+  <definitions>
+    <!-- "## Heading": the marks, then a space (or nothing). "#tag" stays Markdown's. -->
+    <context id="heading1" style-ref="heading1">
+      <match>^(#)([ \t].*)?$</match>
+      <include><context sub-pattern="1" style-ref="heading-markup"/></include>
+    </context>
+    <context id="heading2" style-ref="heading2">
+      <match>^(#{2})([ \t].*)?$</match>
+      <include><context sub-pattern="1" style-ref="heading-markup"/></include>
+    </context>
+    <context id="heading3" style-ref="heading3">
+      <match>^(#{3})([ \t].*)?$</match>
+      <include><context sub-pattern="1" style-ref="heading-markup"/></include>
+    </context>
+    <context id="heading4" style-ref="heading4">
+      <match>^(#{4})([ \t].*)?$</match>
+      <include><context sub-pattern="1" style-ref="heading-markup"/></include>
+    </context>
+    <context id="heading5" style-ref="heading5">
+      <match>^(#{5})([ \t].*)?$</match>
+      <include><context sub-pattern="1" style-ref="heading-markup"/></include>
+    </context>
+    <context id="heading6" style-ref="heading6">
+      <match>^(#{6})([ \t].*)?$</match>
+      <include><context sub-pattern="1" style-ref="heading-markup"/></include>
+    </context>
+
+    <!-- At the same position the first context listed wins: the headings before Markdown's. -->
+    <context id="notav-markdown">
+      <include>
+        <context ref="heading1"/>
+        <context ref="heading2"/>
+        <context ref="heading3"/>
+        <context ref="heading4"/>
+        <context ref="heading5"/>
+        <context ref="heading6"/>
+        <context ref="markdown:markdown"/>
+      </include>
+    </context>
+  </definitions>
+</language>

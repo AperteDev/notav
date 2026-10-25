@@ -334,8 +334,9 @@ Adw.ApplicationWindow window {
                     vexpand: true;
                     styles ["view"]
 
+                    // A line of about 80 characters, as Folio (720) and Iotas (800) keep it.
                     Adw.Clamp {
-                      maximum-size: 860;
+                      maximum-size: 720;
                       tightening-threshold: 600;
 
                       Gtk.Box {
@@ -359,7 +360,6 @@ Adw.ApplicationWindow window {
                           bottom-margin: 48;
                           left-margin: 6;
                           right-margin: 6;
-                          pixels-below-lines: 4;
                           styles ["note-text"]
                         }
                       }

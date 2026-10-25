@@ -364,6 +364,11 @@ fn main() -> glib::ExitCode {
     let app = adw::Application::new(Some(APP_ID), flags);
     app.connect_startup(|app| {
         sourceview5::init();
+        // The editor's Markdown and style schemes, bundled with the icons.
+        sourceview5::LanguageManager::default()
+            .append_search_path("resource:///dev/aperte/Notav/sourceview/");
+        sourceview5::StyleSchemeManager::default()
+            .append_search_path("resource:///dev/aperte/Notav/sourceview/");
         window::setup_actions(app);
         settings::apply_color_scheme();
         if restore_account() && core().setting("notes_folder".into()).is_some() {

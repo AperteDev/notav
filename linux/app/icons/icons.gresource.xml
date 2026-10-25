@@ -9,4 +9,10 @@
   <gresource prefix="/dev/aperte/Notav">
     <file alias="metainfo.xml">dev.aperte.Notav.metainfo.xml</file>
   </gresource>
+  <!-- The editor's Markdown and its style schemes (window.rs adds these to the search paths). -->
+  <gresource prefix="/dev/aperte/Notav/sourceview">
+    <file alias="notav-markdown.lang">../sourceview/notav-markdown.lang</file>
+    <file alias="notav.xml">../sourceview/notav.xml</file>
+    <file alias="notav-dark.xml">../sourceview/notav-dark.xml</file>
+  </gresource>
 </gresources>

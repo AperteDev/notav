@@ -93,8 +93,8 @@ struct Ui {
     /// Set while code replaces the editor's text or the list's rows.
     loading: Cell<bool>,
     last_error: RefCell<String>,
-    /// The locked notes last told about, so each sync (every 30 s) does not repeat it.
-    last_locked: RefCell<Vec<String>>,
+    /// The locks last told about, so each sync (every 30 s) does not repeat them.
+    last_locked: RefCell<Vec<notav_core::Locked>>,
 }
 
 thread_local! {
@@ -239,25 +239,11 @@ pub fn on_event(ev: &Event) {
                 ui.last_error.borrow_mut().clear();
             }
         }
-        Event::Locked(paths) => {
-            if *ui.last_locked.borrow() == *paths {
-                return;
+        Event::Locked(locks) => {
+            let told = ui.last_locked.replace(locks.clone());
+            for l in locks.iter().filter(|l| !told.contains(l)) {
+                locked_toast(&ui, l);
             }
-            *ui.last_locked.borrow_mut() = paths.clone();
-            let msg = match paths.as_slice() {
-                [] => return,
-                [one] => gettext(
-                    "“{title}” is open in an editor on the server, which locks it: your change goes up once it is closed",
-                )
-                .replace("{title}", &title_of(one)),
-                _ => ngettext(
-                    "{n} note is open in an editor on the server, which locks it: your changes go up once it is closed",
-                    "{n} notes are open in an editor on the server, which locks them: your changes go up once they are closed",
-                    paths.len() as u64,
-                )
-                .replace("{n}", &paths.len().to_string()),
-            };
-            ui.toasts.add_toast(note(&msg));
         }
         Event::Conflicts(copies) => {
             let msg = match copies.as_slice() {
@@ -278,6 +264,74 @@ pub fn on_event(ev: &Event) {
             ui.toasts.add_toast(t);
         }
     }
+}
+
+/// Tell that a change waits for a lock on the server: who holds it and since when, with an
+/// Unlock button for a note's.
+fn locked_toast(ui: &Rc<Ui>, l: &notav_core::Locked) {
+    let since = l.since.and_then(|t| {
+        let d = glib::DateTime::from_unix_local(t).ok()?;
+        Some(format!(
+            "{} {}",
+            d.format("%x").ok()?,
+            d.format("%H:%M").ok()?
+        ))
+    });
+    let msg = match (&l.file, &l.owner, &since) {
+        (None, _, _) => gettext("Something in “{title}” is locked on the server"),
+        (Some(_), Some(_), Some(_)) => {
+            gettext("“{title}” is locked on the server by {owner} since {time}")
+        }
+        (Some(_), Some(_), None) => gettext("“{title}” is locked on the server by {owner}"),
+        (Some(_), None, _) => gettext("“{title}” is locked on the server"),
+    }
+    .replace("{title}", &title_of(&l.path))
+    .replace("{owner}", l.owner.as_deref().unwrap_or_default())
+    .replace("{time}", since.as_deref().unwrap_or_default());
+    let t = note(&msg);
+    t.set_timeout(0);
+    if let Some(file) = l.file.clone() {
+        t.set_button_label(Some(&gettext("Unlock…")));
+        let (ui, title) = (ui.clone(), title_of(&l.path));
+        t.connect_button_clicked(move |_| unlock(&ui, file.clone(), title.clone()));
+    }
+    ui.toasts.add_toast(t);
+}
+
+/// Remove a lock on the server, after asking: an editor that still has the note open may lose
+/// what it saves afterwards.
+fn unlock(ui: &Rc<Ui>, file: String, title: String) {
+    let ui = ui.clone();
+    glib::spawn_future_local(async move {
+        let alert = adw::AlertDialog::new(
+            Some(&gettext("Unlock “{title}”?").replace("{title}", &title)),
+            Some(&gettext(
+                "Your change to it waits for the lock. If it is still open in an editor, what is saved there afterwards may be lost: unlock it only if nobody is editing it.",
+            )),
+        );
+        alert.add_responses(&[
+            ("cancel", &gettext("Cancel")),
+            ("unlock", &gettext("Unlock")),
+        ]);
+        alert.set_response_appearance("unlock", adw::ResponseAppearance::Destructive);
+        alert.set_default_response(Some("cancel"));
+        alert.set_close_response("cancel");
+        if alert.choose_future(Some(&ui.window)).await != "unlock" {
+            return;
+        }
+        match gio::spawn_blocking(move || core().unlock(file)).await {
+            Ok(Ok(())) => {
+                ui.last_locked.borrow_mut().clear();
+                crate::sync_now();
+            }
+            Ok(Err(e)) => toast(
+                &gettext("Cannot unlock “{title}”: {error}")
+                    .replace("{title}", &title)
+                    .replace("{error}", &e.to_string()),
+            ),
+            Err(_) => {}
+        }
+    });
 }
 
 /// A note's title from its path: the file name without its extension.

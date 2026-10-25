@@ -20,7 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Sidebar menu (right click): new note or folder inside a folder, next to a note, or at the top
   level; delete a note
 - A note changed on two devices at once keeps both versions: yours as a conflict copy next to it
-- A note locked on the server (open in Nextcloud Text) waits with its change and the rest syncs
+- A note locked on the server (open in Nextcloud Text) waits with its change and the rest syncs;
+  the app says who locked it and since when, and can unlock it
 - Preferences: style, notes folder (moving the notes there or not), account, settings sync
 - Settings synced between devices through `.config/notav/settings.json`
 - Polish translation

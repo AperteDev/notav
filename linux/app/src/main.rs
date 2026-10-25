@@ -71,8 +71,8 @@ pub enum Event {
     SyncState(String),
     /// Conflict copies a sync made, by path.
     Conflicts(Vec<String>),
-    /// Notes whose change waits because they are locked on the server, by path (empty: none).
-    Locked(Vec<String>),
+    /// Changes that wait for a lock on the server (empty: none).
+    Locked(Vec<notav_core::Locked>),
 }
 
 fn post(ev: Event) {

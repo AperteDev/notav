@@ -514,11 +514,12 @@ impl Dav {
         }))
     }
 
-    /// Remove the lock on file `href`, whoever holds it (as Nextcloud's Files app does for the
-    /// file's owner); `kind` is the lock's `LockInfo::kind`.
-    pub fn unlock(&self, href: &str, kind: i64) -> Result<()> {
-        let kind = kind.to_string();
-        let h = [("X-User-Lock", "1"), ("X-User-Lock-Type", kind.as_str())];
+    /// Remove the lock on file `href`, whoever holds it, as Nextcloud's Files app does for the
+    /// file's owner. The request names a user's lock (type 0) whatever the lock's own type:
+    /// that is what lets the file's owner remove an app's (Nextcloud Text's) lock; asking as an
+    /// app works only for the app itself.
+    pub fn unlock(&self, href: &str) -> Result<()> {
+        let h = [("X-User-Lock", "1"), ("X-User-Lock-Type", "0")];
         let r = self.request("UNLOCK", href, &h, "")?;
         match r.status {
             // 412: not locked (any more).

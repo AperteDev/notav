@@ -162,7 +162,7 @@ impl Client {
         let dav = self.dav()?;
         let href = format!("{}{file}", self.notes_root()?);
         match dav.lock_info(&href)? {
-            Some(lock) => dav.unlock(&href, lock.kind),
+            Some(_) => dav.unlock(&href),
             None => Ok(()),
         }
     }

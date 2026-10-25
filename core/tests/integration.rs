@@ -45,18 +45,33 @@ fn client(test: &str, dev: &str, folder: &str) -> Client {
     c
 }
 
+/// A setup step, tried again when the server fails under the tests' parallel load (503 with a
+/// database error, now and then).
+fn retry<T>(f: impl Fn() -> notav_core::Result<T>) -> T {
+    for _ in 0..4 {
+        match f() {
+            Ok(v) => return v,
+            Err(notav_core::Error::Http(503, _)) => {
+                std::thread::sleep(std::time::Duration::from_millis(500))
+            }
+            Err(e) => panic!("{e}"),
+        }
+    }
+    f().unwrap()
+}
+
 impl Fixture {
     fn new(name: &str) -> Fixture {
         let (url, user, pass) = env();
         let dav = Dav::new(&url, &user, &pass);
         let folder = format!("it-notav/{name}");
         let a = client(name, "a", &folder);
-        let home = a.files_home().unwrap();
+        let home = retry(|| a.files_home());
         // Tests making it at once trip the server up (503, 409).
         static PARENT: std::sync::Once = std::sync::Once::new();
-        PARENT.call_once(|| dav.mkcol_all(&home, &format!("{home}it-notav/")).unwrap());
+        PARENT.call_once(|| retry(|| dav.mkcol_all(&home, &format!("{home}it-notav/"))));
         let root = format!("{home}{folder}/");
-        dav.delete(&root, None).unwrap();
+        retry(|| dav.delete(&root, None));
         let b = client(name, "b", &folder);
         Fixture {
             dav,

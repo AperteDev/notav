@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
   <!-- The app's own icon, for the About dialog when it is not installed (a build run). -->
-  <gresource prefix="/io/github/selfref/Notav/icons/scalable/apps">
-    <file alias="io.github.selfref.Notav.svg">../../data/io.github.selfref.Notav.svg</file>
+  <gresource prefix="/dev/aperte/Notav/icons/scalable/apps">
+    <file alias="dev.aperte.Notav.svg">../../data/dev.aperte.Notav.svg</file>
   </gresource>
   <!-- What the About dialog shows (Adw.AboutDialog.new_from_appdata): the metainfo with its
        translations, as build.rs writes it to OUT_DIR. -->
-  <gresource prefix="/io/github/selfref/Notav">
-    <file alias="metainfo.xml">io.github.selfref.Notav.metainfo.xml</file>
+  <gresource prefix="/dev/aperte/Notav">
+    <file alias="metainfo.xml">dev.aperte.Notav.metainfo.xml</file>
   </gresource>
 </gresources>

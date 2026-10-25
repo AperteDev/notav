@@ -78,7 +78,7 @@ def main() -> None:
         )
     )
     # The newest release first; one already listed (the first, written by hand) gets today's date.
-    metainfo = "linux/data/io.github.selfref.Notav.metainfo.xml"
+    metainfo = "linux/data/dev.aperte.Notav.metainfo.xml"
     if f'<release version="{version}"' in (ROOT / metainfo).read_text():
         edit(
             metainfo,

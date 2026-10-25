@@ -7,8 +7,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Notav\n"
-"Report-Msgid-Bugs-To: https://github.com/SelfRef/notav/issues\n"
-"POT-Creation-Date: 2026-10-25 11:40+0100\n"
+"Report-Msgid-Bugs-To: https://github.com/AperteDev/notav/issues\n"
+"POT-Creation-Date: 2026-10-25 11:47+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -521,42 +521,42 @@ msgstr ""
 msgid "About Notav"
 msgstr ""
 
-#: linux/data/io.github.selfref.Notav.desktop:2
-#: linux/data/io.github.selfref.Notav.metainfo.xml:6
+#: linux/data/dev.aperte.Notav.desktop:2
+#: linux/data/dev.aperte.Notav.metainfo.xml:6
 msgid "Notav"
 msgstr ""
 
-#: linux/data/io.github.selfref.Notav.desktop:3
-#: linux/data/io.github.selfref.Notav.metainfo.xml:7
+#: linux/data/dev.aperte.Notav.desktop:3
+#: linux/data/dev.aperte.Notav.metainfo.xml:7
 msgid "Notes and a journal kept in your Nextcloud"
 msgstr ""
 
-#: linux/data/io.github.selfref.Notav.desktop:9
+#: linux/data/dev.aperte.Notav.desktop:9
 msgid "notes;markdown;journal;nextcloud;webdav;"
 msgstr ""
 
-#: linux/data/io.github.selfref.Notav.metainfo.xml:9
+#: linux/data/dev.aperte.Notav.metainfo.xml:9
 msgid ""
 "Notav keeps your notes as plain Markdown files in your Nextcloud, so the "
 "Nextcloud Notes app and Obsidian can open the same folder."
 msgstr ""
 
-#: linux/data/io.github.selfref.Notav.metainfo.xml:14
+#: linux/data/dev.aperte.Notav.metainfo.xml:14
 msgid "Works offline; changes sync when the server is reachable"
 msgstr ""
 
-#: linux/data/io.github.selfref.Notav.metainfo.xml:15
+#: linux/data/dev.aperte.Notav.metainfo.xml:15
 msgid "Notes edited on two devices at once are both kept"
 msgstr ""
 
-#: linux/data/io.github.selfref.Notav.metainfo.xml:16
+#: linux/data/dev.aperte.Notav.metainfo.xml:16
 msgid "Folders, search, and a Markdown editor"
 msgstr ""
 
-#: linux/data/io.github.selfref.Notav.metainfo.xml:17
+#: linux/data/dev.aperte.Notav.metainfo.xml:17
 msgid "Connects through GNOME Online Accounts or a browser sign-in"
 msgstr ""
 
-#: linux/data/io.github.selfref.Notav.metainfo.xml:21
-msgid "SelfRef"
+#: linux/data/dev.aperte.Notav.metainfo.xml:21
+msgid "Aperte"
 msgstr ""

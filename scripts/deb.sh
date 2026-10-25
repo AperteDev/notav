@@ -31,7 +31,7 @@ Depends: $depends, libadwaita-1-0 (>= 1.8)
 Recommends: gnome-keyring
 Section: gnome
 Priority: optional
-Homepage: https://github.com/SelfRef/notav
+Homepage: https://github.com/AperteDev/notav
 Description: Notes and a journal for GNOME, kept in your Nextcloud
  Notav is a notes app for the GNOME desktop. Notes stay in your Nextcloud as
  plain Markdown files, so the Nextcloud Notes app and Obsidian can open the

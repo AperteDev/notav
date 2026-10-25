@@ -4,7 +4,7 @@ Thanks for your interest in Notav!
 
 ## Ideas, bugs and questions
 
-They are very welcome: open an [issue](https://github.com/SelfRef/notav/issues) for a bug, a
+They are very welcome: open an [issue](https://github.com/AperteDev/notav/issues) for a bug, a
 feature request, an idea or a question. For bugs, mention your Nextcloud and GNOME versions and
 how to reproduce the problem.
 
@@ -27,7 +27,7 @@ When one has been agreed:
 
 Translations live in [`po/`](po), one gettext catalog per language, shared by the app, its
 UI files, the desktop file and the metainfo. Corrections to an existing language and new
-languages are welcome; as for code, open an [issue](https://github.com/SelfRef/notav/issues)
+languages are welcome; as for code, open an [issue](https://github.com/AperteDev/notav/issues)
 first, so two people don't translate the same thing.
 
 - **Fix a language:** edit `po/<lang>.po` with any PO editor (such as

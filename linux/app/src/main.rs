@@ -16,7 +16,7 @@ use std::sync::mpsc::{Sender, channel};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
-pub const APP_ID: &str = "io.github.selfref.Notav";
+pub const APP_ID: &str = "dev.aperte.Notav";
 
 static CORE: OnceLock<Arc<Client>> = OnceLock::new();
 static SYNC: OnceLock<Sender<()>> = OnceLock::new();

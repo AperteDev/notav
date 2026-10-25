@@ -50,7 +50,7 @@
   {
     "label": "linux: quit running instance",
     // --auto-start=no so this never D-Bus-activates an installed copy just to quit it.
-    "command": "busctl --user --auto-start=no call io.github.selfref.Notav /io/github/selfref/Notav org.gtk.Actions Activate 'sava{sv}' quit 0 0 || true",
+    "command": "busctl --user --auto-start=no call dev.aperte.Notav /dev/aperte/Notav org.gtk.Actions Activate 'sava{sv}' quit 0 0 || true",
     "use_new_terminal": false,
     "allow_concurrent_runs": false,
     "reveal": "no_focus",

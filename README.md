@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="linux/data/io.github.selfref.Notav.svg" width="128" alt="Notav icon">
+  <img src="linux/data/dev.aperte.Notav.svg" width="128" alt="Notav icon">
 </p>
 
 <h1 align="center">Notav</h1>
@@ -7,13 +7,13 @@
 <p align="center">Notes and a journal for GNOME, kept in your Nextcloud.</p>
 
 <p align="center">
-  <a href="https://github.com/SelfRef/notav/actions/workflows/ci.yml"><img src="https://github.com/SelfRef/notav/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/AperteDev/notav/actions/workflows/ci.yml"><img src="https://github.com/AperteDev/notav/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
 </p>
 
 Notav is a notes app for the GNOME desktop, with an Obsidian-style journal planned. Your notes
 stay in your own Nextcloud as plain Markdown files, so the Nextcloud Notes app and Obsidian
 (through the Nextcloud desktop client) can open the same folder. Notav works from a local copy
-and syncs while it runs. It is the sibling of [Todav](https://github.com/SelfRef/todav), the
+and syncs while it runs. It is the sibling of [Todav](https://github.com/AperteDev/todav), the
 tasks and calendar app.
 
 Notav is at an early stage: notes, folders, search and sync work; the journal, links between
@@ -36,11 +36,11 @@ notes and links to Todav's tasks are next (see the [plan](docs/ARCHITECTURE.md#p
 ## Getting started
 
 Notav needs GNOME 49 or newer. Download a package from the
-[latest release](https://github.com/SelfRef/notav/releases/latest), once there is one:
+[latest release](https://github.com/AperteDev/notav/releases/latest), once there is one:
 
 ```sh
 # Flatpak, on any distribution (the GNOME runtime comes from Flathub)
-flatpak install --user io.github.selfref.Notav.flatpak
+flatpak install --user dev.aperte.Notav.flatpak
 
 # Ubuntu 26.04 and newer
 sudo apt install ./notav_<version>_amd64.deb
@@ -55,7 +55,7 @@ your Nextcloud and pick the folder your notes are in.
 ## Translations
 
 Notav speaks English and Polish, and follows your GNOME language. Missing your language? Ask for
-it in an [issue](https://github.com/SelfRef/notav/issues), or translate it yourself (see
+it in an [issue](https://github.com/AperteDev/notav/issues), or translate it yourself (see
 [CONTRIBUTING.md](CONTRIBUTING.md#translations)).
 
 ## Development

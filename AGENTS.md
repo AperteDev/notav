@@ -8,7 +8,7 @@
 
 ## Todav
 
-- Notav is the sibling of Todav (`SelfRef/todav`, cloned next to this repository) and follows
+- Notav is the sibling of Todav (`AperteDev/todav`, cloned next to this repository) and follows
   its conventions; when something here is not decided yet, look at how Todav does it (its
   `AGENTS.md` and `docs/ARCHITECTURE.md`).
 - Some code here is copied from Todav (listed in "Code from Todav" in `docs/ARCHITECTURE.md`).

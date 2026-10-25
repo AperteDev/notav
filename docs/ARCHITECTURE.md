@@ -1,10 +1,10 @@
 # Notav: Architecture and Plan
 
-Oct 24, 2026, @Kris
+Oct 24, 2026, @Kris, updated Oct 25, 2026
 
 ## Overview
 
-Notav (*notatka* + DAV) is a personal, local-first notes app with an Obsidian-style journal, kept as plain Markdown files in Nextcloud Files over WebDAV. It is the sibling of [Todav](https://github.com/SelfRef/todav) (tasks and calendar over CalDAV) and follows its design: one Rust core with all storage, sync and parsing logic, thin front-ends, the same Nextcloud and GNOME Online Accounts integration.
+Notav (*notatka* + DAV) is a personal, local-first notes app with an Obsidian-style journal, kept as plain Markdown files in Nextcloud Files over WebDAV. It is the sibling of [Todav](https://github.com/AperteDev/todav) (tasks and calendar over CalDAV) and follows its design: one Rust core with all storage, sync and parsing logic, thin front-ends, the same Nextcloud and GNOME Online Accounts integration.
 
 In progress: the core syncs notes, the Linux app edits them; the journal and links are next (see [Plan](#plan)).
 
@@ -24,7 +24,7 @@ In progress: the core syncs notes, the Linux app edits them; the journal and lin
 
 ## Decisions
 
-- Name Notav, app ID `io.github.selfref.Notav`, gettext domain `notav`, its own repository (decided 2026-10-24).
+- Name Notav, gettext domain `notav`, its own repository (decided 2026-10-24). App ID `dev.aperte.Notav`, on the domain of Aperte, the developer, as Todav's `dev.aperte.Todav` (decided 2026-10-25, before the first release; it was `io.github.selfref.Notav`).
 - **Separate from Todav in configuration and credentials**: its own sign-in (its own app password, a GNOME Online Accounts account picked on its own), keyring entries under its own app ID, its own synced settings file (`.config/notav/settings.json`) and its own database. Neither app reads or writes the other's.
 - Storage: Markdown files in Nextcloud Files over WebDAV; see [Storage](#storage) (decided 2026-10-24).
 - Journal: one daily note per day in a dated folder (layout and format not decided yet); `[[wiki links]]`, backlinks and tags are computed locally from the files.
@@ -93,7 +93,7 @@ Same shape as Todav, without the app's directory level:
   linux/
     app/                     # GTK4 + libadwaita app (Rust); Blueprint views in ui/
     data/                    # .desktop, metainfo, icons
-    flatpak/                 # io.github.selfref.Notav.json
+    flatpak/                 # dev.aperte.Notav.json
   po/                        # gettext catalogs, domain notav
   scripts/                   # i18n.sh, release.py, deb.sh (from Todav)
 ```

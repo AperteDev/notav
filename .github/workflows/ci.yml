@@ -52,8 +52,8 @@ jobs:
         run: python3 scripts/release.py "$VERSION" > /dev/null
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
-          manifest-path: linux/flatpak/io.github.selfref.Notav.json
-          bundle: io.github.selfref.Notav.flatpak
+          manifest-path: linux/flatpak/dev.aperte.Notav.json
+          bundle: dev.aperte.Notav.flatpak
           artifact-name: notav-flatpak
 
   tarball:

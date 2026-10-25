@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>io.github.selfref.Notav</id>
+  <id>dev.aperte.Notav</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
   <name>Notav</name>
@@ -17,12 +17,12 @@
       <li>Connects through GNOME Online Accounts or a browser sign-in</li>
     </ul>
   </description>
-  <developer id="io.github.selfref">
-    <name>SelfRef</name>
+  <developer id="dev.aperte">
+    <name>Aperte</name>
   </developer>
-  <launchable type="desktop-id">io.github.selfref.Notav.desktop</launchable>
-  <url type="homepage">https://github.com/SelfRef/notav</url>
-  <url type="bugtracker">https://github.com/SelfRef/notav/issues</url>
+  <launchable type="desktop-id">dev.aperte.Notav.desktop</launchable>
+  <url type="homepage">https://github.com/AperteDev/notav</url>
+  <url type="bugtracker">https://github.com/AperteDev/notav/issues</url>
   <content_rating type="oars-1.1"/>
   <supports>
     <control>pointing</control>

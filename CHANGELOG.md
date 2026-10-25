@@ -26,4 +26,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Settings synced between devices through `.config/notav/settings.json`
 - Polish translation
 
-[Unreleased]: https://github.com/SelfRef/notav/commits/HEAD
+[Unreleased]: https://github.com/AperteDev/notav/commits/HEAD

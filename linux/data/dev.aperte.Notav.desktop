@@ -2,7 +2,7 @@
 Name=Notav
 Comment=Notes and a journal kept in your Nextcloud
 Exec=notav-linux
-Icon=io.github.selfref.Notav
+Icon=dev.aperte.Notav
 Terminal=false
 Type=Application
 Categories=Office;Utility;

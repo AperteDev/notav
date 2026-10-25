@@ -10,14 +10,14 @@ export GETTEXTDATADIRS="$PWD/po" # po/its: what of the metainfo is translated
 pot=po/notav.pot
 x() {
   xgettext --from-code=UTF-8 --add-comments=Translators: --sort-by-file --package-name=Notav \
-    --msgid-bugs-address=https://github.com/SelfRef/notav/issues --output="$pot" "$@"
+    --msgid-bugs-address=https://github.com/AperteDev/notav/issues --output="$pot" "$@"
 }
 
 x -L Rust -k -kgettext -kngettext:1,2 linux/app/src/*.rs
 # Blueprint's _("…") and C_("context", "…") read like C.
 x --join-existing -L C -k -k_ -kC_:1c,2 linux/app/ui/*.blp
-x --join-existing linux/data/io.github.selfref.Notav.desktop \
-  linux/data/io.github.selfref.Notav.metainfo.xml
+x --join-existing linux/data/dev.aperte.Notav.desktop \
+  linux/data/dev.aperte.Notav.metainfo.xml
 
 for lang in $(grep -v '^#' po/LINGUAS); do
   if [ -f "po/$lang.po" ]; then

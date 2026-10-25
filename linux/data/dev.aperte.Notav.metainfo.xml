@@ -39,5 +39,27 @@
     <control>touch</control>
   </supports>
   <releases>
+    <release version="0.1.0" date="2026-10-25">
+      <url type="details">https://github.com/AperteDev/notav/releases/tag/v0.1.0</url>
+      <description translate="no">
+        <p>Added</p>
+        <ul>
+          <li>Notes kept as Markdown files in a folder of your Nextcloud Files (<code>Notes/</code> by default, as the Nextcloud Notes app), synced over WebDAV; Notav works from a local copy, also offline</li>
+          <li>Sign-in through GNOME Online Accounts, the browser, or a login name and app password, then the notes folder to use</li>
+          <li>The notes folder as a tree of folders and notes in the sidebar, as in Obsidian</li>
+          <li>Search through titles and text, ignoring case and accents</li>
+          <li>Markdown editor that saves as you type, styled for reading: headings sized by level, the Markdown marks dimmed, a line of about 80 characters; the title renames the note</li>
+          <li>Drag notes and folders into and out of folders in the sidebar</li>
+          <li>Sidebar menu (right click): new note or folder inside a folder, next to a note, or at the top level; delete a note</li>
+          <li>A note changed on two devices at once keeps both versions: yours as a conflict copy next to it</li>
+          <li>A note locked on the server (open in Nextcloud Text) waits with its change and the rest syncs; the app says who locked it and since when, and can unlock it</li>
+          <li>Preferences: style, notes folder (moving the notes there or not), account, settings sync</li>
+          <li>Settings synced between devices through <code>.config/notav/settings.json</code></li>
+          <li>Polish translation</li>
+          <li>About has a Support page with where to support Notav's development: Ko-fi, GitHub Sponsors and Liberapay</li>
+          <li>An RPM spec for Fedora, built on COPR from <code>.copr/Makefile</code>; Notav uses the system's SQLite</li>
+        </ul>
+      </description>
+    </release>
   </releases>
 </component>

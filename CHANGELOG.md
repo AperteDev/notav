@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-25
+
 ### Added
 
 - Notes kept as Markdown files in a folder of your Nextcloud Files (`Notes/` by default, as the
@@ -30,4 +32,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and Liberapay
 - An RPM spec for Fedora, built on COPR from `.copr/Makefile`; Notav uses the system's SQLite
 
-[Unreleased]: https://github.com/AperteDev/notav/commits/HEAD
+[Unreleased]: https://github.com/AperteDev/notav/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/AperteDev/notav/releases/tag/v0.1.0

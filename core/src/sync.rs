@@ -18,9 +18,23 @@ pub struct SyncReport {
     pub removed: u32,
     /// Conflict copies made: notes changed here and on the server (paths of the copies).
     pub conflicts: Vec<String>,
-    /// Notes whose change could not go up: locked on the server, by an editor that has them
-    /// open (paths). They stay changed here, for the next sync.
-    pub locked: Vec<String>,
+    /// Changes that could not go up: something locked on the server, by an editor that has it
+    /// open (or had: such locks can outlive it). They stay changed here, for the next sync.
+    pub locked: Vec<Locked>,
+}
+
+/// A note (or folder) whose change waits for a lock on the server.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Locked {
+    /// Here, relative to the notes folder.
+    pub path: String,
+    /// The locked file on the server, relative to the notes folder, for `Client::unlock`; None
+    /// when a folder's move waits for something locked in it.
+    pub file: Option<String>,
+    /// Who holds the lock, as Nextcloud names it ("Text").
+    pub owner: Option<String>,
+    /// Since when (unix time).
+    pub since: Option<i64>,
 }
 
 /// The notes folder unless set: Nextcloud Notes' default.
@@ -142,6 +156,17 @@ impl Client {
         self.set_setting("notes_folder".into(), folder)
     }
 
+    /// Remove the lock on `file` (a `Locked::file`) on the server, whoever holds it: what the
+    /// editor holding it saves afterwards may be lost. The next sync uploads what waited.
+    pub fn unlock(&self, file: String) -> Result<()> {
+        let dav = self.dav()?;
+        let href = format!("{}{file}", self.notes_root()?);
+        match dav.lock_info(&href)? {
+            Some(lock) => dav.unlock(&href, lock.kind),
+            None => Ok(()),
+        }
+    }
+
     /// The notes folder's href, ending in "/".
     fn notes_root(&self) -> Result<String> {
         Ok(format!("{}{}/", self.files_home()?, self.notes_folder()))
@@ -190,7 +215,12 @@ impl Client {
                     )?;
                 }
                 Err(Error::Locked(_)) => {
-                    report.locked.push(dst);
+                    report.locked.push(Locked {
+                        path: dst,
+                        file: None,
+                        owner: None,
+                        since: None,
+                    });
                     return Ok(false);
                 }
                 Err(e) => return Err(e),
@@ -230,7 +260,15 @@ impl Client {
             match self.push_note(dav, root, r, report, changed) {
                 // Open in an editor that locks it (Nextcloud Text, a WebDAV LOCK): it stays
                 // changed here, and the next sync tries again.
-                Err(Error::Locked(_)) => report.locked.push(path),
+                Err(Error::Locked(href)) => {
+                    let lock = dav.lock_info(&href).ok().flatten();
+                    report.locked.push(Locked {
+                        path,
+                        file: href.strip_prefix(root).map(str::to_string),
+                        owner: lock.as_ref().and_then(|l| l.owner.clone()),
+                        since: lock.and_then(|l| l.since),
+                    })
+                }
                 r => r?,
             }
         }

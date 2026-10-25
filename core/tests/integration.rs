@@ -262,45 +262,39 @@ fn a_note_locked_on_the_server_waits_and_the_rest_syncs() {
         f.a.add_note("".into(), "Other".into(), "v1".into())
             .unwrap();
     f.a.sync().unwrap();
-    // As the Nextcloud Text editor does while it has the note open.
+    // An app's lock, as the Nextcloud Text editor takes while it has the note open.
     let href = format!("{}Open.md", f.root);
-    let body = r#"<?xml version="1.0"?><d:lockinfo xmlns:d="DAV:"><d:lockscope><d:exclusive/></d:lockscope><d:locktype><d:write/></d:locktype><d:owner>it</d:owner></d:lockinfo>"#;
     let r = f
         .dav
-        .request("LOCK", &href, &[("Timeout", "Second-120")], body)
+        .request(
+            "LOCK",
+            &href,
+            &[("X-User-Lock", "1"), ("X-User-Lock-Type", "1")],
+            "",
+        )
         .unwrap();
     assert_eq!(r.status, 200, "{}", r.body);
-    let token = r
-        .body
-        .split_once("<d:href>opaquelocktoken:")
-        .and_then(|(_, t)| t.split_once('<'))
-        .map(|(t, _)| format!("<opaquelocktoken:{t}>"))
-        .expect("lock token");
 
     f.a.move_note(locked.id, "Work".into(), "Open".into())
         .unwrap();
     f.a.set_text(other.id, "v2".into()).unwrap();
     let r = f.a.sync().unwrap();
-    assert_eq!(r.locked, ["Work/Open.md"]);
+    assert_eq!(r.locked.len(), 1, "{r:?}");
+    let l = &r.locked[0];
+    assert_eq!(
+        (l.path.as_str(), l.file.as_deref()),
+        ("Work/Open.md", Some("Open.md"))
+    );
+    assert!(l.owner.is_some() && l.since.is_some_and(|t| t > 0), "{l:?}");
     assert_eq!(r.uploaded, 1);
     assert_eq!(f.server_text("Other.md").unwrap(), "v2");
     assert!(f.a.pending());
     assert!(f.server_text("Open.md").is_some());
 
-    // The server now and then answers 500 while other tests run: try again.
-    let unlocked = (0..5).any(|_| {
-        let r = f
-            .dav
-            .request("UNLOCK", &href, &[("Lock-Token", &token)], "");
-        let ok = r.is_ok_and(|r| r.status < 300);
-        if !ok {
-            std::thread::sleep(std::time::Duration::from_millis(500));
-        }
-        ok
-    });
-    assert!(unlocked, "UNLOCK failed");
+    // Unlocked from here: the move goes up.
+    f.a.unlock(l.file.clone().unwrap()).unwrap();
     let r = f.a.sync().unwrap();
-    assert!(r.locked.is_empty());
+    assert!(r.locked.is_empty(), "{r:?}");
     assert!(!f.a.pending());
     assert_eq!(f.server_text("Work/Open.md").unwrap(), "v1");
 }

@@ -475,6 +475,60 @@ impl Dav {
     }
 }
 
+/// A lock on a file in Nextcloud (the `files_lock` app): who holds it and since when.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LockInfo {
+    /// `nc:lock-owner-type`: 0 a user, 1 an app (Nextcloud Text), 2 a WebDAV lock.
+    pub kind: i64,
+    /// The holder's name as Nextcloud shows it ("Text", a user's name).
+    pub owner: Option<String>,
+    /// Unix time.
+    pub since: Option<i64>,
+}
+
+impl Dav {
+    /// The lock on file `href`, if it has one.
+    pub fn lock_info(&self, href: &str) -> Result<Option<LockInfo>> {
+        let props = "<nc:lock/><nc:lock-owner-type/><nc:lock-owner-displayname/>\
+            <nc:lock-owner-editor/><nc:lock-owner/><nc:lock-time/>";
+        let resps = match self.propfind(href, "0", props) {
+            Err(Error::Http(404, _)) => return Ok(None),
+            r => r?,
+        };
+        let Some(p) = resps.into_iter().next().map(|r| r.props) else {
+            return Ok(None);
+        };
+        if p.find_text(NC, "lock").as_deref() != Some("1") {
+            return Ok(None);
+        }
+        Ok(Some(LockInfo {
+            kind: p
+                .find_text(NC, "lock-owner-type")
+                .and_then(|k| k.parse().ok())
+                .unwrap_or(0),
+            // The display name; an app's (an editor's) id or a user's without one.
+            owner: ["lock-owner-displayname", "lock-owner-editor", "lock-owner"]
+                .iter()
+                .find_map(|n| p.find_text(NC, n)),
+            since: p.find_text(NC, "lock-time").and_then(|t| t.parse().ok()),
+        }))
+    }
+
+    /// Remove the lock on file `href`, whoever holds it (as Nextcloud's Files app does for the
+    /// file's owner); `kind` is the lock's `LockInfo::kind`.
+    pub fn unlock(&self, href: &str, kind: i64) -> Result<()> {
+        let kind = kind.to_string();
+        let h = [("X-User-Lock", "1"), ("X-User-Lock-Type", kind.as_str())];
+        let r = self.request("UNLOCK", href, &h, "")?;
+        match r.status {
+            // 412: not locked (any more).
+            200..=299 | 412 => Ok(()),
+            423 => Err(Error::Locked(href.into())),
+            s => Err(Error::Http(s, r.body)),
+        }
+    }
+}
+
 /// An HTTP date ("Fri, 23 Oct 2026 09:17:18 GMT") as unix time.
 pub fn http_date(s: &str) -> Option<i64> {
     let mut it = s.split_whitespace().skip(1);

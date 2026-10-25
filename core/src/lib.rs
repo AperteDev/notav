@@ -13,7 +13,7 @@ use std::sync::{Arc, Mutex};
 pub use login::{Credentials, LoginFlow, login_flow_poll, login_flow_start, password_login};
 pub use notes::Note;
 pub use settings::DEVICE_ONLY;
-pub use sync::{DEFAULT_FOLDER, SyncReport};
+pub use sync::{DEFAULT_FOLDER, Locked, SyncReport};
 
 #[derive(Debug, Clone)]
 pub struct Account {

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notav\n"
 "Report-Msgid-Bugs-To: https://github.com/AperteDev/notav/issues\n"
-"POT-Creation-Date: 2026-10-25 22:39+0100\n"
+"POT-Creation-Date: 2026-10-25 22:41+0100\n"
 "PO-Revision-Date: 2026-10-24 20:03+0200\n"
 "Last-Translator: SelfRef\n"
 "Language-Team: Polish\n"
@@ -569,12 +569,12 @@ msgid "About Notav"
 msgstr "O programie Notav"
 
 #: linux/data/dev.aperte.Notav.desktop:2
-#: linux/data/dev.aperte.Notav.metainfo.xml:6
+#: linux/data/dev.aperte.Notav.metainfo.xml:7
 msgid "Notav"
 msgstr "Notav"
 
 #: linux/data/dev.aperte.Notav.desktop:3
-#: linux/data/dev.aperte.Notav.metainfo.xml:7
+#: linux/data/dev.aperte.Notav.metainfo.xml:8
 msgid "Notes and a journal kept in your Nextcloud"
 msgstr "Notatki i dziennik w twoim Nextcloud"
 
@@ -582,7 +582,7 @@ msgstr "Notatki i dziennik w twoim Nextcloud"
 msgid "notes;markdown;journal;nextcloud;webdav;"
 msgstr "notatki;markdown;dziennik;nextcloud;webdav;"
 
-#: linux/data/dev.aperte.Notav.metainfo.xml:9
+#: linux/data/dev.aperte.Notav.metainfo.xml:10
 msgid ""
 "Notav keeps your notes as plain Markdown files in your Nextcloud, so the "
 "Nextcloud Notes app and Obsidian can open the same folder."
@@ -591,26 +591,22 @@ msgstr ""
 "Nextcloud, więc aplikacja Nextcloud Notes i Obsidian mogą otwierać ten sam "
 "folder."
 
-#: linux/data/dev.aperte.Notav.metainfo.xml:14
+#: linux/data/dev.aperte.Notav.metainfo.xml:15
 msgid "Works offline; changes sync when the server is reachable"
 msgstr "Działa bez sieci; zmiany synchronizują się, gdy serwer jest dostępny"
 
-#: linux/data/dev.aperte.Notav.metainfo.xml:15
+#: linux/data/dev.aperte.Notav.metainfo.xml:16
 msgid "Notes edited on two devices at once are both kept"
 msgstr ""
 "Gdy notatkę zmieniono na dwóch urządzeniach naraz, zachowane są obie wersje"
 
-#: linux/data/dev.aperte.Notav.metainfo.xml:16
+#: linux/data/dev.aperte.Notav.metainfo.xml:17
 msgid "Folders, search, and a Markdown editor"
 msgstr "Foldery, wyszukiwanie i edytor Markdown"
 
-#: linux/data/dev.aperte.Notav.metainfo.xml:17
+#: linux/data/dev.aperte.Notav.metainfo.xml:18
 msgid "Connects through GNOME Online Accounts or a browser sign-in"
 msgstr "Łączy się przez Konta online GNOME lub logowanie w przeglądarce"
-
-#: linux/data/dev.aperte.Notav.metainfo.xml:21
-msgid "Aperte"
-msgstr ""
 
 #~ msgid "SelfRef"
 #~ msgstr "SelfRef"

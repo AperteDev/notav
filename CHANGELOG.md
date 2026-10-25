@@ -28,5 +28,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Polish translation
 - About has a Support page with where to support Notav's development: Ko-fi, GitHub Sponsors
   and Liberapay
+- An RPM spec for Fedora, built on COPR from `.copr/Makefile`; Notav uses the system's SQLite
 
 [Unreleased]: https://github.com/AperteDev/notav/commits/HEAD

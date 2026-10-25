@@ -70,15 +70,22 @@ it in an [issue](https://github.com/AperteDev/notav/issues), or translate it you
 ### Building and installing
 
 **Dependencies:** Rust (stable), GTK 4.14+, libadwaita 1.8+, GtkSourceView 5, libsecret,
-`blueprint-compiler`, `glib-compile-resources` (GLib) and gettext's `msgfmt`.
+SQLite, `blueprint-compiler`, `glib-compile-resources` (GLib) and gettext's `msgfmt`.
 
 ```sh
 # The app: binary, desktop file and icons in ~/.local
 make -C linux install
 ```
 
-A Flatpak manifest is included too: `make -C linux flatpak` (needs `flatpak-builder`). The
-`notav` command-line tool (`cargo run -p notav-cli`) syncs and edits notes for debugging.
+A Flatpak manifest is included too: `make -C linux flatpak` (needs `flatpak-builder`). For
+Fedora, `linux/rpm/notav.spec` builds an RPM; COPR builds it with `.copr/Makefile`, which also
+works locally:
+
+```sh
+make -f .copr/Makefile srpm outdir=$PWD/target/rpm spec=$PWD/linux/rpm/notav.spec
+```
+
+The `notav` command-line tool (`cargo run -p notav-cli`) syncs and edits notes for debugging.
 
 Every push is checked and packaged by [CI](.github/workflows/ci.yml); releases are made by the
 manual [Release](.github/workflows/release.yml) workflow and listed in the

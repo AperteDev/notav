@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2026 SelfRef -->
 <component type="desktop-application">
   <id>dev.aperte.Notav</id>
   <metadata_license>CC0-1.0</metadata_license>
@@ -18,11 +19,19 @@
     </ul>
   </description>
   <developer id="dev.aperte">
-    <name>Aperte</name>
+    <name translate="no">Aperte</name>
   </developer>
   <launchable type="desktop-id">dev.aperte.Notav.desktop</launchable>
+  <translation type="gettext">notav</translation>
   <url type="homepage">https://github.com/AperteDev/notav</url>
   <url type="bugtracker">https://github.com/AperteDev/notav/issues</url>
+  <url type="vcs-browser">https://github.com/AperteDev/notav</url>
+  <url type="contribute">https://github.com/AperteDev/notav/blob/master/CONTRIBUTING.md</url>
+  <url type="donation">https://github.com/sponsors/SelfRef</url>
+  <branding>
+    <color type="primary" scheme_preference="light">#bcd7f2</color>
+    <color type="primary" scheme_preference="dark">#26365a</color>
+  </branding>
   <content_rating type="oars-1.1"/>
   <supports>
     <control>pointing</control>

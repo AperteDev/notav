@@ -52,6 +52,9 @@ Copied, not shared: Notav starts from copies of Todav's code that is not about t
 | Account handling, sync worker | `todav/linux/app/src/main.rs` | No push, reminders, D-Bus or local mode |
 | Preferences: style, account | `todav/linux/app/src/settings.rs`, `ui/settings.blp` | The account group as is |
 | Build and packaging | `build.rs`, `todav/linux/Makefile`, Flatpak manifest, `scripts/`, `.github/workflows/`, `po/its/` | No GNOME extension; GtkSourceView added |
+| Release notes in the metainfo, screenshots from the release tag, the RPM spec's version | `scripts/release.py` (as of Todav 1.2.2) | The spec's first entry is for the first release |
+| COPR spec and source RPM | `todav/linux/rpm/todav.spec`, `.copr/Makefile` | `linux/rpm/notav.spec`: no extension, D-Bus service or autostart; GtkSourceView |
+| About with a Support page and donation links | `todav/linux/app/src/window.rs` (`about_support`, `DONATIONS`) | As is |
 | Polish translations | `po/pl.po` | Shared strings merged from Todav's catalog |
 
 A fix to one of these probably applies to Todav too: port it, or note it there. They move into a shared crate in its own repository once copying costs more than sharing: when multiple accounts or other services rework the account layer, when a third app or a front-end of its own needs them, or when the same fix keeps being made twice.
@@ -95,6 +98,7 @@ Same shape as Todav, without the app's directory level:
                              # editor's Markdown language and style schemes in sourceview/
     data/                    # .desktop, metainfo, icons
     flatpak/                 # dev.aperte.Notav.json
+    rpm/                     # notav.spec (COPR, through .copr/Makefile)
   po/                        # gettext catalogs, domain notav
   scripts/                   # i18n.sh, release.py, deb.sh (from Todav)
 ```
@@ -104,7 +108,7 @@ Same shape as Todav, without the app's directory level:
 | Need | Crate / library | Why not std |
 | --- | --- | --- |
 | HTTP + TLS | `ureq` (sync, rustls) | As in Todav |
-| SQLite | `rusqlite` (bundled) | As in Todav; FTS5 included |
+| SQLite | `rusqlite` (0.38 to 0.40), the system SQLite | As in Todav: not bundled, as distributions (Fedora) require, and 0.38 is what Fedora packages. FTS5 is in every SQLite Notav runs on (Fedora's, Ubuntu's, Arch's, the Flatpak runtime's) |
 | XML | `quick-xml` | PROPFIND bodies and multistatus responses |
 | Linux UI | `gtk4`, `libadwaita` | The platform toolkit |
 | Editor | `sourceview5` (GtkSourceView 5) | Markdown highlighting, undo, search; part of the GNOME platform |
@@ -126,7 +130,8 @@ Same shape as Todav, without the app's directory level:
 - [x] Linux app shell: sign-in (welcome page with the notes folder, GOA, Login Flow v2, app password), Secret Service, i18n (Polish), data files with a placeholder icon, packaging; CI packages and the Release workflow
 - [x] Linux app: notes list, editor, rename and move, search (FTS5 in the core), notes folder in Preferences (with moving the notes). Verified in Broadway against the Test account: sign-in through GOA, notes from the server, typing and renaming uploaded, a server edit shown in the open note, moving the notes folder there and back
 - [x] App icon: Todav's calendar turned into a Markdown note (yellow header, `#` heading, a pen), and its symbolic icon
-- [ ] Screenshots in the README
+- [ ] Screenshots in the README and the metainfo (Flathub requires them; `scripts/release.py` points them at each release's tag once they are in `docs/screenshots/`)
+- [x] Packaging for stores, as in Todav: the metainfo with release notes from the changelog, brand colours and links; `linux/rpm/notav.spec` for COPR (`.copr/Makefile`); the system SQLite. Flathub's rules (no AI-written manifest or submission, AI-assisted code disclosed) are in Todav's `docs/ARCHITECTURE.md`
 - [x] Folders in the tree: drag them into other folders (`Client::move_folder`: one `MOVE` on the server, queued in `moves` and pushed before anything else)
 - [ ] Folders in the tree: rename and delete them
 - [ ] Client Push (`notify_push`) listener; polling as the fallback

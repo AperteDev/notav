@@ -1,5 +1,6 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!-- Placeholder until the real icon. -->
 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
-  <path fill="#222222" d="M4 1C2.9 1 2 1.9 2 3v10c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V3c0-1.1-.9-2-2-2H4zm0 4h8v8H4V5zm1 1v1h6V6H5zm0 2v1h6V8H5zm0 2v1h4v-1H5z"/>
+  <g fill="#2e3436">
+    <path d="M4 1C2.355 1 1 2.355 1 4v8c0 1.645 1.355 3 3 3h8c1.645 0 3-1.355 3-3V4c0-1.645-1.355-3-3-3zm0 5h8c.555 0 1 .445 1 1v5c0 .57-.441.887-1 1H4c-.57 0-1-.43-1-1V7c0-.555.445-1 1-1z"/>
+    <path d="M4.5 12.5l.5-2 4-4 1.5 1.5-4 4z"/>
+  </g>
 </svg>

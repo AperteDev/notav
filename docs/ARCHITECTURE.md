@@ -124,7 +124,8 @@ Same shape as Todav, without the app's directory level:
 - [x] CLI round-trip against the server: `ls`, `cat`, `new`, `put`, `mv`, `rm`, `mkdir`, `folder`, `sync`, `whoami`, `login`
 - [x] Linux app shell: sign-in (welcome page with the notes folder, GOA, Login Flow v2, app password), Secret Service, i18n (Polish), data files with a placeholder icon, packaging; CI packages and the Release workflow
 - [x] Linux app: notes list, editor, rename and move, search (FTS5 in the core), notes folder in Preferences (with moving the notes). Verified in Broadway against the Test account: sign-in through GOA, notes from the server, typing and renaming uploaded, a server edit shown in the open note, moving the notes folder there and back
-- [ ] App icon (the user's), screenshots in the README
+- [x] App icon: Todav's calendar turned into a Markdown note (yellow header, `#` heading, a pen), and its symbolic icon
+- [ ] Screenshots in the README
 - [x] Folders in the tree: drag them into other folders (`Client::move_folder`: one `MOVE` on the server, queued in `moves` and pushed before anything else)
 - [ ] Folders in the tree: rename and delete them
 - [ ] Client Push (`notify_push`) listener; polling as the fallback

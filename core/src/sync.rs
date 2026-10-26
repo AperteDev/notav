@@ -251,10 +251,12 @@ impl Client {
             let db = self.db.lock().unwrap();
             db.execute("UPDATE folders SET dirty = 0 WHERE path = ?", [&f])?;
         }
-        let rows = {
+        let mut rows = {
             let db = self.db.lock().unwrap();
             store::rows(&db, "dirty != ?", [CLEAN])?
         };
+        // Moves first: they free names that new notes here may have taken.
+        rows.sort_by_key(|r| r.server_path.is_none());
         for r in rows {
             let path = r.path.clone();
             match self.push_note(dav, root, r, report, changed) {
@@ -438,6 +440,13 @@ impl Client {
             };
             return self.upload(dav, root, &r, report, changed);
         };
+        // The file there is another note changed here (moving away from this name, or moved to
+        // it on the server): this one waits until that note's push lets go of it.
+        if store::by_fileid(&self.db.lock().unwrap(), &entry.fileid)?
+            .is_some_and(|n| n.id != r.id && n.dirty != CLEAN)
+        {
+            return Ok(());
+        }
         let take_server = |db: &Connection| -> Result<()> {
             // Another note here may hold this oc:id (moved on the server): it is this one now.
             db.execute(
@@ -586,7 +595,14 @@ impl Client {
                 changed.push(n.path);
             }
         }
+        // Notes known here first: their moves free names that new ones take.
+        let known: HashSet<String> = {
+            let mut st = db.prepare("SELECT fileid FROM notes WHERE fileid IS NOT NULL")?;
+            st.query_map([], |r| r.get(0))?
+                .collect::<rusqlite::Result<_>>()?
+        };
         drop(db);
+        files.sort_by_key(|(_, e)| !known.contains(&e.fileid));
 
         for (path, e) in files {
             let local = {

@@ -315,6 +315,7 @@ pub fn on_event(ev: &Event) {
                 .set_visible_child_name(if s == "syncing" { "syncing" } else { "idle" });
             if let Some(err) = s.strip_prefix("error:") {
                 if *ui.last_error.borrow() != err {
+                    eprintln!("Sync failed: {err}");
                     ui.toasts.add_toast(note(
                         &gettext("Sync failed: {error}").replace("{error}", err),
                     ));

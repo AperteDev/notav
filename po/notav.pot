@@ -18,7 +18,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: linux/app/src/connection.rs:39 linux/app/src/window.rs:1483
+#: linux/app/src/connection.rs:39 linux/app/src/window.rs:1484
 msgid "No Nextcloud account in Settings → Online Accounts"
 msgstr ""
 
@@ -55,8 +55,8 @@ msgid ""
 "notes in “{new}”?"
 msgstr ""
 
-#: linux/app/src/settings.rs:96 linux/app/src/window.rs:398
-#: linux/app/src/window.rs:1173 linux/app/ui/new-folder.blp:11
+#: linux/app/src/settings.rs:96 linux/app/src/window.rs:399
+#: linux/app/src/window.rs:1174 linux/app/ui/new-folder.blp:11
 #: linux/app/ui/password-login.blp:19 linux/app/ui/settings.blp:101
 #: linux/app/ui/window.blp:118
 msgid "Cancel"
@@ -75,8 +75,8 @@ msgstr ""
 msgid "Notes folder changed to “{folder}”"
 msgstr ""
 
-#: linux/app/src/settings.rs:122 linux/app/src/window.rs:1153
-#: linux/app/src/window.rs:1687
+#: linux/app/src/settings.rs:122 linux/app/src/window.rs:1154
+#: linux/app/src/window.rs:1688
 msgid "Not a folder name"
 msgstr ""
 
@@ -94,7 +94,7 @@ msgstr ""
 msgid "Connected as {name}"
 msgstr ""
 
-#: linux/app/src/settings.rs:161 linux/app/src/window.rs:1498
+#: linux/app/src/settings.rs:161 linux/app/src/window.rs:1499
 #: linux/app/ui/window.blp:43
 msgid "GNOME Online Accounts"
 msgstr ""
@@ -113,11 +113,11 @@ msgstr ""
 msgid "Disconnected"
 msgstr ""
 
-#: linux/app/src/settings.rs:261 linux/app/src/window.rs:1615
+#: linux/app/src/settings.rs:261 linux/app/src/window.rs:1616
 msgid "Waiting for Sign-In…"
 msgstr ""
 
-#: linux/app/src/settings.rs:263 linux/app/src/window.rs:1617
+#: linux/app/src/settings.rs:263 linux/app/src/window.rs:1618
 msgid "Waiting for Browser…"
 msgstr ""
 
@@ -149,19 +149,19 @@ msgstr ""
 msgid "Support"
 msgstr ""
 
-#: linux/app/src/window.rs:319
+#: linux/app/src/window.rs:320
 #, rust-format
 msgid "Sync failed: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:336
+#: linux/app/src/window.rs:337
 #, rust-format
 msgid ""
 "“{title}” was changed elsewhere too: your version is kept next to it as a "
 "copy"
 msgstr ""
 
-#: linux/app/src/window.rs:340
+#: linux/app/src/window.rs:341
 #, rust-format
 msgid ""
 "{n} note was changed elsewhere too: your version is kept next to it as a copy"
@@ -171,154 +171,154 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: linux/app/src/window.rs:366
+#: linux/app/src/window.rs:367
 #, rust-format
 msgid "Something in “{title}” is locked on the server"
 msgstr ""
 
-#: linux/app/src/window.rs:368
+#: linux/app/src/window.rs:369
 #, rust-format
 msgid "“{title}” is locked on the server by {owner} since {time}"
 msgstr ""
 
-#: linux/app/src/window.rs:370
+#: linux/app/src/window.rs:371
 #, rust-format
 msgid "“{title}” is locked on the server by {owner}"
 msgstr ""
 
-#: linux/app/src/window.rs:371
+#: linux/app/src/window.rs:372
 #, rust-format
 msgid "“{title}” is locked on the server"
 msgstr ""
 
-#: linux/app/src/window.rs:379
+#: linux/app/src/window.rs:380
 msgid "Unlock…"
 msgstr ""
 
-#: linux/app/src/window.rs:392
+#: linux/app/src/window.rs:393
 #, rust-format
 msgid "Unlock “{title}”?"
 msgstr ""
 
-#: linux/app/src/window.rs:394
+#: linux/app/src/window.rs:395
 msgid ""
 "Your change to it waits for the lock. If it is still open in an editor, what "
 "is saved there afterwards may be lost: unlock it only if nobody is editing "
 "it."
 msgstr ""
 
-#: linux/app/src/window.rs:399
+#: linux/app/src/window.rs:400
 msgid "Unlock"
 msgstr ""
 
-#: linux/app/src/window.rs:413
+#: linux/app/src/window.rs:414
 #, rust-format
 msgid "Cannot unlock “{title}”: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:1035
+#: linux/app/src/window.rs:1036
 #, rust-format
 msgid "Cannot save the note: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:1085
+#: linux/app/src/window.rs:1086
 msgid "A note with this name exists already"
 msgstr ""
 
-#: linux/app/src/window.rs:1107
+#: linux/app/src/window.rs:1108
 msgid "Untitled"
 msgstr ""
 
-#: linux/app/src/window.rs:1143
+#: linux/app/src/window.rs:1144
 msgid "A folder with this name exists already"
 msgstr ""
 
-#: linux/app/src/window.rs:1167
+#: linux/app/src/window.rs:1168
 msgid "Delete Note?"
 msgstr ""
 
-#: linux/app/src/window.rs:1169
+#: linux/app/src/window.rs:1170
 #, rust-format
 msgid "“{title}” will be deleted on every device."
 msgstr ""
 
-#: linux/app/src/window.rs:1174 linux/app/src/window.rs:1237
+#: linux/app/src/window.rs:1175 linux/app/src/window.rs:1238
 msgid "Delete"
 msgstr ""
 
-#: linux/app/src/window.rs:1229 linux/app/ui/shortcuts.blp:10
+#: linux/app/src/window.rs:1230 linux/app/ui/shortcuts.blp:10
 msgid "New Note"
 msgstr ""
 
-#: linux/app/src/window.rs:1231 linux/app/ui/new-folder.blp:6
+#: linux/app/src/window.rs:1232 linux/app/ui/new-folder.blp:6
 msgid "New Folder"
 msgstr ""
 
-#: linux/app/src/window.rs:1385
+#: linux/app/src/window.rs:1386
 msgid "A note with this name exists in that folder already"
 msgstr ""
 
-#: linux/app/src/window.rs:1388
+#: linux/app/src/window.rs:1389
 msgid "A folder with this name exists in that folder already"
 msgstr ""
 
-#: linux/app/src/window.rs:1501
+#: linux/app/src/window.rs:1502
 msgid "Connect with a Nextcloud account from GNOME Settings"
 msgstr ""
 
-#: linux/app/src/window.rs:1504 linux/app/ui/window.blp:58
+#: linux/app/src/window.rs:1505 linux/app/ui/window.blp:58
 msgid "Nextcloud Server"
 msgstr ""
 
-#: linux/app/src/window.rs:1507
+#: linux/app/src/window.rs:1508
 msgid "Sign in to your Nextcloud; Notav gets an app password of its own"
 msgstr ""
 
-#: linux/app/src/window.rs:1588
+#: linux/app/src/window.rs:1589
 msgid "Enter the Nextcloud server first"
 msgstr ""
 
-#: linux/app/src/window.rs:1704 linux/app/ui/settings.blp:118
+#: linux/app/src/window.rs:1705 linux/app/ui/settings.blp:118
 #: linux/app/ui/window.blp:110
 msgid "Sign In with Browser"
 msgstr ""
 
-#: linux/app/src/window.rs:1718
+#: linux/app/src/window.rs:1719
 msgid "Cannot start login"
 msgstr ""
 
-#: linux/app/src/window.rs:1719
+#: linux/app/src/window.rs:1720
 #, rust-format
 msgid "Cannot start login: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:1727
+#: linux/app/src/window.rs:1728
 msgid "Login link copied to clipboard"
 msgstr ""
 
-#: linux/app/src/window.rs:1747
+#: linux/app/src/window.rs:1748
 #, rust-format
 msgid "Login failed: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:1749
+#: linux/app/src/window.rs:1750
 msgid "Login failed"
 msgstr ""
 
-#: linux/app/src/window.rs:1752
+#: linux/app/src/window.rs:1753
 msgid "Login timed out"
 msgstr ""
 
-#: linux/app/src/window.rs:1801
+#: linux/app/src/window.rs:1802
 msgid "Wrong login name or password"
 msgstr ""
 
-#: linux/app/src/window.rs:1802
+#: linux/app/src/window.rs:1803
 #, rust-format
 msgid "Sign-in failed: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:1803
+#: linux/app/src/window.rs:1804
 msgid "Sign-in failed"
 msgstr ""
 

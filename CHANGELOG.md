@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A dense tree in Preferences: smaller rows, as in Files
 - Note icons in the tree, set in Preferences: on notes only (the default), on folders too, or none
 
+### Fixed
+
+- Sync stopping with "UNIQUE constraint failed: notes.fileid" after a note was moved and a
+  new one took its old name before the next sync, and the new note not showing on other devices
+
 ## [0.1.0] - 2026-10-25
 
 ### Added

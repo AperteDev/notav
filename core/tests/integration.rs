@@ -375,3 +375,62 @@ fn a_folder_moved_onto_a_name_taken_on_the_server_moves_note_by_note() {
         ["Archive/Work/Other.md", "Archive/Work/Plan.md"]
     );
 }
+
+#[test]
+fn a_new_note_takes_the_name_of_one_moved_away() {
+    let f = Fixture::new("name-freed");
+    // As the app adds them: "Untitled", empty.
+    let first =
+        f.a.add_note("".into(), "Untitled".into(), "".into())
+            .unwrap();
+    f.a.sync().unwrap();
+    f.b.sync().unwrap();
+
+    // Moved into a folder sorted after its old name, then a new note takes that name: the
+    // move goes up first, or the new note finds the old one's file there.
+    f.a.move_note(first.id, "work".into(), "Moved".into())
+        .unwrap();
+    let second =
+        f.a.add_note("".into(), "Untitled".into(), "".into())
+            .unwrap();
+    assert_eq!(second.path, "Untitled.md");
+    let r = f.a.sync().unwrap();
+    assert!(r.conflicts.is_empty(), "{r:?}");
+    assert!(!f.a.pending());
+    assert_eq!(paths(&f.a), ["Untitled.md", "work/Moved.md"]);
+    assert_eq!(f.server_text("work/Moved.md").unwrap(), "");
+    assert_eq!(f.server_text("Untitled.md").unwrap(), "");
+
+    // The other device sees the move (the same note) and the new one.
+    let r = f.b.sync().unwrap();
+    assert_eq!((r.downloaded, r.removed), (1, 0), "{r:?} {:?}", f.b.notes());
+    assert_eq!(paths(&f.b), ["Untitled.md", "work/Moved.md"]);
+}
+
+#[test]
+fn a_new_note_on_the_name_of_one_changed_here_and_moved_there_waits() {
+    let f = Fixture::new("name-held");
+    let old = f.a.add_note("".into(), "Old".into(), "v1".into()).unwrap();
+    f.a.sync().unwrap();
+    // Renamed by another client, not pulled here yet; edited here meanwhile, and a new note
+    // takes the name it has there now.
+    f.dav
+        .mv(&format!("{}Old.md", f.root), &format!("{}New.md", f.root))
+        .unwrap();
+    f.a.set_text(old.id, "v2".into()).unwrap();
+    f.a.add_note("".into(), "New".into(), "new".into()).unwrap();
+
+    // The file there is the edited note's, not the new note's to take: no text is lost.
+    for _ in 0..3 {
+        f.a.sync().unwrap();
+    }
+    assert!(!f.a.pending(), "{:?}", f.a.notes());
+    let texts: Vec<String> =
+        f.a.notes()
+            .iter()
+            .map(|n| f.a.note_text(n.id).unwrap())
+            .collect();
+    for t in ["v2", "new"] {
+        assert!(texts.iter().any(|x| x == t), "{t} missing: {texts:?}");
+    }
+}

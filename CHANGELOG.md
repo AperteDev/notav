@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A dense tree in Preferences: smaller rows, as in Files
+- Note icons in the tree, set in Preferences: on notes only (the default), on folders too, or none
+
 ## [0.1.0] - 2026-10-25
 
 ### Added

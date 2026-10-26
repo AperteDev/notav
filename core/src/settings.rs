@@ -10,6 +10,8 @@ pub const DEVICE_ONLY: &[&str] = &[
     "sync_settings",
     // Light, dark or the system's: each device follows its own desktop.
     "color_scheme",
+    // Row density suits the screen.
+    "dense_tree",
     "goa_account",
     "manual_url",
     "manual_user",

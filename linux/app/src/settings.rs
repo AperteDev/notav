@@ -1,4 +1,5 @@
-//! Preferences dialog: General (style, the notes folder) and Accounts (account, settings sync).
+//! Preferences dialog: General (style, the tree's density and icons, the notes folder) and
+//! Accounts (account, settings sync).
 
 use crate::connection::Connection;
 use crate::core;
@@ -41,6 +42,24 @@ pub fn present(parent: &impl IsA<gtk::Widget>) {
         let name = g.active_name().map(|n| n.to_string()).unwrap_or_default();
         let _ = core().set_setting("color_scheme".into(), name);
         apply_color_scheme();
+    });
+    let dense: adw::SwitchRow = get(&b, "dense_tree");
+    dense.set_active(crate::window::dense_tree());
+    dense.connect_active_notify(|s| {
+        let _ = core().set_setting("dense_tree".into(), s.is_active().to_string());
+        crate::window::apply_tree_look();
+    });
+    let icons: adw::ToggleGroup = get(&b, "tree_icons");
+    let current = core().setting("tree_icons".into());
+    icons.set_active_name(Some(match current.as_deref() {
+        Some("all") => "all",
+        Some("none") => "none",
+        _ => "notes",
+    }));
+    icons.connect_active_name_notify(|g| {
+        let name = g.active_name().map(|n| n.to_string()).unwrap_or_default();
+        let _ = core().set_setting("tree_icons".into(), name);
+        crate::window::apply_tree_look();
     });
     dialog.present(Some(parent));
 }

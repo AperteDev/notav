@@ -15,7 +15,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 /// The title above the text is an entry that looks like a heading.
 /// While a note is dragged, the folder it would go to is tinted (`.drop-target`; the tree
 /// itself for the top level) instead of GTK's frame around the row under the pointer; the
-/// dragged note's row fades.
+/// dragged note's row fades. The dense tree (`.dense`) has shorter rows without gaps, as
+/// Nautilus' list view.
 const CSS: &str = "
 .note-title { font-size: 20pt; font-weight: 800; }
 .note-text { font-size: 12pt; line-height: 1.4; }
@@ -23,6 +24,7 @@ const CSS: &str = "
 .navigation-sidebar > row.drop-target { background-color: alpha(var(--accent-bg-color), 0.2); }
 .navigation-sidebar.drop-target { background-color: alpha(var(--accent-bg-color), 0.12); }
 .navigation-sidebar > row.dragged { opacity: 0.5; }
+.navigation-sidebar.dense > row { min-height: 28px; margin-bottom: 0; border-radius: 6px; }
 .drag-card { padding: 6px 12px; border-radius: 6px; background-color: var(--popover-bg-color);
   box-shadow: 0 1px 4px alpha(black, 0.3); }
 ";
@@ -745,9 +747,15 @@ fn refresh_tree(ui: &Rc<Ui>) {
     ui.tree.remove_all();
     ui.rows.borrow_mut().clear();
     let current = ui.current.borrow().as_ref().map(|n| n.id);
+    if dense_tree() {
+        ui.tree.add_css_class("dense");
+    } else {
+        ui.tree.remove_css_class("dense");
+    }
+    let icons = tree_icons();
     for (depth, item) in &items {
         let open = matches!(item, Item::Folder(f) if ui.expanded.borrow().contains(f));
-        let row = tree_row(*depth, item, open);
+        let row = tree_row(*depth, item, open, icons);
         match item {
             Item::Folder(f) => {
                 // Every click opens or closes it: the list's own activation skips the second
@@ -816,8 +824,31 @@ fn by_name(a: &str, b: &str) -> std::cmp::Ordering {
     glib::casefold(a).as_gstr().collate(glib::casefold(b))
 }
 
-/// A folder (its arrow showing whether it is open) or a note, indented by its depth.
-fn tree_row(depth: usize, item: &Item, open: bool) -> gtk::ListBoxRow {
+/// The device-only `dense_tree` setting: shorter rows.
+pub fn dense_tree() -> bool {
+    core().setting("dense_tree".into()).as_deref() == Some("true")
+}
+
+/// Which rows of the tree have an icon, (folders, notes), as the synced `tree_icons` setting
+/// says: "all", "notes" (the default) or "none".
+fn tree_icons() -> (bool, bool) {
+    match core().setting("tree_icons".into()).as_deref() {
+        Some("all") => (true, true),
+        Some("none") => (false, false),
+        _ => (false, true),
+    }
+}
+
+/// The tree in the density and with the icons set in Preferences.
+pub fn apply_tree_look() {
+    if let Some(ui) = ui() {
+        refresh_tree(&ui);
+    }
+}
+
+/// A folder (its arrow showing whether it is open) or a note, indented by its depth, with its
+/// icon if `icons` (folders, notes) says so.
+fn tree_row(depth: usize, item: &Item, open: bool, icons: (bool, bool)) -> gtk::ListBoxRow {
     let line = gtk::Box::new(gtk::Orientation::Horizontal, 4);
     line.set_margin_start(INDENT * depth as i32);
     let (name, folder) = match item {
@@ -834,6 +865,15 @@ fn tree_row(depth: usize, item: &Item, open: bool) -> gtk::ListBoxRow {
         }));
     }
     line.append(&arrow);
+    if (folder && icons.0) || (!folder && icons.1) {
+        let icon = gtk::Image::from_icon_name(if folder {
+            "folder-symbolic"
+        } else {
+            "text-x-generic-symbolic"
+        });
+        icon.set_pixel_size(16);
+        line.append(&icon);
+    }
     let label = gtk::Label::new(Some(name));
     label.set_xalign(0.0);
     label.set_ellipsize(gtk::pango::EllipsizeMode::End);

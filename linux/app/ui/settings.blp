@@ -35,6 +35,37 @@ Adw.PreferencesDialog dialog {
           }
         }
       }
+
+      // Kept on this device only.
+      Adw.SwitchRow dense_tree {
+        title: _("Dense tree");
+        subtitle: _("Smaller rows, as in Files");
+      }
+
+      // Synced.
+      Adw.ActionRow {
+        title: _("Icons in tree");
+
+        [suffix]
+        Adw.ToggleGroup tree_icons {
+          valign: center;
+
+          Adw.Toggle {
+            name: "all";
+            label: C_("tree icons", "All");
+          }
+
+          Adw.Toggle {
+            name: "notes";
+            label: C_("tree icons", "Notes Only");
+          }
+
+          Adw.Toggle {
+            name: "none";
+            label: C_("tree icons", "None");
+          }
+        }
+      }
     }
 
     // The notes folder (synced); another one asks whether to move the notes there.

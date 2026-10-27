@@ -17,7 +17,7 @@ and syncs while it runs. It is the sibling of [Todav](https://github.com/AperteD
 tasks and calendar app.
 
 Notav is at an early stage: notes, folders, search and sync work; the journal, links between
-notes and links to Todav's tasks are next (see the [plan](docs/ARCHITECTURE.md#plan)).
+notes and links to Todav's tasks are next (see the [roadmap](docs/ROADMAP.md)).
 
 Notav is developed in my free time. If it keeps your notes in order, you can support its
 development:
@@ -63,7 +63,7 @@ your Nextcloud and pick the folder your notes are in.
 
 Notav speaks English and Polish, and follows your GNOME language. Missing your language? Ask for
 it in an [issue](https://github.com/AperteDev/notav/issues), or translate it yourself (see
-[CONTRIBUTING.md](CONTRIBUTING.md#translations)).
+[CONTRIBUTING.md](docs/CONTRIBUTING.md#translations)).
 
 ## Development
 
@@ -89,7 +89,7 @@ The `notav` command-line tool (`cargo run -p notav-cli`) syncs and edits notes f
 
 Every push is checked and packaged by [CI](.github/workflows/ci.yml); releases are made by the
 manual [Release](.github/workflows/release.yml) workflow and listed in the
-[changelog](CHANGELOG.md).
+[changelog](docs/CHANGELOG.md).
 
 ## License
 

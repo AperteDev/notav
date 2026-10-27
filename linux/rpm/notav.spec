@@ -65,7 +65,7 @@ appstreamcli validate --no-net %{buildroot}%{_metainfodir}/dev.aperte.Notav.meta
 
 %files -f %{name}.lang
 %license LICENSE LICENSE.dependencies cargo-vendor.txt
-%doc README.md CHANGELOG.md
+%doc README.md docs/CHANGELOG.md
 %{_bindir}/notav-linux
 %{_datadir}/applications/dev.aperte.Notav.desktop
 %{_metainfodir}/dev.aperte.Notav.metainfo.xml

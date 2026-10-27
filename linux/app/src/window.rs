@@ -965,6 +965,8 @@ fn tree_row(depth: usize, item: &Item, open: bool, icons: (bool, bool)) -> gtk::
     let row = gtk::ListBoxRow::new();
     row.set_child(Some(&line));
     row.set_selectable(!folder);
+    // For screen readers and UI tests: a note's row has no tooltip to be named after.
+    row.update_property(&[gtk::accessible::Property::Label(name)]);
     if let Item::Folder(f) = item {
         row.set_tooltip_text(Some(f));
     }

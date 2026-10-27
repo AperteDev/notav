@@ -84,12 +84,22 @@
   `target/sandbox`); `make -C linux broadway` runs it in a browser on display `:6`
   (`http://127.0.0.1:8086`, Todav uses `:5`). Todav's notes on Broadway's limits apply. Closing
   the window quits the app (after the sync), so a new launch starts fresh.
-- With GTK 4.24, Broadway aborts as soon as a note opens (`append_node_ops` assertion, with or
-  without Editor mode). To see the editor, run the sandbox copy in a headless nested GNOME Shell
-  as Todav's notes describe (`gnome-shell --headless --virtual-monitor 1400x1000 --unsafe-mode`
-  on its own bus, Todav's `secrets-forward.py` for the keyring), with clicks and screenshots
-  through `org.gnome.Shell.Eval` and `org.gnome.Shell.Screenshot`. Send a button's press and
-  release in separate calls: in one, the click is lost.
+- With GTK 4.24, Broadway aborts as soon as a note opens (`append_node_ops` assertion). To see
+  and drive the app, use the `waydriver` MCP server (`waydriver-mcp`, installed with `cargo
+  install waydriver-mcp` and registered at user level): `start_session` with `command` the
+  absolute path of `scripts/waydriver-app.sh` and `app_name` `notav-waydriver`. It runs the
+  sandbox copy in a headless Mutter of its own (its own screen and input: nothing reaches the
+  desktop), finds widgets in the accessibility tree by XPath, and records each session (report
+  under `/tmp/waydriver`). Build the app first. What works:
+  - Find rows, buttons and the like by name (`//ListItem[@name='Plan']`, `//ToggleButton[@name=
+    'Main Menu']`; icon buttons are named after their tooltip). Never another `app_name`: the
+    tree is the desktop's, and a copy running there under its own name would be driven instead.
+  - Click with `hover` then `pointer_click`; the first pointer click of a session is often lost,
+    so check the result (`query`, `take_screenshot`) and click again. `click` (the accessibility
+    action) does nothing on the tree's rows and labels.
+  - Menus open (F10 for the main menu) but their items are not in the tree: point at them by
+    their place in a screenshot (`move_pointer_absolute`, `pointer_click`), or use the keyboard.
+  - `read_text` on `(//TextBox)[last()]` is the open note's text; `press_key`, `type_text` type.
 - Editor mode's reference note, `core/tests/reference.md`, has every piece of Markdown it styles;
   the core's tests parse it, and it can be put on the Test account (`notav new`) to look at in the
   app. Delete it from there afterwards.

@@ -494,3 +494,35 @@ fn a_deleted_folder_keeps_what_changed_on_the_server() {
     assert_eq!(f.a.note_text(find(&f.a, "Work/Plan.md").id).unwrap(), "p2");
     assert_eq!(f.a.folders(), ["Inbox", "Work"]);
 }
+
+#[test]
+fn undo_before_and_after_the_server_has_the_change() {
+    let f = Fixture::new("undo");
+    let plan =
+        f.a.add_note("Work".into(), "Plan".into(), "p".into())
+            .unwrap();
+    let idea = f.a.add_note("".into(), "Idea".into(), "i".into()).unwrap();
+    f.a.sync().unwrap();
+
+    // Undone before a sync: nothing to do on the server.
+    f.a.move_note(idea.id, "Work".into(), "Idea".into())
+        .unwrap();
+    f.a.delete_folder("Work".into()).unwrap();
+    assert!(f.a.undo(None).unwrap() && f.a.undo(None).unwrap());
+    let r = f.a.sync().unwrap();
+    assert_eq!((r.uploaded, r.removed), (0, 0), "{r:?}");
+    assert!(!f.a.pending());
+    assert_eq!(f.server_text("Idea.md").unwrap(), "i");
+
+    // Undone after: the deleted folder and note come back as new ones there.
+    f.a.delete_folder("Work".into()).unwrap();
+    f.a.sync().unwrap();
+    assert!(f.server_text("Work/Plan.md").is_none());
+    assert!(f.a.undo(None).unwrap());
+    f.a.sync().unwrap();
+    assert!(!f.a.pending());
+    assert_eq!(f.server_text("Work/Plan.md").unwrap(), "p");
+    assert_eq!(f.a.note(plan.id).unwrap().path, "Work/Plan.md");
+    f.b.sync().unwrap();
+    assert_eq!(paths(&f.b), ["Idea.md", "Work/Plan.md"]);
+}

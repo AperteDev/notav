@@ -2,6 +2,7 @@
 //! uploads it later.
 
 use crate::store::{self, CLEAN, DELETED, FOLDER_DELETED, MODIFIED, Row};
+use crate::undo::Before;
 use crate::{Client, Error, Result, now};
 use rusqlite::{Connection, params};
 
@@ -87,6 +88,21 @@ fn join(folder: &str, name: &str) -> String {
     } else {
         format!("{folder}/{name}")
     }
+}
+
+/// Give note `r` path `path`. Its server copy stays where it is until the push moves it, unless
+/// it is back where the server has it.
+fn place(db: &Connection, r: &Row, path: &str) -> Result<()> {
+    let server_path = r
+        .server_path
+        .clone()
+        .or_else(|| r.fileid.as_ref().map(|_| r.path.clone()))
+        .filter(|s| s != path);
+    db.execute(
+        "UPDATE notes SET path = ?, server_path = ?, dirty = ? WHERE id = ?",
+        params![path, server_path, MODIFIED, r.id],
+    )?;
+    Ok(())
 }
 
 /// SQL: column `col` is a path below the folder in `?1`.
@@ -238,25 +254,24 @@ impl Client {
             if store::by_path(&db, &path)?.is_some() {
                 return Err(Error::Exists(path));
             }
-            // The server copy stays where it is until the push moves it.
-            let server_path = r
-                .server_path
-                .clone()
-                .or_else(|| r.fileid.as_ref().map(|_| r.path.clone()));
-            db.execute(
-                "UPDATE notes SET path = ?, server_path = ?, dirty = ? WHERE id = ?",
-                params![path, server_path, MODIFIED, id],
-            )?;
+            place(&db, &r, &path)?;
             (r.path, store::by_id(&db, id)?.unwrap())
         };
+        self.remember(vec![Before::Note {
+            id,
+            path: old.clone(),
+            text: None,
+        }]);
         self.emit(vec![old, row.path.clone()]);
         Ok(Note::from(&row))
     }
 
     pub fn delete_note(&self, id: i64) -> Result<()> {
-        let path = {
+        let (path, text) = {
             let db = self.db.lock().unwrap();
-            let r = store::by_id(&db, id)?.ok_or_else(|| Error::NotFound(id.to_string()))?;
+            let r = store::by_id(&db, id)?
+                .filter(|r| r.dirty != DELETED)
+                .ok_or_else(|| Error::NotFound(id.to_string()))?;
             if r.fileid.is_some() {
                 db.execute(
                     "UPDATE notes SET dirty = ? WHERE id = ?",
@@ -265,8 +280,13 @@ impl Client {
             } else {
                 db.execute("DELETE FROM notes WHERE id = ?", [id])?;
             }
-            r.path
+            (r.path, r.text)
         };
+        self.remember(vec![Before::Note {
+            id,
+            path: path.clone(),
+            text: Some(text),
+        }]);
         self.emit(vec![path]);
         Ok(())
     }
@@ -277,14 +297,24 @@ impl Client {
     pub fn move_folder(&self, folder: String, parent: String) -> Result<String> {
         let folder = folder_path(&folder)?;
         let dst = join(&folder_path(&parent)?, split(&folder).1);
-        self.relocate_folder(folder, dst)
+        let to = self.relocate_folder(folder.clone(), dst)?;
+        self.remember(vec![Before::FolderMoved {
+            from: folder,
+            to: to.clone(),
+        }]);
+        Ok(to)
     }
 
     /// Rename folder `folder` ("a/b") to `name`, as `move_folder` moves it: its new path.
     pub fn rename_folder(&self, folder: String, name: String) -> Result<String> {
         let folder = folder_path(&folder)?;
         let dst = join(split(&folder).0, &file_title(&name)?);
-        self.relocate_folder(folder, dst)
+        let to = self.relocate_folder(folder.clone(), dst)?;
+        self.remember(vec![Before::FolderMoved {
+            from: folder,
+            to: to.clone(),
+        }]);
+        Ok(to)
     }
 
     /// Delete folder `folder` ("a/b") with everything in it. Its notes go as `delete_note`'s do
@@ -295,16 +325,29 @@ impl Client {
         if folder.is_empty() {
             return Err(Error::Invalid(folder));
         }
+        let inside = |p: &str| p == folder || p.starts_with(&format!("{folder}/"));
+        let mut before: Vec<Before> = self
+            .folders()
+            .into_iter()
+            .filter(|f| inside(f))
+            .map(Before::Folder)
+            .collect();
         let changed = {
             let db = self.db.lock().unwrap();
             let tx = db.unchecked_transaction()?;
             let on_server = on_server(&tx, &folder)?;
             let in_it = under("path");
-            let changed: Vec<String> = {
-                let mut st = tx.prepare(&format!("SELECT path FROM notes WHERE {in_it}"))?;
-                st.query_map([&folder], |r| r.get(0))?
-                    .collect::<rusqlite::Result<_>>()?
-            };
+            let notes = store::rows(
+                &tx,
+                &format!("dirty != ?2 AND {in_it}"),
+                params![folder, DELETED],
+            )?;
+            before.extend(notes.iter().map(|r| Before::Note {
+                id: r.id,
+                path: r.path.clone(),
+                text: Some(r.text.clone()),
+            }));
+            let changed: Vec<String> = notes.into_iter().map(|r| r.path).collect();
             tx.execute(
                 &format!("DELETE FROM notes WHERE fileid IS NULL AND {in_it}"),
                 [&folder],
@@ -326,8 +369,77 @@ impl Client {
             tx.commit()?;
             changed
         };
+        self.remember(before);
         self.emit(changed);
         Ok(())
+    }
+
+    /// The latest change, to undo just that one later (a toast's Undo button).
+    pub fn last_change(&self) -> Option<u64> {
+        self.journal.lock().unwrap().last()
+    }
+
+    /// Put back what change `id` (else the latest) replaced: deleted notes and folders, moved
+    /// ones where they were (a name taken since gets a number); false when there is none. A note
+    /// deleted on the server already comes back as a new one.
+    pub fn undo(&self, id: Option<u64>) -> Result<bool> {
+        let Some(before) = self.journal.lock().unwrap().take(id) else {
+            return Ok(false);
+        };
+        for b in before.into_iter().rev() {
+            match b {
+                Before::Note { id, path, text } => self.restore(id, &path, text)?,
+                Before::Folder(path) => self.add_folder(path)?,
+                Before::FolderMoved { from, to } => {
+                    self.relocate_folder(to, from)?;
+                }
+            }
+        }
+        Ok(true)
+    }
+
+    /// Note `id` back at `path`; `text`: deleted, back with that text. A note deleted since
+    /// stays deleted when only its move is undone.
+    fn restore(&self, id: i64, path: &str, text: Option<String>) -> Result<()> {
+        let changed = {
+            let db = self.db.lock().unwrap();
+            let (folder, name) = split(path);
+            let (stem, ext) = name.rsplit_once('.').unwrap_or((name, "md"));
+            let Some(r) = store::by_id(&db, id)? else {
+                // Gone from here too: a new note, with its old id.
+                let Some(text) = text else { return Ok(()) };
+                let to = free_path(&db, folder, stem, ext)?;
+                db.execute(
+                    "INSERT INTO notes (id, path, text, modified, dirty) VALUES (?, ?, ?, ?, ?)",
+                    params![id, to, text, now(), MODIFIED],
+                )?;
+                drop(db);
+                self.emit(vec![to]);
+                return Ok(());
+            };
+            if r.dirty == DELETED {
+                if text.is_none() {
+                    return Ok(());
+                }
+                db.execute(
+                    "UPDATE notes SET dirty = ? WHERE id = ?",
+                    params![MODIFIED, id],
+                )?;
+            }
+            if r.path == path {
+                vec![r.path]
+            } else {
+                let to = free_path(&db, folder, stem, ext)?;
+                place(&db, &r, &to)?;
+                vec![r.path, to]
+            }
+        };
+        self.emit(changed);
+        Ok(())
+    }
+
+    fn remember(&self, before: Vec<Before>) {
+        self.journal.lock().unwrap().record(before);
     }
 
     /// Move folder `folder` to path `dst`, see `move_folder`.
@@ -521,5 +633,41 @@ mod tests {
         assert_eq!(c.folders(), ["Work"]);
         c.delete_folder("Work".into()).unwrap();
         assert!(!c.pending());
+    }
+
+    #[test]
+    fn undo_puts_back_deletes_and_moves() {
+        let c = client("undo");
+        let a = c
+            .add_note("Work".into(), "Plan".into(), "p".into())
+            .unwrap();
+        let b = c.add_note("".into(), "Later".into(), "l".into()).unwrap();
+        c.add_folder("Work/Empty".into()).unwrap();
+        let paths = || -> Vec<String> { c.notes().into_iter().map(|n| n.path).collect() };
+
+        c.move_note(b.id, "Work".into(), "Later".into()).unwrap();
+        let moved = c.last_change();
+        // Never uploaded: its row goes, and comes back with its id and text.
+        c.delete_note(a.id).unwrap();
+        assert!(c.undo(c.last_change()).unwrap());
+        assert_eq!(c.note(a.id).unwrap().path, "Work/Plan.md");
+        assert_eq!(c.note_text(a.id).as_deref(), Some("p"));
+
+        // An older step, by its id; its name taken since: a number is added.
+        c.add_note("".into(), "Later".into(), "new".into()).unwrap();
+        assert!(c.undo(moved).unwrap());
+        assert_eq!(c.note(b.id).unwrap().path, "Later 2.md");
+        assert!(!c.undo(moved).unwrap(), "a step is undone once");
+
+        c.delete_folder("Work".into()).unwrap();
+        assert_eq!(paths(), ["Later 2.md", "Later.md"]);
+        assert!(c.undo(None).unwrap());
+        assert_eq!(paths(), ["Later 2.md", "Later.md", "Work/Plan.md"]);
+        assert_eq!(c.folders(), ["Work", "Work/Empty"]);
+
+        c.rename_folder("Work".into(), "Done".into()).unwrap();
+        assert!(c.undo(None).unwrap());
+        assert_eq!(c.note(a.id).unwrap().path, "Work/Plan.md");
+        assert!(!c.undo(None).unwrap());
     }
 }

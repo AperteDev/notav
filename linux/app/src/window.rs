@@ -173,6 +173,7 @@ pub fn setup_actions(app: &adw::Application) {
     app.set_accels_for_action("win.preferences", &["<Control>comma"]);
     app.set_accels_for_action("win.new-note", &["<Control>n"]);
     app.set_accels_for_action("win.search", &["<Control>f"]);
+    app.set_accels_for_action("win.undo", &["<Control>z"]);
 }
 
 /// Turns About's Details page into Support: a note and the donation links instead of the
@@ -290,6 +291,30 @@ pub fn save() {
 pub fn toast(msg: &str) {
     if let Some(ui) = ui() {
         ui.toasts.add_toast(note(msg));
+    }
+}
+
+/// Tell what was done, with a button undoing just that (the latest change).
+fn undo_toast(ui: &Ui, title: &str) {
+    let t = note(title);
+    t.set_priority(adw::ToastPriority::High);
+    t.set_button_label(Some(&gettext("Undo")));
+    let change = core().last_change();
+    t.connect_button_clicked(move |_| undo(change));
+    ui.toasts.add_toast(t);
+}
+
+/// Undo `change`, else the latest one.
+fn undo(change: Option<u64>) {
+    let Some(ui) = ui() else { return };
+    match core().undo(change) {
+        Ok(true) => {
+            refresh(&ui);
+            reload_current(&ui);
+            request_sync();
+        }
+        Ok(false) => ui.window.error_bell(),
+        Err(e) => toast(&e.to_string()),
     }
 }
 
@@ -604,6 +629,22 @@ fn connect(ui: &Rc<Ui>) {
         });
         ui.window.add_action(&a);
     }
+    // Undo the latest change; in a text field, the typing there (as in Todav).
+    let window = ui.window.downgrade();
+    let undo_last = gio::SimpleAction::new("undo", None);
+    undo_last.connect_activate(move |_, _| {
+        let Some(w) = window.upgrade() else { return };
+        match gtk::prelude::RootExt::focus(&w)
+            .filter(|f| f.is::<gtk::Text>() || f.is::<gtk::TextView>())
+        {
+            Some(text) => {
+                let _ = text.activate_action("text.undo", None);
+            }
+            None if w.visible_dialog().is_none() => undo(None),
+            None => {}
+        }
+    });
+    ui.window.add_action(&undo_last);
     // Only while the notes are shown.
     let enable = {
         let ui = Rc::downgrade(ui);
@@ -612,6 +653,7 @@ fn connect(ui: &Rc<Ui>) {
             let main = ui.stack.visible_child_name().as_deref() == Some("main");
             new.set_enabled(main);
             search.set_enabled(main);
+            undo_last.set_enabled(main);
         }
     };
     enable();
@@ -1191,99 +1233,40 @@ fn rename_folder(ui: &Rc<Ui>, folder: String) {
     });
 }
 
-/// Delete folder `folder` with everything in it, after asking.
+/// Delete folder `folder` with everything in it; the toast can undo it.
 fn delete_folder(ui: &Rc<Ui>, folder: String) {
-    let name = folder.rsplit('/').next().unwrap_or(&folder).to_string();
-    let inside = {
-        let f = folder.clone();
-        move |p: &str| p == f || p.starts_with(&format!("{f}/"))
-    };
-    let count = core().notes().iter().filter(|n| inside(&n.folder)).count() as u64;
-    let ui = ui.clone();
-    glib::spawn_future_local(async move {
-        let body = match count {
-            0 => gettext("“{name}” will be deleted on every device."),
-            n => ngettext(
-                "“{name}” and the note in it will be deleted on every device.",
-                "“{name}” and the {count} notes in it will be deleted on every device.",
-                n,
-            ),
-        };
-        let alert = adw::AlertDialog::new(
-            Some(&gettext("Delete Folder?")),
-            Some(
-                &body
-                    .replace("{name}", &name)
-                    .replace("{count}", &count.to_string()),
-            ),
-        );
-        alert.add_responses(&[
-            ("cancel", &gettext("Cancel")),
-            ("delete", &gettext("Delete")),
-        ]);
-        alert.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
-        alert.set_default_response(Some("cancel"));
-        alert.set_close_response("cancel");
-        if alert.choose_future(Some(&ui.window)).await != "delete" {
-            return;
+    // What is typed in a note in it comes back with an undo.
+    save_now(ui);
+    match core().delete_folder(folder.clone()) {
+        Ok(()) => {
+            refresh(ui);
+            reload_current(ui);
+            request_sync();
+            let name = folder.rsplit('/').next().unwrap_or(&folder);
+            undo_toast(ui, &gettext("“{title}” deleted").replace("{title}", name));
         }
-        if ui
-            .current
-            .borrow()
-            .as_ref()
-            .is_some_and(|c| inside(&c.folder))
-        {
-            ui.unsaved.set(false);
-        }
-        match core().delete_folder(folder.clone()) {
-            Ok(()) => {
-                refresh(&ui);
-                reload_current(&ui);
-                request_sync();
-            }
-            Err(e) => toast(&e.to_string()),
-        }
-    });
+        Err(e) => toast(&e.to_string()),
+    }
 }
 
-/// Delete a note, after asking.
+/// Delete a note; the toast can undo it.
 fn delete_note(ui: &Rc<Ui>, id: i64) {
     let Some(n) = core().note(id) else {
         return;
     };
-    let ui = ui.clone();
-    glib::spawn_future_local(async move {
-        let alert = adw::AlertDialog::new(
-            Some(&gettext("Delete Note?")),
-            Some(
-                &gettext("“{title}” will be deleted on every device.").replace("{title}", &n.title),
-            ),
-        );
-        alert.add_responses(&[
-            ("cancel", &gettext("Cancel")),
-            ("delete", &gettext("Delete")),
-        ]);
-        alert.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
-        alert.set_default_response(Some("cancel"));
-        alert.set_close_response("cancel");
-        if alert.choose_future(Some(&ui.window)).await != "delete" {
-            return;
+    save_now(ui);
+    match core().delete_note(id) {
+        Ok(()) => {
+            refresh(ui);
+            reload_current(ui);
+            request_sync();
+            undo_toast(
+                ui,
+                &gettext("“{title}” deleted").replace("{title}", &n.title),
+            );
         }
-        let open = ui.current.borrow().as_ref().is_some_and(|c| c.id == id);
-        if open {
-            ui.unsaved.set(false);
-        }
-        match core().delete_note(id) {
-            Ok(()) => {
-                if open {
-                    close_note(&ui);
-                }
-                refresh(&ui);
-                request_sync();
-            }
-            Err(e) => toast(&e.to_string()),
-        }
-    });
+        Err(e) => toast(&e.to_string()),
+    }
 }
 
 /// The tree's menu, on a right click or a long press: on a folder, new notes and folders go

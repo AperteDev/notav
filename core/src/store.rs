@@ -46,6 +46,37 @@ CREATE TABLE folders (
     r#"
 CREATE TABLE moves (id INTEGER PRIMARY KEY, src TEXT NOT NULL, dst TEXT NOT NULL);
 "#,
+    // Note ids never come back after a delete: undo (`undo.rs`) finds notes by them.
+    r#"
+CREATE TABLE notes_new (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  path TEXT NOT NULL UNIQUE,
+  fileid TEXT UNIQUE,
+  etag TEXT,
+  server_path TEXT,
+  text TEXT NOT NULL,
+  base TEXT,
+  mtime INTEGER,
+  modified INTEGER NOT NULL,
+  dirty INTEGER NOT NULL DEFAULT 0
+);
+INSERT INTO notes_new SELECT id, path, fileid, etag, server_path, text, base, mtime, modified, dirty
+  FROM notes;
+DROP TABLE notes;
+ALTER TABLE notes_new RENAME TO notes;
+CREATE TRIGGER notes_fts_insert AFTER INSERT ON notes BEGIN
+  INSERT INTO notes_fts (rowid, path, text) VALUES (new.id,
+    replace(replace(new.path, 'ł', 'l'), 'Ł', 'L'), replace(replace(new.text, 'ł', 'l'), 'Ł', 'L'));
+END;
+CREATE TRIGGER notes_fts_delete AFTER DELETE ON notes BEGIN
+  DELETE FROM notes_fts WHERE rowid = old.id;
+END;
+CREATE TRIGGER notes_fts_update AFTER UPDATE OF path, text ON notes BEGIN
+  DELETE FROM notes_fts WHERE rowid = old.id;
+  INSERT INTO notes_fts (rowid, path, text) VALUES (new.id,
+    replace(replace(new.path, 'ł', 'l'), 'Ł', 'L'), replace(replace(new.text, 'ł', 'l'), 'Ł', 'L'));
+END;
+"#,
 ];
 
 pub const CLEAN: i64 = 0;

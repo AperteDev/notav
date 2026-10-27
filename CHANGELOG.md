@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Note icons in the tree, set in Preferences: on notes only (the default), on folders too, or none
 - Rename and delete folders from the sidebar menu; a note changed on another device meanwhile
   is kept, and its folder with it
+- Undo for deleted, moved and renamed notes and folders: the Undo button on the toast, or
+  Ctrl+Z
+
+### Changed
+
+- Deleting a note no longer asks first: the toast can undo it
 
 ### Fixed
 

@@ -5,6 +5,7 @@ mod notes;
 mod settings;
 pub mod store;
 mod sync;
+mod undo;
 
 use dav::Dav;
 use rusqlite::Connection;
@@ -33,6 +34,7 @@ pub struct Client {
     dav: Mutex<Option<Arc<Dav>>>,
     listeners: Mutex<Vec<Box<dyn ChangeListener>>>,
     sync_lock: Mutex<()>,
+    journal: Mutex<undo::Journal>,
 }
 
 pub fn now() -> i64 {
@@ -51,6 +53,7 @@ impl Client {
             dav: Mutex::new(None),
             listeners: Mutex::new(Vec::new()),
             sync_lock: Mutex::new(()),
+            journal: Mutex::default(),
         })
     }
 
@@ -64,6 +67,7 @@ impl Client {
             db.execute_batch(
                 "DELETE FROM notes; DELETE FROM folders; DELETE FROM kv WHERE key LIKE 'config_%';",
             )?;
+            self.journal.lock().unwrap().clear();
         }
         store::kv_set(&db, "account_url", &url)?;
         store::kv_set(&db, "account_user", &user)?;
@@ -86,6 +90,7 @@ impl Client {
             "DELETE FROM notes; DELETE FROM folders;
              DELETE FROM kv WHERE key LIKE 'config_%' OR key LIKE 'account_%';",
         )?;
+        self.journal.lock().unwrap().clear();
         *self.dav.lock().unwrap() = None;
         Ok(())
     }

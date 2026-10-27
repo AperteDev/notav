@@ -1,6 +1,7 @@
 pub mod dav;
 pub mod json;
 mod login;
+pub mod markdown;
 mod notes;
 mod settings;
 pub mod store;

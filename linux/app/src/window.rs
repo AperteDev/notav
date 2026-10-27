@@ -107,6 +107,8 @@ struct Ui {
     current: RefCell<Option<Note>>,
     /// The editor holds text not given to the core yet.
     unsaved: Cell<bool>,
+    /// The note is styled again before it is drawn next (`restyle`).
+    restyle_pending: Cell<bool>,
     save_timer: RefCell<Option<glib::SourceId>>,
     /// Set while code replaces the editor's text or the list's rows.
     loading: Cell<bool>,
@@ -514,6 +516,7 @@ fn build(app: &adw::Application) -> Rc<Ui> {
             .language("notav-markdown")
             .as_ref(),
     );
+    crate::editor::setup(&buffer);
     follow_style(&buffer);
 
     let ui = Rc::new(Ui {
@@ -556,6 +559,7 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         editor,
         current: RefCell::new(None),
         unsaved: Cell::new(false),
+        restyle_pending: Cell::new(false),
         save_timer: RefCell::new(None),
         loading: Cell::new(false),
         last_error: RefCell::new(String::new()),
@@ -566,6 +570,27 @@ fn build(app: &adw::Application) -> Rc<Ui> {
     connect(&ui);
     connect_welcome(&ui, &b);
     ui
+}
+
+/// The device-only `source_mode` setting: Source mode instead of Editor mode.
+fn source_mode() -> bool {
+    core().setting("source_mode".into()).as_deref() == Some("true")
+}
+
+/// Style the note again for its mode, once the changes made now are done and before it is
+/// drawn: typed text does not take the styles around it.
+fn restyle(ui: &Rc<Ui>) {
+    if ui.restyle_pending.replace(true) {
+        return;
+    }
+    let weak = Rc::downgrade(ui);
+    glib::idle_add_local_full(glib::Priority::HIGH_IDLE, move || {
+        if let Some(ui) = weak.upgrade() {
+            ui.restyle_pending.set(false);
+            crate::editor::restyle(&ui.buffer, source_mode());
+        }
+        glib::ControlFlow::Break
+    });
 }
 
 /// The editor's colours follow the light or dark style: Adwaita's, for prose (`sourceview/`).
@@ -579,6 +604,7 @@ fn follow_style(buffer: &sourceview5::Buffer) {
                     .scheme(name)
                     .as_ref(),
             );
+            crate::editor::look(&buffer);
         }
     };
     let sm = adw::StyleManager::default();
@@ -629,6 +655,18 @@ fn connect(ui: &Rc<Ui>) {
         });
         ui.window.add_action(&a);
     }
+    // Source mode or Editor mode, from the main menu.
+    let source = gio::SimpleAction::new_stateful("source-mode", None, &source_mode().to_variant());
+    let weak = Rc::downgrade(ui);
+    source.connect_change_state(move |a, state| {
+        let (Some(ui), Some(on)) = (weak.upgrade(), state.and_then(|s| s.get::<bool>())) else {
+            return;
+        };
+        a.set_state(&on.to_variant());
+        let _ = core().set_setting("source_mode".into(), on.to_string());
+        restyle(&ui);
+    });
+    ui.window.add_action(&source);
     // Undo the latest change; in a text field, the typing there (as in Todav).
     let window = ui.window.downgrade();
     let undo_last = gio::SimpleAction::new("undo", None);
@@ -733,6 +771,7 @@ fn connect(ui: &Rc<Ui>) {
     let weak = Rc::downgrade(ui);
     ui.buffer.connect_changed(move |_| {
         let Some(ui) = weak.upgrade() else { return };
+        restyle(&ui);
         if ui.loading.get() {
             return;
         }

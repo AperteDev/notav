@@ -2,6 +2,7 @@
 //! service: closing the window quits, once what is waiting for the server has gone up.
 
 mod connection;
+mod editor;
 mod goa;
 mod i18n;
 mod settings;

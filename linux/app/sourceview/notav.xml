@@ -23,4 +23,17 @@
   <style name="markdown:image-marker"         foreground="#9A9996" bold="true"/>
   <style name="markdown:link-text"            foreground="#1C71D8"/>
   <style name="markdown:url"                  foreground="#9A9996" italic="true" underline="low"/>
+
+  <!-- Editor mode (src/editor.rs), headings as above. -->
+  <style name="notav-editor:strong"           bold="true"/>
+  <style name="notav-editor:emphasis"         italic="true"/>
+  <style name="notav-editor:strikethrough"    strikethrough="true"/>
+  <style name="notav-editor:code"             background="#EDEDEB"/>
+  <style name="notav-editor:code-block"       line-background="#F6F5F4"/>
+  <style name="notav-editor:quote"            foreground="#5E5C64"/>
+  <style name="notav-editor:link"             foreground="#1C71D8" underline="single"/>
+  <style name="notav-editor:list-mark"        foreground="#9A9996" bold="true"/>
+  <style name="notav-editor:task"             foreground="#1C71D8" bold="true"/>
+  <style name="notav-editor:table-header"     bold="true"/>
+  <style name="notav-editor:mark"             foreground="#9A9996"/>
 </style-scheme>

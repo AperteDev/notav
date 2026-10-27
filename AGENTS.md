@@ -40,8 +40,9 @@
 ## Dependencies
 
 - Standard library and platform SDKs first; a third-party crate only where it replaces real
-  work, with the reason in its commit. Now: `ureq` (rustls), `rusqlite`, `quick-xml`, `gtk4`,
-  `libadwaita`, `sourceview5`, `libsecret`, `libc`.
+  work, with the reason in its commit. Now: `ureq` (rustls), `rusqlite`, `quick-xml`,
+  `pulldown-cmark` (Markdown for Editor mode, without its HTML writer), `gtk4`, `libadwaita`,
+  `sourceview5`, `libsecret`, `libc`.
 - `rusqlite` stays within 0.38 to 0.40 on the system SQLite, not bundled: distributions
   (Fedora) require that, and Fedora packages 0.38. Search needs FTS5, which every SQLite Notav
   runs on has.
@@ -83,4 +84,13 @@
   `target/sandbox`); `make -C linux broadway` runs it in a browser on display `:6`
   (`http://127.0.0.1:8086`, Todav uses `:5`). Todav's notes on Broadway's limits apply. Closing
   the window quits the app (after the sync), so a new launch starts fresh.
+- With GTK 4.24, Broadway aborts as soon as a note opens (`append_node_ops` assertion, with or
+  without Editor mode). To see the editor, run the sandbox copy in a headless nested GNOME Shell
+  as Todav's notes describe (`gnome-shell --headless --virtual-monitor 1400x1000 --unsafe-mode`
+  on its own bus, Todav's `secrets-forward.py` for the keyring), with clicks and screenshots
+  through `org.gnome.Shell.Eval` and `org.gnome.Shell.Screenshot`. Send a button's press and
+  release in separate calls: in one, the click is lost.
+- Editor mode's reference note, `core/tests/reference.md`, has every piece of Markdown it styles;
+  the core's tests parse it, and it can be put on the Test account (`notav new`) to look at in the
+  app. Delete it from there afterwards.
 

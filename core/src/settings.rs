@@ -12,6 +12,8 @@ pub const DEVICE_ONLY: &[&str] = &[
     "color_scheme",
     // Row density suits the screen.
     "dense_tree",
+    // Source or Editor mode: switched for a moment on one device, not on all.
+    "source_mode",
     "goa_account",
     "manual_url",
     "manual_user",

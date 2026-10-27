@@ -4,24 +4,11 @@ Planned work, not yet done; the order is not fixed.
 
 ## Editor mode
 
-Two modes, as other editors name them: **Editor mode**, the default, and **Source mode**, the
-editor of now. The file is plain Markdown in both. Source mode keeps its highlighting (the
-GtkSourceView language `notav-markdown`) and nothing more; all else below is Editor mode's.
-Useful features come before looks: the Markdown marks stay visible for now.
+Editor mode (the default) styles the note from the core's parse (`notav_core::markdown`, GitHub
+Flavored Markdown); Source mode keeps GtkSourceView's highlighting and nothing more. All below is
+Editor mode's. Useful features come before looks: the Markdown marks stay visible for now.
 
-1. **Parsing in the core**: GitHub Flavored Markdown (CommonMark plus tables, task lists,
-   strikethrough, autolinks; footnotes too) parsed in `notav-core` with `pulldown-cmark` into
-   style ranges, with nothing of GTK in it, so it is unit-tested and serves links, tags and the
-   preview later. The whole note is parsed again shortly after each change (notes are small;
-   above some size, live styling stops). A new dependency: justify it in `AGENTS.md`. Maybe more
-   extensions later (math, callouts, as Obsidian has them), each only where the files stay
-   readable elsewhere.
-2. **All of the syntax shown well**, from the parse: headings (`#` and underlined), emphasis,
-   strong, strikethrough, inline code and code blocks (fenced and indented, on a background),
-   quotes (nested), lists (nested, numbered, tasks), tables (monospace), links, autolinks and
-   images (as text for now), rules, HTML (dimmed), footnotes, line breaks and escapes; the marks
-   dimmed, as now.
-3. **Features**:
+1. **Features**:
    - Tables that look like Markdown tables, kept aligned: cells padded so the pipes line up
      and the `|---|` row rewritten with its alignment colons, when the cursor leaves a row or on
      request. From the right-click menu: insert a table, add, delete and move rows and columns,
@@ -31,13 +18,18 @@ Useful features come before looks: the Markdown marks stay visible for now.
    - Lists: Enter continues a bullet, a number (renumbering what follows) or a task; Enter on
      an empty item ends the list.
    - Links: Ctrl+click opens one.
-4. **Keyboard shortcuts**, later: Tab and Shift+Tab between table cells, Enter to the next row
+2. **Keyboard shortcuts**, later: Tab and Shift+Tab between table cells, Enter to the next row
    (a new one at the end); Tab and Shift+Tab to indent list items; Ctrl+B, Ctrl+I, Ctrl+K around
    the selection; Ctrl+E between Editor and Source mode.
-5. **Hiding the marks**, later, as Obsidian's Live Preview: `**`, `_`, backticks, `#`, `>` and
+3. **Hiding the marks**, later, as Obsidian's Live Preview: `**`, `_`, backticks, `#`, `>` and
    link targets hidden except in the element (or the heading's line) the cursor is in; drawn
    bullets, quote bars, rules and table grids; images below their line. Blocked for now (see
    [Open questions](#open-questions-and-risks)).
+4. **More Markdown**, maybe: math and callouts as Obsidian has them (GitHub's `> [!NOTE]` alerts
+   are only quotes now), each only where the files stay readable elsewhere.
+5. **Faster styling** if long notes need it: each change parses and styles the whole note again
+   (about 45 ms per keystroke for 120 KB in a debug build, a few for a normal note; above
+   300,000 characters it stops). Restyling only the blocks around a change would cut that.
 
 ## Planned features
 

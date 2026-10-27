@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is kept, and its folder with it
 - Undo for deleted, moved and renamed notes and folders: the Undo button on the toast, or
   Ctrl+Z
+- Editor mode, the new default: every part of GitHub Flavored Markdown styled as it is meant
+  (headings, emphasis, code, quotes, lists and tasks, tables in columns, links and bare URLs,
+  footnotes, front matter), the Markdown marks dimmed. Source mode, in the main menu, keeps the
+  editor as it was
 
 ### Changed
 

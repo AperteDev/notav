@@ -5,6 +5,8 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+# Markdown for Editor mode; without its HTML writer.
+pulldown-cmark = { version = "0.13.5", default-features = false }
 quick-xml = "0.42.0"
 # 0.38 is what Fedora packages; the system SQLite, as distributions want.
 rusqlite = ">=0.38, <0.41"

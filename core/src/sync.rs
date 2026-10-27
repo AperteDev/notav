@@ -5,8 +5,8 @@
 //! stays with a file across a rename or move.
 
 use crate::dav::{Dav, Entry};
-use crate::notes::{free_path, is_note, split};
-use crate::store::{self, CLEAN, DELETED, MODIFIED, Row};
+use crate::notes::{free_path, is_note, split, under};
+use crate::store::{self, CLEAN, DELETED, FOLDER_DELETED, MODIFIED, Row};
 use crate::{Client, Error, Result, now};
 use rusqlite::{Connection, params};
 use std::collections::{HashMap, HashSet};
@@ -49,10 +49,11 @@ impl Client {
         let root = self.notes_root()?;
         {
             // Another notes folder (here or from another device): list it all again. Notes keep
-            // their rows; those moved along are found by oc:id.
+            // their rows; those moved along are found by oc:id. Folders deleted here were in the
+            // other one.
             let db = self.db.lock().unwrap();
             if store::kv_get(&db, "config_notes_root")?.as_deref() != Some(&root) {
-                db.execute("DELETE FROM folders WHERE dirty = 0", [])?;
+                db.execute("DELETE FROM folders WHERE dirty != 1", [])?;
             }
         }
         let mut report = SyncReport::default();
@@ -272,6 +273,63 @@ impl Client {
                     })
                 }
                 r => r?,
+            }
+        }
+        self.push_folder_deletions(dav, root, report)
+    }
+
+    /// DELETE the folders deleted here, after their notes: unless a note in one stays (changed
+    /// on the server, or new there), which keeps its folder; one locked waits.
+    fn push_folder_deletions(&self, dav: &Dav, root: &str, report: &mut SyncReport) -> Result<()> {
+        let folders: Vec<String> = {
+            let db = self.db.lock().unwrap();
+            let mut st = db.prepare("SELECT path FROM folders WHERE dirty = ?")?;
+            st.query_map([FOLDER_DELETED], |r| r.get(0))?
+                .collect::<rusqlite::Result<_>>()?
+        };
+        for f in folders {
+            let keep = |db: &Connection| {
+                db.execute("UPDATE folders SET dirty = 0 WHERE path = ?", [&f])
+                    .map(|_| ())
+            };
+            let notes: Vec<i64> = {
+                let db = self.db.lock().unwrap();
+                let mut st = db.prepare(&format!(
+                    "SELECT dirty FROM notes WHERE {} OR {}",
+                    under("path"),
+                    under("server_path")
+                ))?;
+                st.query_map([&f], |r| r.get(0))?
+                    .collect::<rusqlite::Result<_>>()?
+            };
+            if notes.iter().any(|&d| d != DELETED) {
+                keep(&self.db.lock().unwrap())?;
+                continue;
+            }
+            if !notes.is_empty() {
+                continue; // locked: reported with the note
+            }
+            let href = format!("{root}{f}/");
+            if has_notes(dav, &href)? {
+                // New there since the last pull: the pull brings them.
+                keep(&self.db.lock().unwrap())?;
+                continue;
+            }
+            match dav.delete(&href, None) {
+                Ok(()) => {
+                    let db = self.db.lock().unwrap();
+                    db.execute(
+                        "DELETE FROM folders WHERE path = ? AND dirty = ?",
+                        params![f, FOLDER_DELETED],
+                    )?;
+                }
+                Err(Error::Locked(_)) => report.locked.push(Locked {
+                    path: f,
+                    file: None,
+                    owner: None,
+                    since: None,
+                }),
+                Err(e) => return Err(e),
             }
         }
         Ok(())
@@ -696,6 +754,27 @@ impl Client {
         changed.extend([n.path.clone(), path.to_string()]);
         Ok(())
     }
+}
+
+/// Folder `href` has notes, at any depth (dot-folders skipped, as the pull skips them).
+fn has_notes(dav: &Dav, href: &str) -> Result<bool> {
+    let mut queue = vec![href.to_string()];
+    while let Some(h) = queue.pop() {
+        for e in dav.list(&h, "1")?.into_iter().skip(1) {
+            let name = e
+                .href
+                .trim_end_matches('/')
+                .rsplit('/')
+                .next()
+                .unwrap_or("");
+            if e.folder && !name.starts_with('.') {
+                queue.push(e.href);
+            } else if !e.folder && is_note(name) {
+                return Ok(true);
+            }
+        }
+    }
+    Ok(false)
 }
 
 /// "a/b" → "a/b/", "" → "".

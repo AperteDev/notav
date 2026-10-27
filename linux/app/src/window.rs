@@ -592,6 +592,8 @@ fn connect(ui: &Rc<Ui>) {
     for (name, f) in [
         ("new-note-in", new_note_in as fn(&Rc<Ui>, String)),
         ("new-folder-in", new_folder),
+        ("rename-folder", rename_folder),
+        ("delete-folder", delete_folder),
     ] {
         let a = gio::SimpleAction::new(name, Some(glib::VariantTy::STRING));
         let weak = Rc::downgrade(ui);
@@ -1157,6 +1159,93 @@ fn new_folder(ui: &Rc<Ui>, parent: String) {
     });
 }
 
+/// Rename folder `folder`, its new name asked for in the New Folder dialog.
+fn rename_folder(ui: &Rc<Ui>, folder: String) {
+    let b = view!("new-folder");
+    let dialog: adw::AlertDialog = get(&b, "dialog");
+    let name: adw::EntryRow = get(&b, "name");
+    dialog.set_heading(Some(&gettext("Rename Folder")));
+    dialog.set_response_label("create", &gettext("Rename"));
+    name.set_text(folder.rsplit('/').next().unwrap_or(&folder));
+    let d = dialog.clone();
+    name.connect_changed(move |e| d.set_response_enabled("create", !e.text().trim().is_empty()));
+    let ui = ui.clone();
+    glib::spawn_future_local(async move {
+        if dialog.choose_future(Some(&ui.window)).await != "create" {
+            return;
+        }
+        save_now(&ui);
+        match core().rename_folder(folder.clone(), name.text().to_string()) {
+            Ok(to) => {
+                follow_folder(&ui, &folder, &to);
+                refresh(&ui);
+                reload_current(&ui);
+                request_sync();
+            }
+            Err(notav_core::Error::Exists(_)) => {
+                toast(&gettext("A folder with this name exists already"))
+            }
+            Err(notav_core::Error::Invalid(_)) => toast(&gettext("Not a folder name")),
+            Err(e) => toast(&e.to_string()),
+        }
+    });
+}
+
+/// Delete folder `folder` with everything in it, after asking.
+fn delete_folder(ui: &Rc<Ui>, folder: String) {
+    let name = folder.rsplit('/').next().unwrap_or(&folder).to_string();
+    let inside = {
+        let f = folder.clone();
+        move |p: &str| p == f || p.starts_with(&format!("{f}/"))
+    };
+    let count = core().notes().iter().filter(|n| inside(&n.folder)).count() as u64;
+    let ui = ui.clone();
+    glib::spawn_future_local(async move {
+        let body = match count {
+            0 => gettext("“{name}” will be deleted on every device."),
+            n => ngettext(
+                "“{name}” and the note in it will be deleted on every device.",
+                "“{name}” and the {count} notes in it will be deleted on every device.",
+                n,
+            ),
+        };
+        let alert = adw::AlertDialog::new(
+            Some(&gettext("Delete Folder?")),
+            Some(
+                &body
+                    .replace("{name}", &name)
+                    .replace("{count}", &count.to_string()),
+            ),
+        );
+        alert.add_responses(&[
+            ("cancel", &gettext("Cancel")),
+            ("delete", &gettext("Delete")),
+        ]);
+        alert.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
+        alert.set_default_response(Some("cancel"));
+        alert.set_close_response("cancel");
+        if alert.choose_future(Some(&ui.window)).await != "delete" {
+            return;
+        }
+        if ui
+            .current
+            .borrow()
+            .as_ref()
+            .is_some_and(|c| inside(&c.folder))
+        {
+            ui.unsaved.set(false);
+        }
+        match core().delete_folder(folder.clone()) {
+            Ok(()) => {
+                refresh(&ui);
+                reload_current(&ui);
+                request_sync();
+            }
+            Err(e) => toast(&e.to_string()),
+        }
+    });
+}
+
 /// Delete a note, after asking.
 fn delete_note(ui: &Rc<Ui>, id: i64) {
     let Some(n) = core().note(id) else {
@@ -1231,12 +1320,23 @@ fn context_menu(ui: &Rc<Ui>) {
         let new_folder = gio::Action::print_detailed_name("win.new-folder-in", target.as_ref());
         add.append(Some(&gettext("New Folder")), Some(&new_folder));
         m.append_section(None, &add);
-        if let Some(Item::Note(n)) = &item {
-            let delete =
-                gio::Action::print_detailed_name("win.delete-note", Some(&n.id.to_variant()));
-            let note = gio::Menu::new();
-            note.append(Some(&gettext("Delete")), Some(&delete));
-            m.append_section(None, &note);
+        match &item {
+            Some(Item::Note(n)) => {
+                let delete =
+                    gio::Action::print_detailed_name("win.delete-note", Some(&n.id.to_variant()));
+                let note = gio::Menu::new();
+                note.append(Some(&gettext("Delete")), Some(&delete));
+                m.append_section(None, &note);
+            }
+            Some(Item::Folder(_)) => {
+                let rename = gio::Action::print_detailed_name("win.rename-folder", target.as_ref());
+                let delete = gio::Action::print_detailed_name("win.delete-folder", target.as_ref());
+                let f = gio::Menu::new();
+                f.append(Some(&gettext("Rename…")), Some(&rename));
+                f.append(Some(&gettext("Delete")), Some(&delete));
+                m.append_section(None, &f);
+            }
+            None => {}
         }
         // Gone once closed.
         let menu = gtk::PopoverMenu::from_model(Some(&m));

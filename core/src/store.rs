@@ -38,7 +38,7 @@ END;
 CREATE TABLE folders (
   path TEXT PRIMARY KEY,                -- relative, no trailing slash; '' is the notes folder
   etag TEXT,                            -- as last pulled; NULL: not pulled yet
-  dirty INTEGER NOT NULL DEFAULT 0      -- 1: created here, not on the server yet
+  dirty INTEGER NOT NULL DEFAULT 0      -- 1: created here, not on the server yet; 2: deleted here
 );
 "#,
     // Folders moved here, in order, until the push moves them on the server (paths relative to
@@ -51,6 +51,8 @@ CREATE TABLE moves (id INTEGER PRIMARY KEY, src TEXT NOT NULL, dst TEXT NOT NULL
 pub const CLEAN: i64 = 0;
 pub const MODIFIED: i64 = 1;
 pub const DELETED: i64 = 2;
+/// `folders.dirty`: deleted here, still on the server (1: made here, not there yet).
+pub const FOLDER_DELETED: i64 = 2;
 
 /// A note as stored, with its sync state.
 #[derive(Debug, Clone)]

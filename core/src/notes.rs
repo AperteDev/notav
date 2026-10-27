@@ -1,7 +1,7 @@
 //! Notes and folders in the local copy. Every change is local and marks the note dirty; `sync`
 //! uploads it later.
 
-use crate::store::{self, CLEAN, DELETED, MODIFIED, Row};
+use crate::store::{self, CLEAN, DELETED, FOLDER_DELETED, MODIFIED, Row};
 use crate::{Client, Error, Result, now};
 use rusqlite::{Connection, params};
 
@@ -89,6 +89,26 @@ fn join(folder: &str, name: &str) -> String {
     }
 }
 
+/// SQL: column `col` is a path below the folder in `?1`.
+pub(crate) fn under(col: &str) -> String {
+    format!("(substr({col}, 1, length(?1) + 1) = ?1 || '/')")
+}
+
+/// Folder `folder` is on the server: pulled from there (not made here), or a note in it is.
+fn on_server(db: &Connection, folder: &str) -> Result<bool> {
+    Ok(db.query_row(
+        &format!(
+            "SELECT (EXISTS (SELECT 1 FROM folders WHERE path = ?1 AND dirty = 0)
+               OR EXISTS (SELECT 1 FROM notes WHERE fileid IS NOT NULL
+                 AND {} AND server_path IS NULL))
+               AND NOT EXISTS (SELECT 1 FROM folders WHERE path = ?1 AND dirty = 1)",
+            under("path")
+        ),
+        [folder],
+        |r| r.get(0),
+    )?)
+}
+
 /// `folder/title.ext`, or with " 2", " 3"... added to the title until no note has that path.
 pub(crate) fn free_path(db: &Connection, folder: &str, title: &str, ext: &str) -> Result<String> {
     for n in 1.. {
@@ -147,7 +167,7 @@ impl Client {
     pub fn folders(&self) -> Vec<String> {
         let db = self.db.lock().unwrap();
         let mut out: Vec<String> = db
-            .prepare("SELECT path FROM folders WHERE path != ''")
+            .prepare("SELECT path FROM folders WHERE path != '' AND dirty != 2")
             .and_then(|mut st| st.query_map([], |r| r.get(0))?.collect())
             .unwrap_or_default();
         // And the folders of notes made here, in folders not pulled yet.
@@ -256,12 +276,66 @@ impl Client {
     /// into itself. The server's copy moves with the next push, in one `MOVE`.
     pub fn move_folder(&self, folder: String, parent: String) -> Result<String> {
         let folder = folder_path(&folder)?;
-        let parent = folder_path(&parent)?;
-        let inside = |p: &str, f: &str| p == f || p.starts_with(&format!("{f}/"));
-        if folder.is_empty() || inside(&parent, &folder) {
+        let dst = join(&folder_path(&parent)?, split(&folder).1);
+        self.relocate_folder(folder, dst)
+    }
+
+    /// Rename folder `folder` ("a/b") to `name`, as `move_folder` moves it: its new path.
+    pub fn rename_folder(&self, folder: String, name: String) -> Result<String> {
+        let folder = folder_path(&folder)?;
+        let dst = join(split(&folder).0, &file_title(&name)?);
+        self.relocate_folder(folder, dst)
+    }
+
+    /// Delete folder `folder` ("a/b") with everything in it. Its notes go as `delete_note`'s do
+    /// (one changed on the server since stays, and its folder with it); the folder goes with the
+    /// next push, in one `DELETE`.
+    pub fn delete_folder(&self, folder: String) -> Result<()> {
+        let folder = folder_path(&folder)?;
+        if folder.is_empty() {
             return Err(Error::Invalid(folder));
         }
-        let dst = join(&parent, split(&folder).1);
+        let changed = {
+            let db = self.db.lock().unwrap();
+            let tx = db.unchecked_transaction()?;
+            let on_server = on_server(&tx, &folder)?;
+            let in_it = under("path");
+            let changed: Vec<String> = {
+                let mut st = tx.prepare(&format!("SELECT path FROM notes WHERE {in_it}"))?;
+                st.query_map([&folder], |r| r.get(0))?
+                    .collect::<rusqlite::Result<_>>()?
+            };
+            tx.execute(
+                &format!("DELETE FROM notes WHERE fileid IS NULL AND {in_it}"),
+                [&folder],
+            )?;
+            tx.execute(
+                &format!("UPDATE notes SET dirty = ?2 WHERE {in_it}"),
+                params![folder, DELETED],
+            )?;
+            tx.execute(
+                &format!("DELETE FROM folders WHERE path = ?1 OR {in_it}"),
+                [&folder],
+            )?;
+            if on_server {
+                tx.execute(
+                    "INSERT INTO folders (path, dirty) VALUES (?, ?)",
+                    params![folder, FOLDER_DELETED],
+                )?;
+            }
+            tx.commit()?;
+            changed
+        };
+        self.emit(changed);
+        Ok(())
+    }
+
+    /// Move folder `folder` to path `dst`, see `move_folder`.
+    fn relocate_folder(&self, folder: String, dst: String) -> Result<String> {
+        let inside = |p: &str, f: &str| p == f || p.starts_with(&format!("{f}/"));
+        if folder.is_empty() || dst != folder && inside(&dst, &folder) {
+            return Err(Error::Invalid(folder));
+        }
         if dst == folder {
             return Ok(dst);
         }
@@ -271,49 +345,31 @@ impl Client {
         let changed = {
             let db = self.db.lock().unwrap();
             let tx = db.unchecked_transaction()?;
-            let under = "(substr(%c, 1, length(?1) + 1) = ?1 || '/')";
-            // On the server when pulled from there, or when a note in it is.
-            let made_here: bool = tx
-                .query_row(
-                    "SELECT EXISTS (SELECT 1 FROM folders WHERE path = ? AND dirty = 1)",
-                    [&folder],
-                    |r| r.get(0),
-                )
-                .unwrap_or(false);
-            let on_server: bool = tx.query_row(
-                &format!(
-                    "SELECT EXISTS (SELECT 1 FROM folders WHERE path = ?1 AND dirty = 0)
-                       OR EXISTS (SELECT 1 FROM notes WHERE fileid IS NOT NULL
-                         AND {} AND server_path IS NULL)",
-                    under.replace("%c", "path")
-                ),
-                [&folder],
-                |r| r.get(0),
-            )?;
+            let on_server = on_server(&tx, &folder)?;
             let changed: Vec<String> = {
-                let mut st = tx.prepare(&format!(
-                    "SELECT path FROM notes WHERE {}",
-                    under.replace("%c", "path")
-                ))?;
+                let mut st =
+                    tx.prepare(&format!("SELECT path FROM notes WHERE {}", under("path")))?;
                 st.query_map([&folder], |r| r.get(0))?
                     .collect::<rusqlite::Result<_>>()?
             };
             let to = |c: &str| format!("{c} = ?2 || substr({c}, length(?1) + 1)");
             tx.execute(
-                &format!(
-                    "UPDATE notes SET {} WHERE {}",
-                    to("path"),
-                    under.replace("%c", "path")
-                ),
+                &format!("UPDATE notes SET {} WHERE {}", to("path"), under("path")),
                 params![folder, dst],
             )?;
-            if on_server && !made_here {
+            // One deleted there and not yet on the server: the push finds the name taken and
+            // moves the notes one by one.
+            tx.execute(
+                "DELETE FROM folders WHERE path = ? AND dirty = ?",
+                params![dst, FOLDER_DELETED],
+            )?;
+            if on_server {
                 // The server's copies of what is in it move with it.
                 tx.execute(
                     &format!(
                         "UPDATE notes SET {} WHERE {}",
                         to("server_path"),
-                        under.replace("%c", "server_path")
+                        under("server_path")
                     ),
                     params![folder, dst],
                 )?;
@@ -326,7 +382,7 @@ impl Client {
                 &format!(
                     "UPDATE folders SET {} WHERE path = ?1 OR {}",
                     to("path"),
-                    under.replace("%c", "path")
+                    under("path")
                 ),
                 params![folder, dst],
             )?;
@@ -348,9 +404,11 @@ impl Client {
             return Err(Error::Invalid(folder));
         }
         let db = self.db.lock().unwrap();
+        // One deleted here and not yet on the server stays there.
         db.execute(
-            "INSERT OR IGNORE INTO folders (path, dirty) VALUES (?, 1)",
-            [&folder],
+            "INSERT INTO folders (path, dirty) VALUES (?1, 1)
+             ON CONFLICT (path) DO UPDATE SET dirty = 1 WHERE dirty = ?2",
+            params![folder, FOLDER_DELETED],
         )?;
         Ok(())
     }
@@ -444,9 +502,24 @@ mod tests {
             Err(Error::Exists(_))
         ));
         assert_eq!(c.folders(), ["Old", "Old/Work", "Work"]);
+        assert_eq!(
+            c.rename_folder("Old/Work".into(), " Done/ ".into())
+                .unwrap(),
+            "Old/Done-"
+        );
+        assert!(matches!(
+            c.rename_folder("Old".into(), "Work".into()),
+            Err(Error::Exists(_))
+        ));
+        assert_eq!(c.note(a.id).unwrap().path, "Old/Done-/Plan.md");
         // Never uploaded: gone at once.
-        c.delete_note(a.id).unwrap();
+        c.delete_note(b.id).unwrap();
         assert_eq!(c.notes().len(), 1);
         assert!(c.pending());
+        c.delete_folder("Old".into()).unwrap();
+        assert!(c.notes().is_empty());
+        assert_eq!(c.folders(), ["Work"]);
+        c.delete_folder("Work".into()).unwrap();
+        assert!(!c.pending());
     }
 }

@@ -434,3 +434,63 @@ fn a_new_note_on_the_name_of_one_changed_here_and_moved_there_waits() {
         assert!(texts.iter().any(|x| x == t), "{t} missing: {texts:?}");
     }
 }
+
+#[test]
+fn a_folder_renamed_then_deleted_on_the_other_device() {
+    let f = Fixture::new("folder-rename-delete");
+    f.a.add_note("Work".into(), "Plan".into(), "p".into())
+        .unwrap();
+    f.a.add_note("Work/Sub".into(), "Deep".into(), "d".into())
+        .unwrap();
+    f.a.sync().unwrap();
+    f.b.sync().unwrap();
+
+    assert_eq!(
+        f.a.rename_folder("Work".into(), "Projects".into()).unwrap(),
+        "Projects"
+    );
+    f.a.sync().unwrap();
+    assert!(!f.a.pending());
+    assert_eq!(f.server_text("Projects/Sub/Deep.md").unwrap(), "d");
+    assert!(f.server_text("Work/Plan.md").is_none());
+    let r = f.b.sync().unwrap();
+    assert_eq!(r.downloaded, 0, "a rename downloads nothing: {r:?}");
+    assert_eq!(paths(&f.b), ["Projects/Plan.md", "Projects/Sub/Deep.md"]);
+
+    f.b.delete_folder("Projects".into()).unwrap();
+    assert!(f.b.notes().is_empty() && f.b.folders().is_empty());
+    f.b.sync().unwrap();
+    assert!(!f.b.pending());
+    let gone = format!("{}Projects/", f.root);
+    assert!(f.dav.list(&gone, "0").unwrap().is_empty(), "folder deleted");
+    let r = f.a.sync().unwrap();
+    assert_eq!(r.removed, 2, "{r:?}");
+    assert!(f.a.notes().is_empty() && f.a.folders().is_empty());
+}
+
+#[test]
+fn a_deleted_folder_keeps_what_changed_on_the_server() {
+    let f = Fixture::new("folder-delete-keep");
+    f.a.add_note("Work".into(), "Plan".into(), "p".into())
+        .unwrap();
+    f.a.add_note("Work".into(), "Other".into(), "o".into())
+        .unwrap();
+    f.a.add_note("Inbox".into(), "Old".into(), "o".into())
+        .unwrap();
+    f.a.sync().unwrap();
+    // Changed and added by another client, not pulled here yet; a second later, as Nextcloud's
+    // ETags are times in whole seconds.
+    std::thread::sleep(std::time::Duration::from_secs(1));
+    f.put("Work/Plan.md", "p2");
+    f.put("Inbox/New.md", "n");
+
+    f.a.delete_folder("Work".into()).unwrap();
+    f.a.delete_folder("Inbox".into()).unwrap();
+    f.a.sync().unwrap();
+    assert!(!f.a.pending());
+    assert!(f.server_text("Work/Other.md").is_none());
+    assert!(f.server_text("Inbox/Old.md").is_none());
+    assert_eq!(paths(&f.a), ["Inbox/New.md", "Work/Plan.md"]);
+    assert_eq!(f.a.note_text(find(&f.a, "Work/Plan.md").id).unwrap(), "p2");
+    assert_eq!(f.a.folders(), ["Inbox", "Work"]);
+}

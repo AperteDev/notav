@@ -65,7 +65,8 @@ impl Client {
         {
             // Different account: its copy belongs to the old one.
             db.execute_batch(
-                "DELETE FROM notes; DELETE FROM folders; DELETE FROM kv WHERE key LIKE 'config_%';",
+                "DELETE FROM notes; DELETE FROM folders; DELETE FROM moves;
+                 DELETE FROM kv WHERE key LIKE 'config_%';",
             )?;
             self.journal.lock().unwrap().clear();
         }
@@ -87,7 +88,7 @@ impl Client {
     pub fn logout(&self) -> Result<()> {
         let db = self.db.lock().unwrap();
         db.execute_batch(
-            "DELETE FROM notes; DELETE FROM folders;
+            "DELETE FROM notes; DELETE FROM folders; DELETE FROM moves;
              DELETE FROM kv WHERE key LIKE 'config_%' OR key LIKE 'account_%';",
         )?;
         self.journal.lock().unwrap().clear();
@@ -230,5 +231,32 @@ mod tests {
             Error::Http(500, "oops".into()).to_string(),
             "HTTP 500: oops"
         );
+    }
+
+    #[test]
+    fn another_account_or_signing_out_drops_what_waits_for_the_server() {
+        let dir = std::env::temp_dir().join(format!("notav-test-account-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let c = Client::open(dir.to_string_lossy().into()).unwrap();
+        let account = |user: &str| {
+            c.set_account("https://cloud.example".into(), user.into(), "x".into())
+                .unwrap()
+        };
+        // A folder pulled from the server, then moved here: one MOVE queued.
+        let queue_a_move = || {
+            c.db.lock()
+                .unwrap()
+                .execute("INSERT INTO folders (path, etag) VALUES ('Work', 'e')", [])
+                .unwrap();
+            c.move_folder("Work".into(), "Old".into()).unwrap();
+            assert!(c.pending());
+        };
+        account("a");
+        queue_a_move();
+        account("b");
+        assert!(!c.pending(), "a's move would go to b's files");
+        queue_a_move();
+        c.logout().unwrap();
+        assert!(!c.pending());
     }
 }

@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Sync stopping with "UNIQUE constraint failed: notes.fileid" after a note was moved and a
   new one took its old name before the next sync, and the new note not showing on other devices
+- A folder moved before signing out or into another account, and not synced yet, no longer
+  moves a folder of that name in the next account's files
 
 ## [0.1.0] - 2026-10-25
 

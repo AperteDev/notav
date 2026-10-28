@@ -43,6 +43,8 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
   - **Outgoing links**: the notes the open one links to, missing ones marked, and the other
     notes' titles it names without a link. Both link views need links between notes (Editor
     mode) and read the notes as Tags does.
+  - **Tags**: every tag with its count of notes, nested tags (`#a/b`) as a tree; a click lists
+    the notes with it (a `tag:` search).
 - **Tabs**: several notes open at once, in tabs above the editor (`AdwTabBar`); a middle click
   opens a note in a new tab; the open tabs are kept for the next launch (device-only).
 - **Notes' tree**: sorting by name (now), modified or created time, either way, from a menu

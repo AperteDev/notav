@@ -31,8 +31,9 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
 
 - **Journal**: today's daily note, one per day in a dated folder (see
   [Open questions](#open-questions-and-risks)).
-- **Backlinks and tags**: the notes linking to the open one, and tags (`#tag`, front matter's
-  `tags`), computed locally from the files.
+- **Tags**: `#tag` and front matter's `tags`, computed locally from the files, to list the notes
+  with one. Backlinks read every note each time a note opens; an index of links (and tags) when
+  that gets slow.
 - **Links to Todav's tasks**: a note links a task as `todav://task/<uid>`. Todav opens it (it
   handles the `todav` URI scheme), and Notav shows the task's title and state through Todav's
   D-Bus API (`GetTask`, to be added in Todav). Without Todav the link stays a plain link.

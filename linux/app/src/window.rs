@@ -106,6 +106,9 @@ struct Ui {
     note_clamp: adw::Clamp,
     note_box: gtk::Box,
     note_mode: adw::ToggleGroup,
+    backlinks_box: gtk::Box,
+    backlinks_title: gtk::Label,
+    backlinks: gtk::ListBox,
     zoom_reset: gtk::Label,
     /// The note's font, size and width (`apply_text_look`).
     text_css: gtk::CssProvider,
@@ -575,6 +578,9 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         note_clamp: get(&b, "note_clamp"),
         note_box: get(&b, "note_box"),
         note_mode: get(&b, "note_mode"),
+        backlinks_box: get(&b, "backlinks_box"),
+        backlinks_title: get(&b, "backlinks_title"),
+        backlinks: get(&b, "backlinks"),
         zoom_reset: get(&b, "zoom_reset"),
         text_css: gtk::CssProvider::new(),
         buffer,
@@ -1372,10 +1378,56 @@ fn open_note(ui: &Rc<Ui>, n: &Note) {
     ui.buffer.place_cursor(&ui.buffer.start_iter());
     show_heading(ui, n);
     show_page(ui);
+    show_backlinks(ui);
     *ui.target_folder.borrow_mut() = n.folder.clone();
     reveal(ui, &n.folder);
     refresh_tree(ui);
     let _ = core().set_setting("last_note".into(), n.path.clone());
+}
+
+/// The notes linking to the open one, under its text; worked out in the background (every note
+/// is read), shown if the same note is still open.
+fn show_backlinks(ui: &Rc<Ui>) {
+    let Some(id) = ui.current.borrow().as_ref().map(|n| n.id) else {
+        ui.backlinks_box.set_visible(false);
+        return;
+    };
+    let weak = Rc::downgrade(ui);
+    glib::spawn_future_local(async move {
+        let notes = gio::spawn_blocking(move || core().backlinks(id))
+            .await
+            .unwrap_or_default();
+        let Some(ui) = weak.upgrade() else { return };
+        if ui.current.borrow().as_ref().map(|n| n.id) != Some(id) {
+            return;
+        }
+        ui.backlinks.remove_all();
+        for n in &notes {
+            let row = adw::ActionRow::builder()
+                .title(glib::markup_escape_text(&n.title))
+                .subtitle(glib::markup_escape_text(&n.folder))
+                .activatable(true)
+                .build();
+            row.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
+            let (weak, n) = (Rc::downgrade(&ui), n.clone());
+            row.connect_activated(move |_| {
+                if let Some(ui) = weak.upgrade() {
+                    open_note(&ui, &n);
+                }
+            });
+            ui.backlinks.append(&row);
+        }
+        let count = notes.len() as u64;
+        ui.backlinks_title.set_label(
+            &ngettext(
+                "Linked from {count} note",
+                "Linked from {count} notes",
+                count,
+            )
+            .replace("{count}", &count.to_string()),
+        );
+        ui.backlinks_box.set_visible(count > 0);
+    });
 }
 
 fn show_heading(ui: &Ui, n: &Note) {
@@ -1391,6 +1443,7 @@ fn close_note(ui: &Rc<Ui>) {
     ui.note_title.set_title("");
     ui.note_title.set_subtitle("");
     show_page(ui);
+    show_backlinks(ui);
     ui.tree.unselect_all();
 }
 
@@ -1443,6 +1496,7 @@ fn reload_current(ui: &Rc<Ui>) {
         close_note(ui);
         return;
     };
+    show_backlinks(ui); // other notes may have changed
     if !ui.title.has_focus() {
         ui.title.set_text(&n.title);
     }

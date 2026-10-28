@@ -432,6 +432,24 @@ Adw.ApplicationWindow window {
                             right-margin: 6;
                             styles ["note-text"]
                           }
+
+                          // The notes linking to this one, under its text (`show_backlinks`).
+                          Gtk.Box backlinks_box {
+                            orientation: vertical;
+                            spacing: 12;
+                            visible: false;
+
+                            Gtk.Label backlinks_title {
+                              xalign: 0;
+                              margin-start: 6;
+                              styles ["heading"]
+                            }
+
+                            Gtk.ListBox backlinks {
+                              selection-mode: none;
+                              styles ["boxed-list"]
+                            }
+                          }
                         }
                       }
                     }

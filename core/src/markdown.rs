@@ -2,7 +2,7 @@
 //! front matter) parsed into styled ranges. Nothing here knows GTK: a front-end turns each
 //! style into its own text attributes.
 
-use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
+use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, LinkType, Options, Parser, Tag, TagEnd};
 use std::ops::Range;
 
 /// What a range of a note is.
@@ -200,6 +200,50 @@ pub fn spans(text: &str) -> Vec<Span> {
     }
     urls(run, &mut out);
     to_chars(text, out)
+}
+
+/// The address of the link at character `at`: a link's or image's target, an autolink (an
+/// e-mail one as `mailto:`), a bare URL (a `www.` one as `https://`). Only an address with a
+/// scheme: a relative one names nothing to open.
+pub fn link_at(text: &str, at: usize) -> Option<String> {
+    let byte = text.char_indices().nth(at)?.0;
+    let address = |url: &str| {
+        let scheme = url.split_once(':')?.0;
+        let valid = scheme.starts_with(|c: char| c.is_ascii_alphabetic())
+            && scheme
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || "+-.".contains(c));
+        valid.then(|| url.to_string())
+    };
+    let parser = Parser::new_ext(text, options()).into_offset_iter();
+    for (event, _) in parser.filter(|(_, r)| r.contains(&byte)) {
+        match event {
+            Event::Start(Tag::Link {
+                link_type: LinkType::Email,
+                dest_url,
+                ..
+            }) => return Some(format!("mailto:{dest_url}")),
+            Event::Start(Tag::Link { dest_url, .. } | Tag::Image { dest_url, .. }) => {
+                return address(&dest_url);
+            }
+            Event::Text(_) => {
+                let start = text[..byte].rfind('\n').map_or(0, |n| n + 1);
+                let line = &text[start..line_end(text, byte)];
+                let url = bare_urls(line)
+                    .into_iter()
+                    .find(|u| u.contains(&(byte - start)))?;
+                let url = &line[url];
+                return if url.starts_with("www.") {
+                    Some(format!("https://{url}"))
+                } else {
+                    address(url)
+                };
+            }
+            Event::Code(_) | Event::Start(Tag::CodeBlock(_)) => return None,
+            _ => {}
+        }
+    }
+    None
 }
 
 /// What Enter at character `at` does in a list item, in the order of the text (none: a plain
@@ -570,6 +614,25 @@ mod tests {
             ["www.a.b/c", "https://d.e?f=1"]
         );
         assert!(urls("https:// www.").is_empty());
+    }
+
+    #[test]
+    fn links_open_their_address() {
+        let t = "Zażółć [the *text*](https://a.b/c \"t\") ![i](https://d.e/i.png) [rel](x.md)\n\
+                 <me@f.g> [ref][r] see www.h.i/j_(k). `https://code` and https://l.m\n\n\
+                 [r]: http://n.o\n";
+        let at = |s: &str| link_at(t, t[..t.find(s).unwrap()].chars().count());
+        assert_eq!(at("text").as_deref(), Some("https://a.b/c"));
+        assert_eq!(at("](https://a").as_deref(), Some("https://a.b/c"));
+        assert_eq!(at("[i]").as_deref(), Some("https://d.e/i.png"));
+        assert_eq!(at("rel"), None);
+        assert_eq!(at("me@").as_deref(), Some("mailto:me@f.g"));
+        assert_eq!(at("ref").as_deref(), Some("http://n.o"));
+        assert_eq!(at("(k)").as_deref(), Some("https://www.h.i/j_(k)"));
+        assert_eq!(at("code"), None);
+        assert_eq!(at("l.m").as_deref(), Some("https://l.m"));
+        assert_eq!(at("see"), None);
+        assert_eq!(at("Zażółć"), None);
     }
 
     /// `text` (with `|` where the cursor is) after Enter, with `|` where the cursor goes.

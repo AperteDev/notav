@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In Editor mode, a click on a task's `[ ]` or `[x]` ticks or unticks it
 - In Editor mode, Enter in a list starts the next item: the same bullet, the next number (the
   numbers below moved up), an open task after a task; Enter on an empty item ends the list
+- In Editor mode, Ctrl+click opens a link, an autolink or a bare URL
 
 ### Changed
 

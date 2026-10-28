@@ -73,7 +73,8 @@ pub fn setup(buffer: &sourceview5::Buffer) {
     }
 }
 
-/// What a click and keys do in Editor mode: a click ticks a task, Enter continues a list.
+/// What a click and keys do in Editor mode: a click ticks a task, Ctrl+click opens a link,
+/// Enter continues a list.
 pub fn connect(view: &sourceview5::View) {
     let keys = gtk::EventControllerKey::new();
     keys.set_propagation_phase(gtk::PropagationPhase::Capture);
@@ -111,22 +112,30 @@ pub fn connect(view: &sourceview5::View) {
         let Some(view) = gesture.widget().and_downcast::<sourceview5::View>() else {
             return;
         };
-        let plain = !gesture
-            .current_event_state()
-            .intersects(gtk::accelerator_get_default_mod_mask());
-        if n == 1 && plain && toggle_task(&view, x, y) {
+        let mods = gesture.current_event_state() & gtk::accelerator_get_default_mod_mask();
+        let done = n == 1
+            && match mods {
+                m if m.is_empty() => toggle_task(&view, x, y),
+                gtk::gdk::ModifierType::CONTROL_MASK => open_link(&view, x, y),
+                _ => false,
+            };
+        if done {
             gesture.set_state(gtk::EventSequenceState::Claimed);
         }
     });
     view.add_controller(click);
-    // A hand over what a click acts on.
+    // A hand over what a click acts on: a task, a link with Ctrl.
     let motion = gtk::EventControllerMotion::new();
     motion.connect_motion(|motion, x, y| {
         let Some(view) = motion.widget().and_downcast::<sourceview5::View>() else {
             return;
         };
-        let task = task_at(&view, x, y).is_some();
-        view.set_cursor_from_name(Some(if task { "pointer" } else { "text" }));
+        let ctrl = motion
+            .current_event_state()
+            .contains(gtk::gdk::ModifierType::CONTROL_MASK);
+        let hand =
+            task_at(&view, x, y).is_some() || (ctrl && tagged_at(&view, "md-link", x, y).is_some());
+        view.set_cursor_from_name(Some(if hand { "pointer" } else { "text" }));
     });
     view.add_controller(motion);
 }
@@ -151,10 +160,15 @@ fn apply(buffer: &sourceview5::Buffer, edits: &[markdown::Edit]) {
     buffer.end_user_action();
 }
 
-/// The text under the widget's point `x`, `y`, if it has Editor mode's tag `name`.
-fn tagged_at(view: &sourceview5::View, name: &str, x: f64, y: f64) -> Option<gtk::TextIter> {
+/// The text under the widget's point `x`, `y`.
+fn iter_at(view: &sourceview5::View, x: f64, y: f64) -> Option<gtk::TextIter> {
     let (x, y) = view.window_to_buffer_coords(gtk::TextWindowType::Widget, x as i32, y as i32);
-    let at = view.iter_at_location(x, y)?;
+    view.iter_at_location(x, y)
+}
+
+/// The text under the point, if it has Editor mode's tag `name`.
+fn tagged_at(view: &sourceview5::View, name: &str, x: f64, y: f64) -> Option<gtk::TextIter> {
+    let at = iter_at(view, x, y)?;
     let tag = view.buffer().tag_table().lookup(name)?;
     at.has_tag(&tag).then_some(at)
 }
@@ -167,6 +181,23 @@ fn task_at(view: &sourceview5::View, x: f64, y: f64) -> Option<gtk::TextIter> {
         at.backward_to_tag_toggle(Some(&tag));
     }
     Some(at)
+}
+
+/// Open the link under the point in Editor mode, in the app for its address (the browser);
+/// whether there was one.
+fn open_link(view: &sourceview5::View, x: f64, y: f64) -> bool {
+    let buffer = view.buffer().downcast::<sourceview5::Buffer>().unwrap();
+    let (Some(at), true) = (iter_at(view, x, y), editor_mode(&buffer)) else {
+        return false;
+    };
+    let (start, end) = buffer.bounds();
+    let Some(url) = markdown::link_at(&buffer.text(&start, &end, true), at.offset() as usize)
+    else {
+        return false;
+    };
+    let window = view.root().and_downcast::<gtk::Window>();
+    gtk::UriLauncher::new(&url).launch(window.as_ref(), gtk::gio::Cancellable::NONE, |_| {});
+    true
 }
 
 /// Tick or untick the task box under the point, as one step to undo; whether there was one.

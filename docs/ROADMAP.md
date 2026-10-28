@@ -14,7 +14,8 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
      request. From the right-click menu: insert a table, add, delete and move rows and columns,
      align a column, sort by one. Text pasted from a spreadsheet (tab-separated) becomes a
      table. Each change is one undo step.
-   - Links: Ctrl+click opens one.
+   - Links to other notes: Ctrl+click on a relative target (`[text](other.md)`) opens that
+     note; Ctrl+click opens only addresses with a scheme now.
 2. **Keyboard shortcuts**, later: Tab and Shift+Tab between table cells, Enter to the next row
    (a new one at the end); Tab and Shift+Tab to indent list items; Ctrl+B, Ctrl+I, Ctrl+K around
    the selection; Ctrl+E between Editor and Source mode.

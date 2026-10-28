@@ -99,8 +99,8 @@ pub fn setup(buffer: &sourceview5::Buffer) {
     }
 }
 
-/// What a click and keys do in Editor mode: a click ticks a task, Ctrl+click opens a link,
-/// Enter continues a list.
+/// What a click and keys do in Editor mode: a click ticks a task, Ctrl+click opens a link (Alt+
+/// Enter the one at the cursor, as in Obsidian), Enter continues a list.
 pub fn connect(view: &sourceview5::View) {
     let keys = gtk::EventControllerKey::new();
     keys.set_propagation_phase(gtk::PropagationPhase::Capture);
@@ -110,12 +110,18 @@ pub fn connect(view: &sourceview5::View) {
             return glib::Propagation::Proceed;
         };
         let buffer = view.buffer().downcast::<sourceview5::Buffer>().unwrap();
-        let plain = !state.intersects(gtk::accelerator_get_default_mod_mask());
-        if !matches!(key, Key::Return | Key::KP_Enter)
-            || !plain
-            || buffer.has_selection()
-            || !editor_mode(&buffer)
+        let mods = state & gtk::accelerator_get_default_mod_mask();
+        let enter = matches!(key, Key::Return | Key::KP_Enter);
+        // The link the cursor is in, or ends.
+        let cursor = buffer.cursor_position() as usize;
+        if enter
+            && mods == gtk::gdk::ModifierType::ALT_MASK
+            && follow(&view, &[cursor, cursor.saturating_sub(1)])
         {
+            return glib::Propagation::Stop;
+        }
+        let plain = mods.is_empty();
+        if !enter || !plain || buffer.has_selection() || !editor_mode(&buffer) {
             return glib::Propagation::Proceed;
         }
         let (start, end) = buffer.bounds();
@@ -478,20 +484,35 @@ fn task_at(view: &sourceview5::View, x: f64, y: f64) -> Option<gtk::TextIter> {
     Some(at)
 }
 
-/// Open the link under the point in Editor mode, in the app for its address (the browser);
-/// whether there was one.
+/// Open the link under the point in Editor mode; whether there was one.
 fn open_link(view: &sourceview5::View, x: f64, y: f64) -> bool {
+    iter_at(view, x, y).is_some_and(|at| follow(view, &[at.offset() as usize]))
+}
+
+/// Open the link at the first of the characters `at` that has one, in Editor mode: a note here,
+/// an address in the app for it (the browser); whether there was one.
+fn follow(view: &sourceview5::View, at: &[usize]) -> bool {
     let buffer = view.buffer().downcast::<sourceview5::Buffer>().unwrap();
-    let (Some(at), true) = (iter_at(view, x, y), editor_mode(&buffer)) else {
+    if !editor_mode(&buffer) {
         return false;
-    };
+    }
     let (start, end) = buffer.bounds();
-    let Some(url) = markdown::link_at(&buffer.text(&start, &end, true), at.offset() as usize)
-    else {
-        return false;
-    };
-    let window = view.root().and_downcast::<gtk::Window>();
-    gtk::UriLauncher::new(&url).launch(window.as_ref(), gtk::gio::Cancellable::NONE, |_| {});
+    let text = buffer.text(&start, &end, true);
+    match at.iter().find_map(|&a| markdown::link_at(&text, a)) {
+        Some(markdown::Link::Address(url)) => {
+            let window = view.root().and_downcast::<gtk::Window>();
+            gtk::UriLauncher::new(&url).launch(window.as_ref(), gio::Cancellable::NONE, |_| {});
+        }
+        // After the click or key: it replaces the text under it.
+        Some(markdown::Link::Note {
+            target,
+            heading,
+            wiki,
+        }) => {
+            glib::idle_add_local_once(move || crate::window::follow_link(target, heading, wiki));
+        }
+        None => return false,
+    }
     true
 }
 

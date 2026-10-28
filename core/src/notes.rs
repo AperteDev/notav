@@ -1,6 +1,7 @@
 //! Notes and folders in the local copy. Every change is local and marks the note dirty; `sync`
 //! uploads it later.
 
+use crate::markdown::{self, Link};
 use crate::store::{self, CLEAN, DELETED, FOLDER_DELETED, MODIFIED, Row};
 use crate::undo::Before;
 use crate::{Client, Error, Result, now};
@@ -39,6 +40,71 @@ impl From<&Row> for Note {
 /// (folder, file name) of a relative path.
 pub(crate) fn split(path: &str) -> (&str, &str) {
     path.rsplit_once('/').unwrap_or(("", path))
+}
+
+/// The note among `notes` a link from a note in folder `from` names, or the folder and title of
+/// the note it would be. A Markdown link's target is a path from `from` (`/` first: from the
+/// notes folder), `.md` optional. A wiki link's is a path from the notes folder (a note whose
+/// path ends so, the shortest), or a title, case aside: in `from` first, then the shortest path.
+fn resolve<'a>(
+    notes: &'a [Note],
+    from: &str,
+    target: &str,
+    wiki: bool,
+) -> std::result::Result<&'a Note, (String, String)> {
+    let with_md = |p: &str| {
+        if p.ends_with(".md") || p.ends_with(".txt") {
+            p.to_string()
+        } else {
+            format!("{p}.md")
+        }
+    };
+    let missing = |path: &str| {
+        let (folder, name) = split(path);
+        (folder.to_string(), stem(name).to_string())
+    };
+    if !wiki {
+        let mut parts: Vec<&str> = if target.starts_with('/') {
+            Vec::new()
+        } else {
+            from.split('/').filter(|p| !p.is_empty()).collect()
+        };
+        for p in target.split('/') {
+            match p {
+                "" | "." => {}
+                ".." => {
+                    parts.pop();
+                }
+                p => parts.push(p),
+            }
+        }
+        let path = with_md(&parts.join("/"));
+        return notes
+            .iter()
+            .find(|n| n.path == path)
+            .ok_or_else(|| missing(&path));
+    }
+    let name = target.trim_start_matches('/');
+    if name.contains('/') {
+        let path = with_md(name);
+        let tail = format!("/{path}");
+        return notes
+            .iter()
+            .filter(|n| n.path == path || n.path.ends_with(&tail))
+            .min_by_key(|n| (n.path.len(), n.path.clone()))
+            .ok_or_else(|| missing(&path));
+    }
+    let title = name.strip_suffix(".md").unwrap_or(name).to_lowercase();
+    notes
+        .iter()
+        .filter(|n| n.title.to_lowercase() == title)
+        .min_by_key(|n| (n.folder != from, n.path.len(), n.path.clone()))
+        .ok_or_else(|| {
+            (
+                from.to_string(),
+                name.strip_suffix(".md").unwrap_or(name).to_string(),
+            )
+        })
 }
 
 /// A file name without its extension.
@@ -197,6 +263,44 @@ impl Client {
         out.sort();
         out.dedup();
         out
+    }
+
+    /// The note a link in note `from` names (`markdown::Link::Note`'s target and kind), made
+    /// where the link puts it when there is none, as Obsidian does.
+    pub fn follow_link(&self, from: i64, target: String, wiki: bool) -> Result<Note> {
+        let from = self
+            .note(from)
+            .ok_or_else(|| Error::NotFound(from.to_string()))?;
+        if target.is_empty() && !wiki {
+            return Ok(from);
+        }
+        match resolve(&self.notes(), &from.folder, &target, wiki) {
+            Ok(n) => Ok(n.clone()),
+            Err((folder, title)) => self.add_note(folder, title, String::new()),
+        }
+    }
+
+    /// The notes with a link to note `id`, by path.
+    // ponytail: parses every note each time; an index of links when vaults get large.
+    pub fn backlinks(&self, id: i64) -> Vec<Note> {
+        let rows = {
+            let db = self.db.lock().unwrap();
+            store::rows(&db, "dirty != ?", [DELETED]).unwrap_or_default()
+        };
+        let notes: Vec<Note> = rows.iter().map(Note::from).collect();
+        let links_here = |n: &Note, text: &str| {
+            markdown::links(text).into_iter().any(|l| match l {
+                Link::Note { target, wiki, .. } if wiki || !target.is_empty() => {
+                    resolve(&notes, &n.folder, &target, wiki).is_ok_and(|t| t.id == id)
+                }
+                _ => false,
+            })
+        };
+        rows.iter()
+            .zip(&notes)
+            .filter(|(r, n)| n.id != id && links_here(n, &r.text))
+            .map(|(_, n)| n.clone())
+            .collect()
     }
 
     /// A new note in `folder` ("" at the top); a number is added to the title if one exists.
@@ -566,6 +670,74 @@ mod tests {
         assert!(folder_path("a/.obsidian").is_err());
         assert!(is_note("Ideas.md") && is_note("Old.txt"));
         assert!(!is_note(".hidden.md") && !is_note("photo.png"));
+    }
+
+    #[test]
+    fn links_find_their_notes() {
+        let notes: Vec<Note> = [
+            "Plan.md",
+            "Work/Plan.md",
+            "Work/Ideas/Big one.md",
+            "Old.txt",
+        ]
+        .iter()
+        .enumerate()
+        .map(|(i, p)| {
+            let (folder, name) = split(p);
+            Note {
+                id: i as i64,
+                path: p.to_string(),
+                title: stem(name).to_string(),
+                folder: folder.to_string(),
+                modified: 0,
+                pending: false,
+            }
+        })
+        .collect();
+        let find = |from: &str, target: &str, wiki| {
+            resolve(&notes, from, target, wiki)
+                .map(|n| n.path.as_str())
+                .map_err(|(f, t)| format!("{f}|{t}"))
+        };
+        assert_eq!(find("Work", "Plan.md", false), Ok("Work/Plan.md"));
+        assert_eq!(find("Work", "../Plan", false), Ok("Plan.md"));
+        assert_eq!(find("Work/Ideas", "/Plan.md", false), Ok("Plan.md"));
+        assert_eq!(
+            find("", "Work/Ideas/Big one.md", false),
+            Ok("Work/Ideas/Big one.md")
+        );
+        assert_eq!(find("", "Old.txt", false), Ok("Old.txt"));
+        assert_eq!(find("Work", "New.md", false), Err("Work|New".into()));
+        assert_eq!(find("Work", "plan", true), Ok("Work/Plan.md"));
+        assert_eq!(find("Elsewhere", "Plan", true), Ok("Plan.md"));
+        assert_eq!(find("", "big ONE", true), Ok("Work/Ideas/Big one.md"));
+        assert_eq!(find("", "Ideas/Big one", true), Ok("Work/Ideas/Big one.md"));
+        assert_eq!(find("Work", "Missing", true), Err("Work|Missing".into()));
+        assert_eq!(find("Work", "A/Missing", true), Err("A|Missing".into()));
+    }
+
+    #[test]
+    fn following_and_backlinks() {
+        let c = client("links");
+        let a = c
+            .add_note("".into(), "A".into(), "See [[B]] and [c](Sub/C.md).".into())
+            .unwrap();
+        let b = c
+            .add_note("".into(), "B".into(), "Back to [A](A.md)".into())
+            .unwrap();
+        assert_eq!(c.follow_link(a.id, "B".into(), true).unwrap().id, b.id);
+        assert_eq!(c.follow_link(a.id, "".into(), false).unwrap().id, a.id);
+        // A note the link names and that is not there yet is made.
+        let made = c.follow_link(a.id, "Sub/C.md".into(), false).unwrap();
+        assert_eq!(made.path, "Sub/C.md");
+        assert_eq!(
+            c.follow_link(a.id, "Sub/C.md".into(), false).unwrap().id,
+            made.id
+        );
+        let paths = |v: Vec<Note>| v.into_iter().map(|n| n.path).collect::<Vec<_>>();
+        assert_eq!(paths(c.backlinks(a.id)), ["B.md"]);
+        assert_eq!(paths(c.backlinks(b.id)), ["A.md"]);
+        assert_eq!(paths(c.backlinks(made.id)), ["A.md"]);
     }
 
     #[test]

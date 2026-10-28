@@ -116,6 +116,8 @@ struct Ui {
     unsaved: Cell<bool>,
     /// The note is styled again before it is drawn next (`restyle`).
     restyle_pending: Cell<bool>,
+    /// A scroll to the cursor waiting for the note to be laid out (`scroll_to_cursor`): `top`.
+    follow_pending: Cell<Option<bool>>,
     save_timer: RefCell<Option<glib::SourceId>>,
     /// Set while code replaces the editor's text or the list's rows.
     loading: Cell<bool>,
@@ -580,6 +582,7 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         current: RefCell::new(None),
         unsaved: Cell::new(false),
         restyle_pending: Cell::new(false),
+        follow_pending: Cell::new(None),
         save_timer: RefCell::new(None),
         loading: Cell::new(false),
         last_error: RefCell::new(String::new()),
@@ -718,36 +721,49 @@ fn restyle(ui: &Rc<Ui>) {
     });
 }
 
-/// Scroll the note to its cursor, once the text is laid out: what scrolls is the box with the
-/// title and the text, so the text view cannot do it itself.
-fn follow_cursor(ui: &Rc<Ui>) {
+/// Scroll the note to its cursor (its line at the top with `top`), once the text is laid out:
+/// what scrolls is the box with the title and the text, so the text view cannot do it itself.
+fn follow_cursor(ui: &Rc<Ui>, top: bool) {
     let weak = Rc::downgrade(ui);
     glib::idle_add_local_once(move || {
-        let Some(ui) = weak.upgrade() else { return };
-        let (view, adj) = (&ui.editor, ui.note_scroll.vadjustment());
-        let cursor = ui.buffer.iter_at_mark(&ui.buffer.get_insert());
-        // On the first line, the title above it too.
-        if cursor.line() == 0 {
-            adj.set_value(0.0);
-            return;
-        }
-        let at = view.iter_location(&cursor);
-        let (x, y) = view.buffer_to_window_coords(gtk::TextWindowType::Widget, at.x(), at.y());
-        // Where it is in what scrolls, as that is not moved until it is laid out again.
-        let point = gtk::graphene::Point::new(x as f32, y as f32);
-        let Some(p) = view
-            .ancestor(adw::Clamp::static_type())
-            .and_then(|content| view.compute_point(&content, &point))
-        else {
-            return;
-        };
-        let (top, bottom, margin) = (p.y() as f64, (p.y() + at.height() as f32) as f64, 24.0);
-        if top - margin < adj.value() {
-            adj.set_value(top - margin);
-        } else if bottom + margin > adj.value() + adj.page_size() {
-            adj.set_value(bottom + margin - adj.page_size());
+        if let Some(ui) = weak.upgrade()
+            && !scroll_to_cursor(&ui, top)
+        {
+            ui.follow_pending.set(Some(top));
         }
     });
+}
+
+/// Scroll to the cursor now, if the scrolled area reaches it: false while the area is still
+/// the size of a note before (it is laid out after the text), for `follow_pending`.
+fn scroll_to_cursor(ui: &Ui, top: bool) -> bool {
+    let (view, adj) = (&ui.editor, ui.note_scroll.vadjustment());
+    let cursor = ui.buffer.iter_at_mark(&ui.buffer.get_insert());
+    // On the first line, the title above it too.
+    if cursor.line() == 0 {
+        adj.set_value(0.0);
+        return true;
+    }
+    let at = view.iter_location(&cursor);
+    let (x, y) = view.buffer_to_window_coords(gtk::TextWindowType::Widget, at.x(), at.y());
+    // Where it is in what scrolls, as that is not moved until it is laid out again.
+    let point = gtk::graphene::Point::new(x as f32, y as f32);
+    let Some(p) = view
+        .ancestor(adw::Clamp::static_type())
+        .and_then(|content| view.compute_point(&content, &point))
+    else {
+        return true;
+    };
+    let (line, bottom, margin) = (p.y() as f64, (p.y() + at.height() as f32) as f64, 24.0);
+    if bottom > adj.upper() {
+        return false;
+    }
+    if top || line - margin < adj.value() {
+        adj.set_value(line - margin);
+    } else if bottom + margin > adj.value() + adj.page_size() {
+        adj.set_value(bottom + margin - adj.page_size());
+    }
+    true
 }
 
 /// The editor's colours follow the light or dark style: Adwaita's, for prose (`sourceview/`).
@@ -1002,10 +1018,20 @@ fn connect(ui: &Rc<Ui>) {
     });
     ui.editor.add_controller(keys);
 
+    // Once a note is laid out, the scroll to its cursor that waited for it; after the layout, as
+    // a scroll made in it is not shown.
+    let weak = Rc::downgrade(ui);
+    ui.note_scroll.vadjustment().connect_changed(move |_| {
+        if let Some(ui) = weak.upgrade()
+            && let Some(top) = ui.follow_pending.take()
+        {
+            follow_cursor(&ui, top);
+        }
+    });
     let weak = Rc::downgrade(ui);
     ui.buffer.connect_mark_set(move |b, _, mark| {
         if let Some(ui) = weak.upgrade().filter(|_| *mark == b.get_insert()) {
-            follow_cursor(&ui);
+            follow_cursor(&ui, false);
         }
     });
     // Typing, at the cursor; not a change elsewhere (a task ticked with a click).
@@ -1015,7 +1041,7 @@ fn connect(ui: &Rc<Ui>) {
     let weak = Rc::downgrade(ui);
     ui.buffer.connect_insert_text(move |b, at, _| {
         if let Some(ui) = weak.upgrade().filter(|_| at_cursor(b, at)) {
-            follow_cursor(&ui);
+            follow_cursor(&ui, false);
         }
     });
     let weak = Rc::downgrade(ui);
@@ -1024,7 +1050,7 @@ fn connect(ui: &Rc<Ui>) {
             .upgrade()
             .filter(|_| at_cursor(b, start) || at_cursor(b, end))
         {
-            follow_cursor(&ui);
+            follow_cursor(&ui, false);
         }
     });
 
@@ -1310,6 +1336,27 @@ fn subtitle(n: &Note) -> String {
         date
     } else {
         format!("{} · {date}", n.folder)
+    }
+}
+
+/// Open the note a link in the open note names (`markdown::Link::Note`), made if there is none,
+/// at the heading it names.
+pub fn follow_link(target: String, heading: Option<String>, wiki: bool) {
+    let Some(ui) = ui() else { return };
+    let Some(from) = ui.current.borrow().as_ref().map(|n| n.id) else {
+        return;
+    };
+    save_now(&ui);
+    let note = match core().follow_link(from, target, wiki) {
+        Ok(n) => n,
+        Err(e) => return toast(&e.to_string()),
+    };
+    open_note(&ui, &note);
+    let (start, end) = ui.buffer.bounds();
+    let text = ui.buffer.text(&start, &end, true);
+    if let Some(at) = heading.and_then(|h| notav_core::markdown::heading_at(&text, &h)) {
+        ui.buffer.place_cursor(&ui.buffer.iter_at_offset(at as i32));
+        follow_cursor(&ui, true);
     }
 }
 

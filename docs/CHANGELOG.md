@@ -26,7 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In Editor mode, a click on a task's `[ ]` or `[x]` ticks or unticks it
 - In Editor mode, Enter in a list starts the next item: the same bullet, the next number (the
   numbers below moved up), an open task after a task; Enter on an empty item ends the list
-- In Editor mode, Ctrl+click opens a link, an autolink or a bare URL
+- In Editor mode, Ctrl+click opens a link, an autolink or a bare URL; Alt+Enter the one at the
+  cursor
+- Links between notes: a Markdown link to a note (`[text](Other.md)`, `../Folder/Note.md`) or a
+  wiki link (`[[Note]]`, `[[Folder/Note|shown]]`, by title or path, as in Obsidian) opens the
+  note, at the heading after a `#`; a note a link names that is not there yet is made
 - Tables in Editor mode: kept aligned (the pipes lined up, the alignment in the `|---|` row)
   once the cursor leaves a changed row; from the right-click menu, insert a table, add, move
   and delete rows and columns, align a column or sort by it; rows copied from a spreadsheet

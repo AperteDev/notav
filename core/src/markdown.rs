@@ -65,6 +65,7 @@ pub(crate) fn options() -> Options {
         | Options::ENABLE_TASKLISTS
         | Options::ENABLE_GFM
         | Options::ENABLE_YAML_STYLE_METADATA_BLOCKS
+        | Options::ENABLE_WIKILINKS
 }
 
 /// The styled ranges of `text`, in the order found. Ranges of different styles overlap
@@ -202,29 +203,74 @@ pub fn spans(text: &str) -> Vec<Span> {
     to_chars(text, out)
 }
 
-/// The address of the link at character `at`: a link's or image's target, an autolink (an
-/// e-mail one as `mailto:`), a bare URL (a `www.` one as `https://`). Only an address with a
-/// scheme: a relative one names nothing to open.
-pub fn link_at(text: &str, at: usize) -> Option<String> {
-    let byte = text.char_indices().nth(at)?.0;
-    let address = |url: &str| {
-        let scheme = url.split_once(':')?.0;
-        let valid = scheme.starts_with(|c: char| c.is_ascii_alphabetic())
+/// What a link points to.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Link {
+    /// An address with a scheme, opened by another app: a web page, `mailto:`.
+    Address(String),
+    /// A note: from a Markdown link, a path relative to the linking note's folder (decoded, `.md`
+    /// optional; "" for that note itself, `/` first for the notes folder); from a wiki link
+    /// (`wiki`), a title or a path from the notes folder, without `.md`. With the heading after
+    /// a `#`.
+    Note {
+        target: String,
+        heading: Option<String>,
+        wiki: bool,
+    },
+}
+
+/// What a link's target is, if it is one to follow: not an image's, nor a file other than a
+/// note's.
+fn link(kind: LinkType, dest: &str) -> Option<Link> {
+    let (target, heading) = match dest.split_once('#') {
+        Some((t, h)) => (t, Some(h.to_string())),
+        None => (dest, None),
+    };
+    let note = |target: String, wiki| {
+        Some(Link::Note {
+            target,
+            heading: heading.clone(),
+            wiki,
+        })
+    };
+    match kind {
+        LinkType::Email => Some(Link::Address(format!("mailto:{dest}"))),
+        LinkType::WikiLink { .. } => note(target.trim().to_string(), true),
+        _ if has_scheme(dest) => Some(Link::Address(dest.to_string())),
+        _ if dest.is_empty() => None,
+        _ => {
+            let target = crate::dav::percent_decode(target);
+            let name = target.rsplit('/').next().unwrap_or_default();
+            let note_file = !name.contains('.') || name.ends_with(".md") || name.ends_with(".txt");
+            note_file.then(|| note(target, false)).flatten()
+        }
+    }
+}
+
+/// Whether `url` starts with a scheme ("https:", "mailto:").
+fn has_scheme(url: &str) -> bool {
+    url.split_once(':').is_some_and(|(scheme, _)| {
+        scheme.starts_with(|c: char| c.is_ascii_alphabetic())
             && scheme
                 .chars()
-                .all(|c| c.is_ascii_alphanumeric() || "+-.".contains(c));
-        valid.then(|| url.to_string())
-    };
+                .all(|c| c.is_ascii_alphanumeric() || "+-.".contains(c))
+    })
+}
+
+/// The link at character `at`: a link's or a wiki link's target, an autolink (an e-mail one
+/// as `mailto:`), a bare URL (a `www.` one as `https://`), an image's address (not its file).
+pub fn link_at(text: &str, at: usize) -> Option<Link> {
+    let byte = text.char_indices().nth(at)?.0;
     let parser = Parser::new_ext(text, options()).into_offset_iter();
     for (event, _) in parser.filter(|(_, r)| r.contains(&byte)) {
         match event {
             Event::Start(Tag::Link {
-                link_type: LinkType::Email,
+                link_type,
                 dest_url,
                 ..
-            }) => return Some(format!("mailto:{dest_url}")),
-            Event::Start(Tag::Link { dest_url, .. } | Tag::Image { dest_url, .. }) => {
-                return address(&dest_url);
+            }) => return link(link_type, &dest_url),
+            Event::Start(Tag::Image { dest_url, .. }) => {
+                return has_scheme(&dest_url).then(|| Link::Address(dest_url.to_string()));
             }
             Event::Text(_) => {
                 let start = text[..byte].rfind('\n').map_or(0, |n| n + 1);
@@ -234,12 +280,53 @@ pub fn link_at(text: &str, at: usize) -> Option<String> {
                     .find(|u| u.contains(&(byte - start)))?;
                 let url = &line[url];
                 return if url.starts_with("www.") {
-                    Some(format!("https://{url}"))
+                    Some(Link::Address(format!("https://{url}")))
                 } else {
-                    address(url)
+                    has_scheme(url).then(|| Link::Address(url.to_string()))
                 };
             }
             Event::Code(_) | Event::Start(Tag::CodeBlock(_)) => return None,
+            _ => {}
+        }
+    }
+    None
+}
+
+/// The links to notes in `text` (`Link::Note`), in order.
+pub fn links(text: &str) -> Vec<Link> {
+    Parser::new_ext(text, options())
+        .filter_map(|event| match event {
+            Event::Start(Tag::Link {
+                link_type,
+                dest_url,
+                ..
+            }) => link(link_type, &dest_url),
+            _ => None,
+        })
+        .filter(|l| matches!(l, Link::Note { .. }))
+        .collect()
+}
+
+/// Where the heading titled `heading` starts in `text` (a character), its case and spaces as a
+/// link writes them aside.
+pub fn heading_at(text: &str, heading: &str) -> Option<usize> {
+    let wanted = heading.trim().to_lowercase();
+    let mut current: Option<(usize, String)> = None;
+    for (event, range) in Parser::new_ext(text, options()).into_offset_iter() {
+        match event {
+            Event::Start(Tag::Heading { .. }) => current = Some((range.start, String::new())),
+            Event::Text(t) | Event::Code(t) => {
+                if let Some((_, title)) = &mut current {
+                    title.push_str(&t);
+                }
+            }
+            Event::End(TagEnd::Heading(_)) => {
+                if let Some((start, title)) = current.take()
+                    && title.trim().to_lowercase() == wanted
+                {
+                    return Some(text[..start].chars().count());
+                }
+            }
             _ => {}
         }
     }
@@ -621,11 +708,14 @@ mod tests {
         let t = "Zażółć [the *text*](https://a.b/c \"t\") ![i](https://d.e/i.png) [rel](x.md)\n\
                  <me@f.g> [ref][r] see www.h.i/j_(k). `https://code` and https://l.m\n\n\
                  [r]: http://n.o\n";
-        let at = |s: &str| link_at(t, t[..t.find(s).unwrap()].chars().count());
+        let at = |s: &str| match link_at(t, t[..t.find(s).unwrap()].chars().count()) {
+            Some(Link::Address(a)) => Some(a),
+            Some(other) => panic!("{other:?}"),
+            None => None,
+        };
         assert_eq!(at("text").as_deref(), Some("https://a.b/c"));
         assert_eq!(at("](https://a").as_deref(), Some("https://a.b/c"));
         assert_eq!(at("[i]").as_deref(), Some("https://d.e/i.png"));
-        assert_eq!(at("rel"), None);
         assert_eq!(at("me@").as_deref(), Some("mailto:me@f.g"));
         assert_eq!(at("ref").as_deref(), Some("http://n.o"));
         assert_eq!(at("(k)").as_deref(), Some("https://www.h.i/j_(k)"));
@@ -633,6 +723,55 @@ mod tests {
         assert_eq!(at("l.m").as_deref(), Some("https://l.m"));
         assert_eq!(at("see"), None);
         assert_eq!(at("Zażółć"), None);
+    }
+
+    #[test]
+    fn links_to_notes() {
+        let note = |target: &str, heading: Option<&str>, wiki| Link::Note {
+            target: target.into(),
+            heading: heading.map(Into::into),
+            wiki,
+        };
+        let t = "[a](Other.md) [b](../Up%20One.md#Part) [c](#Here) [d](Plain) [e](pic.png)\n\
+                 [[Wiki]] [[Dir/Name|shown]] [[Wiki#Sub part]] ![[img.png]] ![f](g.md)\n";
+        let at = |s: &str| link_at(t, t[..t.find(s).unwrap()].chars().count());
+        assert_eq!(at("a]"), Some(note("Other.md", None, false)));
+        assert_eq!(at("b]"), Some(note("../Up One.md", Some("Part"), false)));
+        assert_eq!(at("c]"), Some(note("", Some("Here"), false)));
+        assert_eq!(at("d]"), Some(note("Plain", None, false)));
+        assert_eq!(at("e]"), None);
+        assert_eq!(at("Wiki]]"), Some(note("Wiki", None, true)));
+        assert_eq!(at("shown"), Some(note("Dir/Name", None, true)));
+        assert_eq!(at("Sub"), Some(note("Wiki", Some("Sub part"), true)));
+        assert_eq!(at("img"), None);
+        assert_eq!(at("f]"), None);
+        assert_eq!(links(t).len(), 7);
+        assert_eq!(
+            of(t, Style::Link),
+            [
+                "a",
+                "b",
+                "c",
+                "d",
+                "e",
+                "Wiki",
+                "shown",
+                "Wiki#Sub part",
+                "img.png",
+                "f"
+            ]
+        );
+    }
+
+    #[test]
+    fn headings_are_found_by_their_title() {
+        let t = "Intro\n\n## Sub *part*\n\nText\n\nŁódź\n=====\n";
+        assert_eq!(heading_at(t, "sub part"), Some(7));
+        assert_eq!(
+            heading_at(t, "Łódź "),
+            Some(t[..t.find("Łódź").unwrap()].chars().count())
+        );
+        assert_eq!(heading_at(t, "Text"), None);
     }
 
     /// `text` (with `|` where the cursor is) after Enter, with `|` where the cursor goes.

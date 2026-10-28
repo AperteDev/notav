@@ -11,8 +11,9 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
 1. **Features**:
    - Tables in quotes (`> | a |`): kept aligned and changed like the others, which leave them
      as they are now.
-   - Links to other notes: Ctrl+click on a relative target (`[text](other.md)`) opens that
-     note; Ctrl+click opens only addresses with a scheme now.
+   - Links between notes: `[[` offers the notes' titles as you type; renaming or moving a note
+     updates the links to it (asked first, as Obsidian does); Alt+Left back to the note a
+     link was followed from.
 2. **Keyboard shortcuts**, later: Tab and Shift+Tab between table cells, Enter to the next row
    (a new one at the end); Tab and Shift+Tab to indent list items; Ctrl+B, Ctrl+I, Ctrl+K around
    the selection; Ctrl+E between Editor and Source mode.
@@ -30,8 +31,8 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
 
 - **Journal**: today's daily note, one per day in a dated folder (see
   [Open questions](#open-questions-and-risks)).
-- **Links, backlinks and tags**: `[[wiki links]]`, backlinks and tags, computed locally from the
-  files.
+- **Backlinks and tags**: the notes linking to the open one, and tags (`#tag`, front matter's
+  `tags`), computed locally from the files.
 - **Links to Todav's tasks**: a note links a task as `todav://task/<uid>`. Todav opens it (it
   handles the `todav` URI scheme), and Notav shows the task's title and state through Todav's
   D-Bus API (`GetTask`, to be added in Todav). Without Todav the link stays a plain link.

@@ -849,13 +849,31 @@ fn connect(ui: &Rc<Ui>) {
             follow_cursor(&ui);
         }
     });
+    // Typing, at the cursor; not a change elsewhere (a task ticked with a click).
+    let at_cursor = |b: &sourceview5::Buffer, at: &gtk::TextIter| {
+        at.line() == b.iter_at_mark(&b.get_insert()).line()
+    };
+    let weak = Rc::downgrade(ui);
+    ui.buffer.connect_insert_text(move |b, at, _| {
+        if let Some(ui) = weak.upgrade().filter(|_| at_cursor(b, at)) {
+            follow_cursor(&ui);
+        }
+    });
+    let weak = Rc::downgrade(ui);
+    ui.buffer.connect_delete_range(move |b, start, end| {
+        if let Some(ui) = weak
+            .upgrade()
+            .filter(|_| at_cursor(b, start) || at_cursor(b, end))
+        {
+            follow_cursor(&ui);
+        }
+    });
 
     // Typing saves after a pause.
     let weak = Rc::downgrade(ui);
     ui.buffer.connect_changed(move |_| {
         let Some(ui) = weak.upgrade() else { return };
         restyle(&ui);
-        follow_cursor(&ui);
         if ui.loading.get() {
             return;
         }

@@ -304,7 +304,13 @@ fn tables(view: &sourceview5::View) {
     });
 }
 
-/// Tidy the table of the row last changed, once the cursor has left that row.
+/// The synced `format_tables` setting (on unless "false"): tables tidied by themselves.
+pub fn format_tables() -> bool {
+    crate::core().setting("format_tables".into()).as_deref() != Some("false")
+}
+
+/// Tidy the table of the row last changed, once the cursor has left that row (if
+/// `format_tables`).
 fn tidy_left(buffer: &sourceview5::Buffer) {
     let Some(mark) = buffer.mark(EDITED) else {
         return;
@@ -317,7 +323,7 @@ fn tidy_left(buffer: &sourceview5::Buffer) {
         return;
     }
     buffer.delete_mark(&mark);
-    if !editor_mode(buffer) {
+    if !editor_mode(buffer) || !format_tables() {
         return;
     }
     let (start, end) = buffer.bounds();

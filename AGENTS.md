@@ -71,6 +71,9 @@
 
 - Static views are Blueprint files in `linux/app/ui/`, compiled by `build.rs`; dynamic UI (note
   rows) stays in Rust code.
+- What Editor mode changes by itself (a table tidied as the cursor leaves it) gets a switch in
+  Preferences, General → Editing: a synced setting, on by default, read where the change is made
+  (`editor::format_tables`). What the user asks for (a menu item, a click) needs none.
 
 ## Testing
 

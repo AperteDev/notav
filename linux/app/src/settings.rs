@@ -1,5 +1,5 @@
-//! Preferences dialog: General (style, the tree's density and icons) and Accounts (account,
-//! notes folder, settings sync).
+//! Preferences dialog: General (style, the tree's density and icons, Editor mode's automatic
+//! changes) and Accounts (account, notes folder, settings sync).
 
 use crate::connection::Connection;
 use crate::core;
@@ -60,6 +60,11 @@ pub fn present(parent: &impl IsA<gtk::Widget>) {
         let name = g.active_name().map(|n| n.to_string()).unwrap_or_default();
         let _ = core().set_setting("tree_icons".into(), name);
         crate::window::apply_tree_look();
+    });
+    let tables: adw::SwitchRow = get(&b, "format_tables");
+    tables.set_active(crate::editor::format_tables());
+    tables.connect_active_notify(|s| {
+        let _ = core().set_setting("format_tables".into(), s.is_active().to_string());
     });
     dialog.present(Some(parent));
 }

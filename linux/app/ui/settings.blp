@@ -67,6 +67,16 @@ Adw.PreferencesDialog dialog {
         }
       }
     }
+
+    // What Editor mode does by itself, each to turn off (synced).
+    Adw.PreferencesGroup {
+      title: _("Editing");
+
+      Adw.SwitchRow format_tables {
+        title: _("Format tables");
+        subtitle: _("Line up a table’s columns when the cursor leaves a changed row");
+      }
+    }
   }
 
   Adw.PreferencesPage {

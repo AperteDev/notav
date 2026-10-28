@@ -14,6 +14,10 @@ pub const DEVICE_ONLY: &[&str] = &[
     "dense_tree",
     // Source or Editor mode: switched for a moment on one device, not on all.
     "source_mode",
+    // The text's font (fonts differ between devices), size and width suit the screen.
+    "editor_font",
+    "text_zoom",
+    "full_width",
     "goa_account",
     "manual_url",
     "manual_user",

@@ -92,6 +92,6 @@ Later (v2):
   only while it is open (decided 2026-10-24).
 - **The first line as the title**: the title is the file name, as in Obsidian; Nextcloud Notes
   renames files after their first line, Notav does not.
-- **Editor styles** not taken, for now: a monospace font (Apostrophe's Fira Mono, Iotas's
-  default), a font size that grows with the window (Apostrophe), the `#` marks hanging in the
-  margin (Iotas), font and width preferences.
+- **Editor styles** not taken, for now: a monospace font by default (Apostrophe's Fira Mono,
+  Iotas's; Preferences can choose one), a font size that grows with the window (Apostrophe), the
+  `#` marks hanging in the margin (Iotas).

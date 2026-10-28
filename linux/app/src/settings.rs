@@ -61,12 +61,62 @@ pub fn present(parent: &impl IsA<gtk::Widget>) {
         let _ = core().set_setting("tree_icons".into(), name);
         crate::window::apply_tree_look();
     });
+    connect_font(&b);
     let tables: adw::SwitchRow = get(&b, "format_tables");
     tables.set_active(crate::editor::format_tables());
     tables.connect_active_notify(|s| {
         let _ = core().set_setting("format_tables".into(), s.is_active().to_string());
     });
     dialog.present(Some(parent));
+}
+
+/// The device-only `editor_font` setting (a Pango font description), if one is chosen.
+pub fn editor_font() -> Option<gtk::pango::FontDescription> {
+    core()
+        .setting("editor_font".into())
+        .filter(|f| !f.is_empty())
+        .map(|f| gtk::pango::FontDescription::from_string(&f))
+}
+
+/// The notes' font: the one chosen, or the interface's at 12 pt (the default) shown.
+fn connect_font(b: &gtk::Builder) {
+    let button: gtk::FontDialogButton = get(b, "editor_font");
+    let default: gtk::Button = get(b, "font_default");
+    // Set while the button is given the font to show, which is no choice.
+    let showing = Rc::new(std::cell::Cell::new(false));
+    let show = {
+        let (button, default, showing) = (button.clone(), default.clone(), showing.clone());
+        move || {
+            let chosen = editor_font();
+            default.set_visible(chosen.is_some());
+            let font = chosen.unwrap_or_else(|| {
+                let name = gtk::Settings::default()
+                    .and_then(|s| s.gtk_font_name())
+                    .unwrap_or_default();
+                let mut f = gtk::pango::FontDescription::from_string(&name);
+                f.set_size(12 * gtk::pango::SCALE);
+                f
+            });
+            showing.set(true);
+            button.set_font_desc(&font);
+            showing.set(false);
+        }
+    };
+    show();
+    let (shown, default_) = (show.clone(), default.clone());
+    button.connect_font_desc_notify(move |b| {
+        let Some(font) = b.font_desc().filter(|_| !showing.get()) else {
+            return;
+        };
+        let _ = core().set_setting("editor_font".into(), font.to_string());
+        crate::window::text_look_changed();
+        default_.set_visible(true);
+    });
+    default.connect_clicked(move |_| {
+        let _ = core().set_setting("editor_font".into(), String::new());
+        crate::window::text_look_changed();
+        shown();
+    });
 }
 
 /// The notes folder: another one asks whether the notes move along (when there are some), then

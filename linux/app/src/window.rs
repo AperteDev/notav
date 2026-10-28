@@ -19,7 +19,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 /// Nautilus' list view.
 const CSS: &str = "
 .note-title { font-size: 20pt; font-weight: 800; }
-.note-text { font-size: 12pt; line-height: 1.4; }
+.note-text { line-height: 1.4; }
 .navigation-sidebar > row:drop(active), scrolledwindow:drop(active) { box-shadow: none; }
 .navigation-sidebar > row.drop-target { background-color: alpha(var(--accent-bg-color), 0.2); }
 .navigation-sidebar.drop-target { background-color: alpha(var(--accent-bg-color), 0.12); }
@@ -103,6 +103,12 @@ struct Ui {
     note_stack: gtk::Stack,
     title: gtk::Entry,
     note_scroll: gtk::ScrolledWindow,
+    note_clamp: adw::Clamp,
+    note_box: gtk::Box,
+    note_mode: adw::ToggleGroup,
+    zoom_reset: gtk::Button,
+    /// The note's font, size and width (`apply_text_look`).
+    text_css: gtk::CssProvider,
     buffer: sourceview5::Buffer,
     editor: sourceview5::View,
     current: RefCell<Option<Note>>,
@@ -177,6 +183,12 @@ pub fn setup_actions(app: &adw::Application) {
     app.set_accels_for_action("win.new-note", &["<Control>n"]);
     app.set_accels_for_action("win.search", &["<Control>f"]);
     app.set_accels_for_action("win.undo", &["<Control>z"]);
+    app.set_accels_for_action(
+        "win.zoom-in",
+        &["<Control>plus", "<Control>equal", "<Control>KP_Add"],
+    );
+    app.set_accels_for_action("win.zoom-out", &["<Control>minus", "<Control>KP_Subtract"]);
+    app.set_accels_for_action("win.zoom-reset", &["<Control>0", "<Control>KP_0"]);
 }
 
 /// Turns About's Details page into Support: a note and the donation links instead of the
@@ -558,6 +570,11 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         note_stack: get(&b, "note_stack"),
         title: get(&b, "title"),
         note_scroll: get(&b, "note_scroll"),
+        note_clamp: get(&b, "note_clamp"),
+        note_box: get(&b, "note_box"),
+        note_mode: get(&b, "note_mode"),
+        zoom_reset: get(&b, "zoom_reset"),
+        text_css: gtk::CssProvider::new(),
         buffer,
         editor,
         current: RefCell::new(None),
@@ -569,10 +586,91 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         last_locked: RefCell::new(Vec::new()),
     });
     ui.conn.attach(&get(&b, "login_group"));
+    let zoom: gtk::Box = get(&b, "zoom_box");
+    if zoom.parent().is_none() {
+        get::<gtk::PopoverMenu>(&b, "view_popover").add_child(&zoom, "zoom");
+    }
+    // Over `CSS`, which it overrides.
+    gtk::style_context_add_provider_for_display(
+        &WidgetExt::display(&ui.window),
+        &ui.text_css,
+        gtk::STYLE_PROVIDER_PRIORITY_APPLICATION + 1,
+    );
+    apply_text_look(&ui);
     close_note(&ui);
     connect(&ui);
     connect_welcome(&ui, &b);
     ui
+}
+
+/// The device-only `text_zoom` setting: the note's text size in percent, 50 to 300.
+fn text_zoom() -> i32 {
+    core()
+        .setting("text_zoom".into())
+        .and_then(|z| z.parse().ok())
+        .unwrap_or(100)
+        .clamp(50, 300)
+}
+
+/// The device-only `full_width` setting: the text across the window, without margins.
+fn full_width() -> bool {
+    core().setting("full_width".into()).as_deref() == Some("true")
+}
+
+/// The note's text again after a setting of its look changed (Preferences).
+pub fn text_look_changed() {
+    if let Some(ui) = ui() {
+        apply_text_look(&ui);
+    }
+}
+
+/// The note's text in the font from Preferences (the device-only `editor_font`; the
+/// interface's at 12 pt without one), at the size `text_zoom` scales it to, as wide as
+/// `full_width` says.
+fn apply_text_look(ui: &Ui) {
+    let zoom = text_zoom();
+    let mut css = String::from(".note-text {");
+    let mut size = 12.0;
+    if let Some(font) = crate::settings::editor_font() {
+        let set = font.set_fields();
+        if let Some(family) = font
+            .family()
+            .filter(|_| set.contains(gtk::pango::FontMask::FAMILY))
+        {
+            css.push_str(&format!(" font-family: \"{}\";", family.replace('"', "")));
+        }
+        if font.size() > 0 {
+            size = font.size() as f64 / gtk::pango::SCALE as f64;
+            if font.is_size_absolute() {
+                size *= 0.75; // pixels to points
+            }
+        }
+        if set.contains(gtk::pango::FontMask::WEIGHT) {
+            use glib::translate::IntoGlib;
+            css.push_str(&format!(" font-weight: {};", font.weight().into_glib()));
+        }
+        if font.style() == gtk::pango::Style::Italic {
+            css.push_str(" font-style: italic;");
+        }
+    }
+    css.push_str(&format!(
+        " font-size: {:.1}pt; }}",
+        size * zoom as f64 / 100.0
+    ));
+    ui.text_css.load_from_string(&css);
+    // Translators: the note's text size in the view menu, as "100%".
+    let percent = gettext("{percent}%");
+    ui.zoom_reset
+        .set_label(&percent.replace("{percent}", &zoom.to_string()));
+    let full = full_width();
+    // No limit: wider than any window.
+    ui.note_clamp
+        .set_maximum_size(if full { 100_000 } else { 720 });
+    ui.note_clamp
+        .set_tightening_threshold(if full { 100_000 } else { 600 });
+    let margin = if full { 0 } else { 12 };
+    ui.note_box.set_margin_start(margin);
+    ui.note_box.set_margin_end(margin);
 }
 
 /// The device-only `source_mode` setting: Source mode instead of Editor mode.
@@ -690,7 +788,7 @@ fn connect(ui: &Rc<Ui>) {
         });
         ui.window.add_action(&a);
     }
-    // Source mode or Editor mode, from the main menu.
+    // Source mode or Editor mode, from the header's toggles.
     let source = gio::SimpleAction::new_stateful("source-mode", None, &source_mode().to_variant());
     let weak = Rc::downgrade(ui);
     source.connect_change_state(move |a, state| {
@@ -699,9 +797,45 @@ fn connect(ui: &Rc<Ui>) {
         };
         a.set_state(&on.to_variant());
         let _ = core().set_setting("source_mode".into(), on.to_string());
+        ui.note_mode
+            .set_active_name(Some(if on { "source" } else { "editor" }));
         restyle(&ui);
     });
     ui.window.add_action(&source);
+    ui.note_mode
+        .set_active_name(Some(if source_mode() { "source" } else { "editor" }));
+    let window = ui.window.downgrade();
+    ui.note_mode.connect_active_name_notify(move |g| {
+        let on = g.active_name().as_deref() == Some("source");
+        if let Some(w) = window.upgrade()
+            && on != source_mode()
+        {
+            w.change_action_state("source-mode", &on.to_variant());
+        }
+    });
+    // The text's size and width, from the view menu.
+    for (name, step) in [("zoom-in", 10), ("zoom-out", -10), ("zoom-reset", 0)] {
+        let a = gio::SimpleAction::new(name, None);
+        let weak = Rc::downgrade(ui);
+        a.connect_activate(move |_, _| {
+            let Some(ui) = weak.upgrade() else { return };
+            let zoom = if step == 0 { 100 } else { text_zoom() + step };
+            let _ = core().set_setting("text_zoom".into(), zoom.clamp(50, 300).to_string());
+            apply_text_look(&ui);
+        });
+        ui.window.add_action(&a);
+    }
+    let full = gio::SimpleAction::new_stateful("full-width", None, &full_width().to_variant());
+    let weak = Rc::downgrade(ui);
+    full.connect_change_state(move |a, state| {
+        let (Some(ui), Some(on)) = (weak.upgrade(), state.and_then(|s| s.get::<bool>())) else {
+            return;
+        };
+        a.set_state(&on.to_variant());
+        let _ = core().set_setting("full_width".into(), on.to_string());
+        apply_text_look(&ui);
+    });
+    ui.window.add_action(&full);
     // Undo the latest change; in a text field, the typing there (as in Todav).
     let window = ui.window.downgrade();
     let undo_last = gio::SimpleAction::new("undo", None);

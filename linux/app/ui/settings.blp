@@ -36,6 +36,30 @@ Adw.PreferencesDialog dialog {
         }
       }
 
+      // The notes' font, kept on this device only (fonts differ between them); the button
+      // takes it back to the interface's.
+      Adw.ActionRow {
+        title: _("Font");
+
+        [suffix]
+        Gtk.Button font_default {
+          icon-name: "edit-undo-symbolic";
+          tooltip-text: _("Use the Default Font");
+          valign: center;
+          styles ["flat"]
+        }
+
+        [suffix]
+        Gtk.FontDialogButton editor_font {
+          valign: center;
+          level: font;
+
+          dialog: Gtk.FontDialog {
+            title: _("Note Font");
+          };
+        }
+      }
+
       // Kept on this device only.
       Adw.SwitchRow dense_tree {
         title: _("Dense tree");

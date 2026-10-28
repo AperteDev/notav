@@ -236,6 +236,65 @@ Adw.ApplicationWindow window {
                   action-name: "win.new-note";
                 }
 
+                // Font size and the text area's width, for this device.
+                [end]
+                Gtk.MenuButton {
+                  icon-name: "view-more-symbolic";
+                  tooltip-text: _("View Options");
+
+                  // The builder sets the menu after the children: the zoom row is added to it in
+                  // code (`zoom_box`).
+                  popover: Gtk.PopoverMenu view_popover {
+                    menu-model: view_menu;
+
+                    [zoom]
+                    Gtk.Box zoom_box {
+                      homogeneous: true;
+                      margin-start: 6;
+                      margin-end: 6;
+
+                      Gtk.Button {
+                        icon-name: "zoom-out-symbolic";
+                        tooltip-text: _("Smaller Text (Ctrl+−)");
+                        action-name: "win.zoom-out";
+                        styles ["flat"]
+                      }
+
+                      Gtk.Button zoom_reset {
+                        label: "100%";
+                        tooltip-text: _("Reset Text Size (Ctrl+0)");
+                        action-name: "win.zoom-reset";
+                        styles ["flat"]
+                      }
+
+                      Gtk.Button {
+                        icon-name: "zoom-in-symbolic";
+                        tooltip-text: _("Larger Text (Ctrl++)");
+                        action-name: "win.zoom-in";
+                        styles ["flat"]
+                      }
+                    }
+                  };
+                }
+
+                // Editor mode or Source mode (the device-only `source_mode` setting).
+                [end]
+                Adw.ToggleGroup note_mode {
+                  valign: center;
+
+                  Adw.Toggle {
+                    name: "editor";
+                    icon-name: "format-text-rich-symbolic";
+                    tooltip: _("Editor Mode");
+                  }
+
+                  Adw.Toggle {
+                    name: "source";
+                    icon-name: "format-text-plaintext-symbolic";
+                    tooltip: _("Source Mode");
+                  }
+                }
+
                 // The icon, or a spinner while syncing.
                 [end]
                 Gtk.Button {
@@ -339,12 +398,13 @@ Adw.ApplicationWindow window {
                     Gtk.Viewport {
                       scroll-to-focus: false;
 
-                      // A line of about 80 characters, as Folio (720) and Iotas (800) keep it.
-                      Adw.Clamp {
+                      // A line of about 80 characters, as Folio (720) and Iotas (800) keep it;
+                      // all the width with Full Width (`apply_text_look`).
+                      Adw.Clamp note_clamp {
                         maximum-size: 720;
                         tightening-threshold: 600;
 
-                        Gtk.Box {
+                        Gtk.Box note_box {
                           orientation: vertical;
                           margin-top: 18;
                           margin-bottom: 18;
@@ -389,11 +449,19 @@ Adw.ApplicationWindow window {
   }
 }
 
-menu main_menu {
+menu view_menu {
   section {
-    item (_("Source Mode"), "win.source-mode")
+    item {
+      custom: "zoom";
+    }
   }
 
+  section {
+    item (_("Full Width"), "win.full-width")
+  }
+}
+
+menu main_menu {
   item (_("Preferences"), "win.preferences")
   item (_("Keyboard Shortcuts"), "app.shortcuts")
   item (_("About Notav"), "app.about")

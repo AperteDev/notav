@@ -59,5 +59,20 @@ Adw.ShortcutsDialog dialog {
       title: _("Redo");
       accelerator: "<Shift><Control>z";
     }
+
+    Adw.ShortcutsItem {
+      title: _("Larger Text");
+      action-name: "win.zoom-in";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Smaller Text");
+      action-name: "win.zoom-out";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Reset Text Size");
+      action-name: "win.zoom-reset";
+    }
   }
 }

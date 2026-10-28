@@ -2,6 +2,7 @@
 //! marks still there, dimmed. Source mode is GtkSourceView's own highlighting
 //! (`sourceview/notav-markdown.lang`).
 
+use gtk::glib;
 use gtk::prelude::*;
 use notav_core::markdown::{self, Style};
 use sourceview5::prelude::*;
@@ -72,8 +73,36 @@ pub fn setup(buffer: &sourceview5::Buffer) {
     }
 }
 
-/// What a click does in Editor mode: ticks a task.
+/// What a click and keys do in Editor mode: a click ticks a task, Enter continues a list.
 pub fn connect(view: &sourceview5::View) {
+    let keys = gtk::EventControllerKey::new();
+    keys.set_propagation_phase(gtk::PropagationPhase::Capture);
+    keys.connect_key_pressed(|keys, key, _, state| {
+        use gtk::gdk::Key;
+        let Some(view) = keys.widget().and_downcast::<sourceview5::View>() else {
+            return glib::Propagation::Proceed;
+        };
+        let buffer = view.buffer().downcast::<sourceview5::Buffer>().unwrap();
+        let plain = !state.intersects(gtk::accelerator_get_default_mod_mask());
+        if !matches!(key, Key::Return | Key::KP_Enter)
+            || !plain
+            || buffer.has_selection()
+            || !editor_mode(&buffer)
+        {
+            return glib::Propagation::Proceed;
+        }
+        let (start, end) = buffer.bounds();
+        let edits = markdown::enter(
+            &buffer.text(&start, &end, true),
+            buffer.cursor_position() as usize,
+        );
+        if edits.is_empty() {
+            return glib::Propagation::Proceed;
+        }
+        apply(&buffer, &edits);
+        glib::Propagation::Stop
+    });
+    view.add_controller(keys);
     // Before the text view's own, which would move the cursor there.
     let click = gtk::GestureClick::new();
     click.set_button(gtk::gdk::BUTTON_PRIMARY);
@@ -100,6 +129,26 @@ pub fn connect(view: &sourceview5::View) {
         view.set_cursor_from_name(Some(if task { "pointer" } else { "text" }));
     });
     view.add_controller(motion);
+}
+
+/// Whether `buffer` is in Editor mode (and not too long for it).
+fn editor_mode(buffer: &sourceview5::Buffer) -> bool {
+    !buffer.is_highlight_syntax() && buffer.char_count() <= MAX_CHARS
+}
+
+/// Make the core's `edits` (in the order of the text) as one step to undo. The cursor stays
+/// at the first, after what it inserts.
+fn apply(buffer: &sourceview5::Buffer, edits: &[markdown::Edit]) {
+    buffer.begin_user_action();
+    for e in edits.iter().rev() {
+        let (mut start, mut end) = (
+            buffer.iter_at_offset(e.start as i32),
+            buffer.iter_at_offset(e.end as i32),
+        );
+        buffer.delete(&mut start, &mut end);
+        buffer.insert(&mut start, &e.text);
+    }
+    buffer.end_user_action();
 }
 
 /// The text under the widget's point `x`, `y`, if it has Editor mode's tag `name`.

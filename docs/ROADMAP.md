@@ -14,8 +14,6 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
      request. From the right-click menu: insert a table, add, delete and move rows and columns,
      align a column, sort by one. Text pasted from a spreadsheet (tab-separated) becomes a
      table. Each change is one undo step.
-   - Lists: Enter continues a bullet, a number (renumbering what follows) or a task; Enter on
-     an empty item ends the list.
    - Links: Ctrl+click opens one.
 2. **Keyboard shortcuts**, later: Tab and Shift+Tab between table cells, Enter to the next row
    (a new one at the end); Tab and Shift+Tab to indent list items; Ctrl+B, Ctrl+I, Ctrl+K around

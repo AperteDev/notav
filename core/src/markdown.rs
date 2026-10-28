@@ -50,16 +50,27 @@ struct Open {
     children: Vec<Range<usize>>,
 }
 
-/// The styled ranges of `text`, in the order found. Ranges of different styles overlap
-/// (strong text in a heading, marks in a link).
-pub fn spans(text: &str) -> Vec<Span> {
-    let options = Options::ENABLE_TABLES
+/// A change to a note's text: characters `start` to `end` replaced by `text`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Edit {
+    pub start: usize,
+    pub end: usize,
+    pub text: String,
+}
+
+fn options() -> Options {
+    Options::ENABLE_TABLES
         | Options::ENABLE_FOOTNOTES
         | Options::ENABLE_STRIKETHROUGH
         | Options::ENABLE_TASKLISTS
         | Options::ENABLE_GFM
-        | Options::ENABLE_YAML_STYLE_METADATA_BLOCKS;
-    let parser = Parser::new_ext(text, options).into_offset_iter();
+        | Options::ENABLE_YAML_STYLE_METADATA_BLOCKS
+}
+
+/// The styled ranges of `text`, in the order found. Ranges of different styles overlap
+/// (strong text in a heading, marks in a link).
+pub fn spans(text: &str) -> Vec<Span> {
+    let parser = Parser::new_ext(text, options()).into_offset_iter();
     let mut out: Vec<(Range<usize>, Style)> = Vec::new();
     // Link reference definitions ("[id]: url") make no events.
     for (_, def) in parser.reference_definitions().iter() {
@@ -189,6 +200,157 @@ pub fn spans(text: &str) -> Vec<Span> {
     }
     urls(run, &mut out);
     to_chars(text, out)
+}
+
+/// What Enter at character `at` does in a list item, in the order of the text (none: a plain
+/// new line). In an item's text it starts the next item: the same bullet, the next number (the
+/// numbers after it moved up while they count on), an open task after a task. In an empty
+/// item it ends the list: the line keeps only a quote's `>`.
+pub fn enter(text: &str, at: usize) -> Vec<Edit> {
+    let Some(byte) = text
+        .char_indices()
+        .map(|(i, _)| i)
+        .chain([text.len()])
+        .nth(at)
+    else {
+        return Vec::new();
+    };
+    let start = text[..byte].rfind('\n').map_or(0, |n| n + 1);
+    let end = line_end(text, byte);
+    let line = &text[start..end];
+    let Some(item) = ListItem::parse(line) else {
+        return Vec::new();
+    };
+    if byte < start + item.content {
+        return Vec::new();
+    }
+    // The parser decides what is an item (not in a code block, not "1986\.").
+    let Some(after) = items_after(text, start + item.prefix.len()) else {
+        return Vec::new();
+    };
+    let chars = |b: usize| text[..b].chars().count();
+    if line[item.content..].trim().is_empty() {
+        let quote = item.prefix.trim_end();
+        let keep = if quote.is_empty() {
+            String::new()
+        } else {
+            format!("{quote} ")
+        };
+        return vec![Edit {
+            start: chars(start),
+            end: chars(end),
+            text: keep,
+        }];
+    }
+    let task = if item.task { "[ ] " } else { "" };
+    let spacing = if item.spacing.is_empty() {
+        " "
+    } else {
+        item.spacing
+    };
+    let next = match item.number {
+        Some((n, delimiter)) => format!("{}{delimiter}", n + 1),
+        None => item.marker.to_string(),
+    };
+    let mut edits = vec![Edit {
+        start: at,
+        end: at,
+        text: format!("\n{}{next}{spacing}{task}", item.prefix),
+    }];
+    // Renumber the items after it that counted on from it.
+    if let Some((n, _)) = item.number {
+        let mut expected = n + 1;
+        for s in after {
+            let digits = text[s..].bytes().take_while(u8::is_ascii_digit).count();
+            if text[s..s + digits].parse() != Ok(expected) {
+                break;
+            }
+            expected += 1;
+            edits.push(Edit {
+                start: chars(s),
+                end: chars(s + digits),
+                text: expected.to_string(),
+            });
+        }
+    }
+    edits
+}
+
+/// A line that starts like a list item.
+struct ListItem<'a> {
+    /// Indentation and a quote's `>`s before the marker.
+    prefix: &'a str,
+    marker: &'a str,
+    /// An ordered item's number and its `.` or `)`.
+    number: Option<(u64, char)>,
+    spacing: &'a str,
+    task: bool,
+    /// Where its text starts in the line.
+    content: usize,
+}
+
+impl<'a> ListItem<'a> {
+    fn parse(line: &'a str) -> Option<Self> {
+        let prefix_len = line.len() - line.trim_start_matches([' ', '\t', '>']).len();
+        let (prefix, rest) = line.split_at(prefix_len);
+        let digits = rest.bytes().take_while(u8::is_ascii_digit).count();
+        let (marker, number) = match rest.as_bytes().first()? {
+            b'-' | b'*' | b'+' => (&rest[..1], None),
+            _ if (1..=9).contains(&digits)
+                && matches!(rest.as_bytes()[digits..].first(), Some(b'.' | b')')) =>
+            {
+                let delimiter = rest.as_bytes()[digits] as char;
+                (
+                    &rest[..digits + 1],
+                    Some((rest[..digits].parse().ok()?, delimiter)),
+                )
+            }
+            _ => return None,
+        };
+        let after = &rest[marker.len()..];
+        let spacing = &after[..after.len() - after.trim_start_matches([' ', '\t']).len()];
+        if spacing.is_empty() && !after.is_empty() {
+            return None;
+        }
+        let mut content = prefix.len() + marker.len() + spacing.len();
+        let task = matches!(line.get(content..content + 3), Some("[ ]" | "[x]" | "[X]"))
+            && matches!(line.as_bytes().get(content + 3), None | Some(b' '));
+        if task {
+            content = (content + 4).min(line.len());
+        }
+        Some(Self {
+            prefix,
+            marker,
+            number,
+            spacing,
+            task,
+            content,
+        })
+    }
+}
+
+/// The starts of the items after the one starting at byte `item`, in its list; None when no
+/// item starts there.
+fn items_after(text: &str, item: usize) -> Option<Vec<usize>> {
+    let mut lists: Vec<Vec<usize>> = Vec::new();
+    for (event, range) in Parser::new_ext(text, options()).into_offset_iter() {
+        match event {
+            Event::Start(Tag::List(_)) => lists.push(Vec::new()),
+            Event::Start(Tag::Item) => {
+                if let Some(items) = lists.last_mut() {
+                    items.push(range.start);
+                }
+            }
+            Event::End(TagEnd::List(_)) => {
+                let items = lists.pop().unwrap_or_default();
+                if let Some(i) = items.iter().position(|&s| s == item) {
+                    return Some(items[i + 1..].to_vec());
+                }
+            }
+            _ => {}
+        }
+    }
+    None
 }
 
 /// Push `style` over `range`; its marks are what its children leave.
@@ -408,6 +570,64 @@ mod tests {
             ["www.a.b/c", "https://d.e?f=1"]
         );
         assert!(urls("https:// www.").is_empty());
+    }
+
+    /// `text` (with `|` where the cursor is) after Enter, with `|` where the cursor goes.
+    fn after_enter(text: &str) -> String {
+        let at = text.find('|').unwrap();
+        let mut t: Vec<char> = text.replace('|', "").chars().collect();
+        let at = text[..at].chars().count();
+        let edits = enter(&t.iter().collect::<String>(), at);
+        let mut cursor = at;
+        for e in edits.iter().rev() {
+            t.splice(e.start..e.end, e.text.chars());
+        }
+        if let Some(first) = edits.first() {
+            cursor = first.start + first.text.chars().count();
+        } else {
+            t.insert(at, '\n');
+            cursor += 1;
+        }
+        t.insert(cursor, '|');
+        t.into_iter().collect()
+    }
+
+    #[test]
+    fn enter_continues_a_list() {
+        assert_eq!(after_enter("- a|"), "- a\n- |");
+        assert_eq!(after_enter("* a|b"), "* a\n* |b");
+        assert_eq!(after_enter("- [x] done|"), "- [x] done\n- [ ] |");
+        assert_eq!(after_enter("> - ą|\n"), "> - ą\n> - |\n");
+        assert_eq!(after_enter("- a\n  - b|"), "- a\n  - b\n  - |");
+        assert_eq!(after_enter("3) a|"), "3) a\n4) |");
+        assert_eq!(
+            after_enter("1. a|\n2. b\n   1. c\n3. d\n\n5. e\n"),
+            "1. a\n2. |\n3. b\n   1. c\n4. d\n\n5. e\n"
+        );
+        // Items numbered alike stay so.
+        assert_eq!(after_enter("1. a|\n1. b\n"), "1. a\n2. |\n1. b\n");
+    }
+
+    #[test]
+    fn enter_on_an_empty_item_ends_the_list() {
+        assert_eq!(after_enter("- a\n- |"), "- a\n|");
+        assert_eq!(after_enter("- a\n- [ ] |\n"), "- a\n|\n");
+        assert_eq!(after_enter("> - a\n> - |"), "> - a\n> |");
+    }
+
+    #[test]
+    fn enter_elsewhere_is_a_new_line() {
+        for t in [
+            "|- a",
+            "-| a",
+            "a|",
+            "```\n- a|\n```",
+            "1986\\. a|",
+            "* * *|",
+            "-a|",
+        ] {
+            assert_eq!(after_enter(t), t.replace('|', "\n|"), "{t:?}");
+        }
     }
 
     #[test]

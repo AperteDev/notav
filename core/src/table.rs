@@ -1,0 +1,689 @@
+//! Editor mode's tables: a GitHub Flavored Markdown table kept aligned (cells padded so the
+//! pipes line up, the delimiter row holding each column's alignment) and changed by rows and
+//! columns. Each change is one edit of the table's lines, with where the cursor goes after it.
+
+use crate::markdown::{Edit, options};
+use pulldown_cmark::{Event, Parser, Tag};
+use std::cmp::Ordering;
+use std::ops::Range;
+
+/// A column's alignment, from the colons of the delimiter row.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Align {
+    None,
+    Left,
+    Center,
+    Right,
+}
+
+/// What to do to the table, at the cell of the cursor.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Op {
+    /// Only align it.
+    Tidy,
+    RowAbove,
+    RowBelow,
+    DeleteRow,
+    MoveRowUp,
+    MoveRowDown,
+    ColumnLeft,
+    ColumnRight,
+    DeleteColumn,
+    MoveColumnLeft,
+    MoveColumnRight,
+    Align(Align),
+    /// The rows below the header, by the column: numbers by value, the rest alphabetically.
+    Sort {
+        descending: bool,
+    },
+}
+
+/// An edit and where the cursor goes after it (in characters, as `Edit`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Change {
+    pub edit: Edit,
+    pub cursor: usize,
+}
+
+/// Do `op` to the table holding character `at`, with the cursor at character `cursor` (in it
+/// or elsewhere). None when there is no table there, `op` cannot be done (the header row has
+/// nothing above it, nor moves) or nothing changes.
+pub fn apply(text: &str, at: usize, cursor: usize, op: Op) -> Option<Change> {
+    let mut t = Table::find(text, byte(text, at)?)?;
+    let target = t.place(text, byte(text, at)?);
+    let cursor_byte = byte(text, cursor)?;
+    let mut place = (t.start..=t.end)
+        .contains(&cursor_byte)
+        .then(|| t.place(text, cursor_byte));
+    let (rows, columns) = (t.rows.len(), t.aligns.len());
+    let Place { row, column, .. } = target;
+    let mut go = |row, column| {
+        place = Some(Place {
+            row,
+            column,
+            spot: Spot::Text(0),
+        })
+    };
+    match op {
+        Op::Tidy => {}
+        Op::RowAbove | Op::RowBelow => {
+            if op == Op::RowAbove && row == 0 {
+                return None;
+            }
+            let i = if op == Op::RowAbove { row } else { row + 1 };
+            t.rows.insert(i, vec![String::new(); columns]);
+            go(i, column);
+        }
+        Op::DeleteRow => {
+            if row == 0 {
+                return None;
+            }
+            t.rows.remove(row);
+            go(row.min(rows - 2), column);
+        }
+        Op::MoveRowUp | Op::MoveRowDown => {
+            let other = if op == Op::MoveRowUp {
+                row.checked_sub(1)?
+            } else {
+                row + 1
+            };
+            if row == 0 || other == 0 || other >= rows {
+                return None;
+            }
+            t.rows.swap(row, other);
+            place = Some(Place {
+                row: other,
+                ..target
+            });
+        }
+        Op::ColumnLeft | Op::ColumnRight => {
+            let i = if op == Op::ColumnLeft {
+                column
+            } else {
+                column + 1
+            };
+            for r in &mut t.rows {
+                r.insert(i, String::new());
+            }
+            t.aligns.insert(i, Align::None);
+            go(row, i);
+        }
+        Op::DeleteColumn => {
+            if columns == 1 {
+                return None;
+            }
+            for r in &mut t.rows {
+                r.remove(column);
+            }
+            t.aligns.remove(column);
+            go(row, column.min(columns - 2));
+        }
+        Op::MoveColumnLeft | Op::MoveColumnRight => {
+            let other = if op == Op::MoveColumnLeft {
+                column.checked_sub(1)?
+            } else {
+                column + 1
+            };
+            if other >= columns {
+                return None;
+            }
+            for r in &mut t.rows {
+                r.swap(column, other);
+            }
+            t.aligns.swap(column, other);
+            place = Some(Place {
+                column: other,
+                ..target
+            });
+        }
+        Op::Align(a) => t.aligns[column] = a,
+        Op::Sort { descending } => {
+            t.rows[1..].sort_by(|a, b| {
+                let o = compare(&a[column], &b[column]);
+                if descending { o.reverse() } else { o }
+            });
+        }
+    }
+    let (new, starts) = t.format();
+    let old = &text[t.start..t.end];
+    if new == old {
+        return None;
+    }
+    let start = chars(text, t.start);
+    let cursor = match place {
+        Some(p) => {
+            let (line_start, cells, line_end) = &starts[p.row];
+            let len = t.rows[p.row][p.column].chars().count();
+            start
+                + match p.spot {
+                    Spot::Start => chars(&new, *line_start),
+                    Spot::End => chars(&new, *line_end),
+                    Spot::Text(offset) => chars(&new, cells[p.column]) + offset.min(len),
+                }
+        }
+        None if cursor_byte > t.end => cursor + new.chars().count() - old.chars().count(),
+        None => cursor,
+    };
+    Some(Change {
+        edit: Edit {
+            start,
+            end: chars(text, t.end),
+            text: new,
+        },
+        cursor,
+    })
+}
+
+/// Whether character `at` is in a table's lines.
+pub fn is_at(text: &str, at: usize) -> bool {
+    byte(text, at).and_then(|b| Table::find(text, b)).is_some()
+}
+
+/// An empty table of two columns, a header and one row.
+pub fn empty() -> String {
+    Table::new(String::new(), vec![vec![String::new(); 2]; 2], Vec::new())
+        .format()
+        .0
+}
+
+/// Text copied from a spreadsheet as a table: two lines or more, each with a tab between
+/// cells; the first line is the header.
+pub fn from_tsv(pasted: &str) -> Option<String> {
+    let lines: Vec<&str> = pasted.trim_end_matches(['\n', '\r']).lines().collect();
+    if lines.len() < 2 || !lines.iter().all(|l| l.contains('\t')) {
+        return None;
+    }
+    let rows = lines
+        .iter()
+        .map(|l| {
+            l.split('\t')
+                .map(|c| c.trim().replace('|', "\\|"))
+                .collect()
+        })
+        .collect();
+    Some(Table::new(String::new(), rows, Vec::new()).format().0)
+}
+
+/// Put `table` at character `cursor` as a block of its own (after the cursor's line if that has
+/// text), blank lines around it; the cursor in its first cell.
+pub fn insert(text: &str, cursor: usize, table: &str) -> Option<Change> {
+    let b = byte(text, cursor)?;
+    let line_start = text[..b].rfind('\n').map_or(0, |n| n + 1);
+    let line_end = text[b..].find('\n').map_or(text.len(), |n| b + n);
+    let blank = |line: Option<&str>| line.is_none_or(|l| l.trim().is_empty());
+    let previous = text[..line_start]
+        .strip_suffix('\n')
+        .map(|t| t.rsplit('\n').next().unwrap_or(t));
+    let next = text
+        .get(line_end + 1..)
+        .map(|t| t.split('\n').next().unwrap_or(t));
+    let (range, before) = if text[line_start..line_end].trim().is_empty() {
+        (
+            line_start..line_end,
+            if blank(previous) { "" } else { "\n" },
+        )
+    } else {
+        (line_end..line_end, "\n\n")
+    };
+    let after = if blank(next) { "" } else { "\n" };
+    let start = chars(text, range.start);
+    Some(Change {
+        edit: Edit {
+            start,
+            end: chars(text, range.end),
+            text: format!("{before}{table}{after}"),
+        },
+        cursor: start + before.len() + 2,
+    })
+}
+
+struct Table {
+    /// Bytes from its first line's start to its last line's end.
+    start: usize,
+    end: usize,
+    /// Spaces before each line (in a list item).
+    indent: String,
+    /// The header first; no delimiter row. All as long as `aligns`.
+    rows: Vec<Vec<String>>,
+    aligns: Vec<Align>,
+}
+
+/// A cell: its row (0 the header) and column, and where in it.
+#[derive(Debug, Clone, Copy)]
+struct Place {
+    row: usize,
+    column: usize,
+    spot: Spot,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum Spot {
+    /// Characters into the cell's text.
+    Text(usize),
+    /// Before the row's first pipe, after its last.
+    Start,
+    End,
+}
+
+/// Where a row of the formatted table is (bytes): its line's start, its cells' texts' starts,
+/// its line's end.
+type Row = (usize, Vec<usize>, usize);
+
+impl Table {
+    /// Rows padded with empty cells to the widest.
+    fn new(indent: String, mut rows: Vec<Vec<String>>, mut aligns: Vec<Align>) -> Self {
+        let n = rows
+            .iter()
+            .map(Vec::len)
+            .chain([aligns.len(), 1])
+            .max()
+            .unwrap_or(1);
+        for r in &mut rows {
+            r.resize(n, String::new());
+        }
+        aligns.resize(n, Align::None);
+        Self {
+            start: 0,
+            end: 0,
+            indent,
+            rows,
+            aligns,
+        }
+    }
+
+    /// The table with byte `at` in its lines, if the parser sees one there (not in a quote).
+    fn find(text: &str, at: usize) -> Option<Self> {
+        for (event, range) in Parser::new_ext(text, options()).into_offset_iter() {
+            if range.start > at {
+                return None;
+            }
+            let Event::Start(Tag::Table(_)) = event else {
+                continue;
+            };
+            let start = text[..range.start].rfind('\n').map_or(0, |n| n + 1);
+            let end = start + text[start..range.end].trim_end_matches(['\n', '\r']).len();
+            if !(start..=end).contains(&at) {
+                continue;
+            }
+            let indent = &text[start..range.start];
+            if !indent.chars().all(|c| c == ' ' || c == '\t') {
+                return None;
+            }
+            let lines: Vec<&str> = text[start..end].split('\n').collect();
+            let texts = |line: &str| cells(line).into_iter().map(|c| c.text).collect::<Vec<_>>();
+            let aligns = cells(lines.get(1)?)
+                .iter()
+                .map(|c| match (c.text.starts_with(':'), c.text.ends_with(':')) {
+                    (true, true) => Align::Center,
+                    (true, false) => Align::Left,
+                    (false, true) => Align::Right,
+                    (false, false) => Align::None,
+                })
+                .collect();
+            let rows = [lines[0]]
+                .iter()
+                .chain(&lines[2..])
+                .map(|l| texts(l))
+                .collect();
+            let mut t = Self::new(indent.to_string(), rows, aligns);
+            (t.start, t.end) = (start, end);
+            return Some(t);
+        }
+        None
+    }
+
+    /// The cell holding byte `at` of the text (in the table's lines); the delimiter row counts
+    /// as the header's start.
+    fn place(&self, text: &str, at: usize) -> Place {
+        let line_start = text[..at].rfind('\n').map_or(0, |n| n + 1).max(self.start);
+        let line = &text[line_start..text[at..].find('\n').map_or(text.len(), |n| at + n)];
+        let index = text[self.start..line_start].matches('\n').count();
+        let at = at - line_start;
+        let cells = cells(line);
+        let column = cells
+            .iter()
+            .position(|c| at <= c.stretch.end)
+            .unwrap_or(cells.len().saturating_sub(1))
+            .min(self.aligns.len() - 1);
+        let spot = match (cells.first(), cells.last()) {
+            (Some(first), _) if at < first.stretch.start => Spot::Start,
+            (_, Some(last)) if at > last.stretch.end => Spot::End,
+            _ => Spot::Text(cells.get(column).map_or(0, |c| {
+                line[c.text_start.min(at)..at]
+                    .chars()
+                    .count()
+                    .min(c.text.chars().count())
+            })),
+        };
+        match index {
+            0 => Place {
+                row: 0,
+                column,
+                spot,
+            },
+            1 => Place {
+                row: 0,
+                column,
+                spot: Spot::Text(0),
+            },
+            i => Place {
+                row: i - 1,
+                column,
+                spot,
+            },
+        }
+    }
+
+    /// The table's lines, aligned, and where its rows are in them.
+    fn format(&self) -> (String, Vec<Row>) {
+        let widths: Vec<usize> = (0..self.aligns.len())
+            .map(|c| {
+                self.rows
+                    .iter()
+                    .map(|r| width(&r[c]))
+                    .max()
+                    .unwrap_or(0)
+                    .max(3)
+            })
+            .collect();
+        let mut out = String::new();
+        let mut starts = Vec::new();
+        for (i, row) in self.rows.iter().enumerate() {
+            let line_start = out.len();
+            out.push_str(&self.indent);
+            out.push('|');
+            let mut s = Vec::new();
+            for (c, cell) in row.iter().enumerate() {
+                let pad = widths[c] - width(cell);
+                let (left, right) = match self.aligns[c] {
+                    Align::Right => (pad, 0),
+                    Align::Center => (pad / 2, pad - pad / 2),
+                    Align::None | Align::Left => (0, pad),
+                };
+                out.push_str(&" ".repeat(left + 1));
+                s.push(out.len());
+                out.push_str(cell);
+                out.push_str(&" ".repeat(right + 1));
+                out.push('|');
+            }
+            starts.push((line_start, s, out.len()));
+            out.push('\n');
+            if i == 0 {
+                out.push_str(&self.indent);
+                out.push('|');
+                for (c, align) in self.aligns.iter().enumerate() {
+                    let dashes = |n: usize| "-".repeat(widths[c] - n);
+                    let cell = match align {
+                        Align::None => dashes(0),
+                        Align::Left => format!(":{}", dashes(1)),
+                        Align::Right => format!("{}:", dashes(1)),
+                        Align::Center => format!(":{}:", dashes(2)),
+                    };
+                    out.push_str(&format!(" {cell} |"));
+                }
+                out.push('\n');
+            }
+        }
+        out.pop();
+        (out, starts)
+    }
+}
+
+/// A cell of a table line.
+struct Cell {
+    /// Between its pipes (bytes of the line).
+    stretch: Range<usize>,
+    /// Where its text starts, and the text, trimmed.
+    text_start: usize,
+    text: String,
+}
+
+/// The cells of a table line, split at the pipes that are not escaped (`\|`), the outer ones
+/// optional.
+fn cells(line: &str) -> Vec<Cell> {
+    let bytes = line.as_bytes();
+    let mut pipes = Vec::new();
+    let mut i = 0;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'\\' => i += 1,
+            b'|' => pipes.push(i),
+            _ => {}
+        }
+        i += 1;
+    }
+    let first = line.len() - line.trim_start().len();
+    let last = line.trim_end().len();
+    let mut from = first;
+    if pipes.first() == Some(&first) {
+        pipes.remove(0);
+        from += 1;
+    }
+    let mut to = last;
+    if last > from && pipes.last() == Some(&(last - 1)) {
+        pipes.pop();
+        to -= 1;
+    }
+    let mut out = Vec::new();
+    for end in pipes.into_iter().chain([to]) {
+        let raw = &line[from..end.max(from)];
+        let text_start = from + raw.len() - raw.trim_start().len();
+        out.push(Cell {
+            stretch: from..end.max(from),
+            text_start,
+            text: raw.trim().to_string(),
+        });
+        from = end + 1;
+    }
+    out
+}
+
+/// How many columns `s` takes in a monospace font: two for East Asian wide characters and
+/// emoji, none for combining marks and joiners.
+// ponytail: the common ranges only, not Unicode's whole East Asian Width table; the
+// `unicode-width` crate if a script lines up wrong.
+fn width(s: &str) -> usize {
+    s.chars()
+        .map(|c| match c as u32 {
+            0x0300..=0x036F | 0x200B..=0x200F | 0xFE00..=0xFE0F => 0,
+            0x1100..=0x115F
+            | 0x2E80..=0xA4CF
+            | 0xAC00..=0xD7A3
+            | 0xF900..=0xFAFF
+            | 0xFE30..=0xFE4F
+            | 0xFF00..=0xFF60
+            | 0xFFE0..=0xFFE6
+            | 0x1F300..=0x1F64F
+            | 0x1F900..=0x1F9FF
+            | 0x20000..=0x3FFFD => 2,
+            _ => 1,
+        })
+        .sum()
+}
+
+/// Numbers by value, the rest alphabetically, ignoring case.
+fn compare(a: &str, b: &str) -> Ordering {
+    match (a.parse::<f64>(), b.parse::<f64>()) {
+        (Ok(x), Ok(y)) => x.total_cmp(&y),
+        _ => a.to_lowercase().cmp(&b.to_lowercase()),
+    }
+}
+
+/// The byte of character `at` (the text's end after its last).
+fn byte(text: &str, at: usize) -> Option<usize> {
+    text.char_indices()
+        .map(|(i, _)| i)
+        .chain([text.len()])
+        .nth(at)
+}
+
+fn chars(text: &str, byte: usize) -> usize {
+    text[..byte].chars().count()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `text` (with `‸` where the cursor is) after `op` there, with `‸` where the cursor goes.
+    fn after(text: &str, op: Op) -> Option<String> {
+        let at = text[..text.find('‸').unwrap()].chars().count();
+        let t = text.replace('‸', "");
+        let c = apply(&t, at, at, op)?;
+        let mut chars: Vec<char> = t.chars().collect();
+        chars.splice(c.edit.start..c.edit.end, c.edit.text.chars());
+        chars.insert(c.cursor, '‸');
+        Some(chars.into_iter().collect())
+    }
+
+    #[test]
+    fn tidy_lines_up_the_pipes() {
+        assert_eq!(
+            after(
+                "Text\n\n| a | b‸b |\n|:-|-:|\n| ccc | d |\n\nMore\n",
+                Op::Tidy
+            )
+            .unwrap(),
+            "Text\n\n| a   |  b‸b |\n| :-- | --: |\n| ccc |   d |\n\nMore\n"
+        );
+        assert_eq!(
+            after("a | b‸\n--|:-:\n1 | 22222\n", Op::Tidy).unwrap(),
+            "| a   |   b‸   |\n| --- | :---: |\n| 1   | 22222 |\n"
+        );
+        // Escaped pipes stay in their cell, wide characters take two columns.
+        assert_eq!(
+            after("| `x\\|y` | 中文‸ |\n|---|---|\n| 🎉 | z |", Op::Tidy).unwrap(),
+            "| `x\\|y` | 中文‸ |\n| ------ | ---- |\n| 🎉     | z    |"
+        );
+        assert_eq!(after("| a   |‸ b   |\n| --- | --- |", Op::Tidy), None);
+        assert_eq!(after("Not a table | ‸\n", Op::Tidy), None);
+        assert_eq!(after("> | a | b‸ |\n> |---|---|\n", Op::Tidy), None);
+    }
+
+    #[test]
+    fn tidy_keeps_the_cursor_in_its_cell_or_out_of_the_table() {
+        let t = "| a | b |\n|-|-|\n| 1 | 2 |\n\nx";
+        let row = apply(t, 1, 22, Op::Tidy).unwrap();
+        assert_eq!(row.edit.text, "| a   | b   |\n| --- | --- |\n| 1   | 2   |");
+        assert_eq!(&row.edit.text[row.cursor..], "2   |");
+        let below = apply(t, 1, t.chars().count(), Op::Tidy).unwrap();
+        assert_eq!(below.cursor, row.edit.text.chars().count() + 3);
+        // At a row's ends, past its pipes, it stays there.
+        assert_eq!(
+            after("| a | b |\n|-|-|\n| 1 | 2 |‸", Op::Tidy).unwrap(),
+            "| a   | b   |\n| --- | --- |\n| 1   | 2   |‸"
+        );
+        assert_eq!(
+            after("| a | b |\n|-|-|\n‸| 1 | 2 |", Op::Tidy).unwrap(),
+            "| a   | b   |\n| --- | --- |\n‸| 1   | 2   |"
+        );
+    }
+
+    #[test]
+    fn rows_and_columns() {
+        let t = "| a | b‸ |\n|---|--:|\n| 1 | 2 |\n| 3 | 4 |";
+        assert_eq!(
+            after(t, Op::RowBelow).unwrap(),
+            "| a   |   b |\n| --- | --: |\n|     |    ‸ |\n| 1   |   2 |\n| 3   |   4 |"
+        );
+        assert_eq!(after(t, Op::RowAbove), None);
+        assert_eq!(after(t, Op::DeleteRow), None);
+        assert_eq!(after(t, Op::MoveRowDown), None);
+        assert_eq!(
+            after("| a | b |\n|---|--:|\n| 1 | 2 |\n| 3‸ | 4 |", Op::MoveRowUp).unwrap(),
+            "| a   |   b |\n| --- | --: |\n| 3‸   |   4 |\n| 1   |   2 |"
+        );
+        assert_eq!(
+            after("| a | b |\n|---|--:|\n| 1 | 2 |\n| 3‸ | 4 |", Op::DeleteRow).unwrap(),
+            "| a   |   b |\n| --- | --: |\n| ‸1   |   2 |"
+        );
+        assert_eq!(
+            after(t, Op::ColumnLeft).unwrap(),
+            "| a   | ‸    |   b |\n| --- | --- | --: |\n| 1   |     |   2 |\n| 3   |     |   4 |"
+        );
+        assert_eq!(
+            after(t, Op::MoveColumnLeft).unwrap(),
+            "|   b‸ | a   |\n| --: | --- |\n|   2 | 1   |\n|   4 | 3   |"
+        );
+        assert_eq!(after(t, Op::MoveColumnRight), None);
+        assert_eq!(
+            after(t, Op::DeleteColumn).unwrap(),
+            "| ‸a   |\n| --- |\n| 1   |\n| 3   |"
+        );
+        assert_eq!(
+            after(t, Op::Align(Align::Center)).unwrap(),
+            "| a   |  b‸  |\n| --- | :-: |\n| 1   |  2  |\n| 3   |  4  |"
+        );
+    }
+
+    #[test]
+    fn sorting_takes_numbers_by_value() {
+        let t = "| n‸ |\n|---|\n| 10 |\n| b |\n| 9 |\n| A |";
+        assert_eq!(
+            after(t, Op::Sort { descending: false }).unwrap(),
+            "| n‸   |\n| --- |\n| 9   |\n| 10  |\n| A   |\n| b   |"
+        );
+        assert_eq!(
+            after(t, Op::Sort { descending: true }).unwrap(),
+            "| n‸   |\n| --- |\n| b   |\n| A   |\n| 10  |\n| 9   |"
+        );
+    }
+
+    #[test]
+    fn new_tables_stand_apart() {
+        let put = |text: &str, cursor: usize| {
+            let c = insert(text, cursor, &empty()).unwrap();
+            let mut chars: Vec<char> = text.chars().collect();
+            chars.splice(c.edit.start..c.edit.end, c.edit.text.chars());
+            chars.insert(c.cursor, '‸');
+            chars.into_iter().collect::<String>()
+        };
+        let table = "|     |     |\n| --- | --- |\n|     |     |";
+        assert_eq!(put("", 0), format!("| ‸{}", &table[2..]));
+        assert_eq!(put("ab\nc", 1), format!("ab\n\n| ‸{}\n\nc", &table[2..]));
+        assert_eq!(put("ab\n\nc", 3), format!("ab\n\n| ‸{}\n\nc", &table[2..]));
+        assert_eq!(put("ab\n", 3), format!("ab\n\n| ‸{}", &table[2..]));
+    }
+
+    #[test]
+    fn every_change_anywhere_in_the_reference_note_holds() {
+        let t = include_str!("../tests/reference.md");
+        let n = t.chars().count();
+        let ops = [
+            Op::Tidy,
+            Op::RowAbove,
+            Op::RowBelow,
+            Op::DeleteRow,
+            Op::MoveRowUp,
+            Op::MoveRowDown,
+            Op::ColumnLeft,
+            Op::ColumnRight,
+            Op::DeleteColumn,
+            Op::MoveColumnLeft,
+            Op::MoveColumnRight,
+            Op::Align(Align::Right),
+            Op::Sort { descending: true },
+        ];
+        let mut changed = 0;
+        for at in (0..=n).step_by(3) {
+            for op in ops {
+                if let Some(c) = apply(t, at, at, op) {
+                    let len = n - (c.edit.end - c.edit.start) + c.edit.text.chars().count();
+                    assert!(c.edit.start <= c.edit.end && c.edit.end <= n && c.cursor <= len);
+                    changed += 1;
+                }
+            }
+        }
+        assert!(changed > 100, "{changed}");
+    }
+
+    #[test]
+    fn spreadsheet_rows_make_a_table() {
+        assert_eq!(
+            from_tsv("Name\tSize\na|b\t10\n\n").unwrap(),
+            "| Name | Size |\n| ---- | ---- |\n| a\\|b | 10   |"
+        );
+        assert_eq!(from_tsv("one\ttwo\n"), None);
+        assert_eq!(from_tsv("a\tb\nno tab\n"), None);
+    }
+}

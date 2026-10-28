@@ -9,11 +9,8 @@ Flavored Markdown); Source mode keeps GtkSourceView's highlighting and nothing m
 Editor mode's. Useful features come before looks: the Markdown marks stay visible for now.
 
 1. **Features**:
-   - Tables that look like Markdown tables, kept aligned: cells padded so the pipes line up
-     and the `|---|` row rewritten with its alignment colons, when the cursor leaves a row or on
-     request. From the right-click menu: insert a table, add, delete and move rows and columns,
-     align a column, sort by one. Text pasted from a spreadsheet (tab-separated) becomes a
-     table. Each change is one undo step.
+   - Tables in quotes (`> | a |`): kept aligned and changed like the others, which leave them
+     as they are now.
    - Links to other notes: Ctrl+click on a relative target (`[text](other.md)`) opens that
      note; Ctrl+click opens only addresses with a scheme now.
 2. **Keyboard shortcuts**, later: Tab and Shift+Tab between table cells, Enter to the next row
@@ -71,10 +68,13 @@ Later (v2):
   [Scribe](https://github.com/gnacho/scribe) does (the cursor then steps through them). Scribe
   (Rust, GTK 4, GtkSourceView 5, `pulldown-cmark`) is the closest prior art; it is AGPL, so its
   ideas only, not its code.
-- **Table alignment**: CJK characters and emoji take two columns; padding needs their display
-  width (the `unicode-width` crate, or measuring with Pango). Tables wider than the text column
-  either wrap (and lose the alignment) or scroll sideways. Padding changes the file's text when
-  a table is tidied, which other devices and apps see.
+- **Table alignment**: tables are padded by each character's width in a monospace font, taken
+  from the common wide ranges (CJK, Hangul, emoji; `width` in `core/src/table.rs`). A script
+  that still lines up wrong needs Unicode's whole East Asian Width table (the `unicode-width`
+  crate) or measuring with Pango, and fallback fonts may not be exactly two columns wide anyway.
+  Tables wider than the text column wrap and lose the alignment; scrolling them sideways would
+  need them out of the text view. Tidying changes the file's text, which other devices and apps
+  see.
 
 - **Journal**: the folder layout and name format of the daily notes, and whether a new one
   starts from a template.

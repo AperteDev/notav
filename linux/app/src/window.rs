@@ -1178,6 +1178,7 @@ fn set_text(ui: &Ui, text: &str, keep_cursor: bool) {
     ui.buffer.begin_irreversible_action();
     ui.buffer.set_text(text);
     ui.buffer.end_irreversible_action();
+    crate::editor::forget(&ui.buffer);
     ui.loading.set(false);
     ui.unsaved.set(false);
     if keep_cursor {

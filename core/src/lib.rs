@@ -6,6 +6,7 @@ mod notes;
 mod settings;
 pub mod store;
 mod sync;
+pub mod table;
 mod undo;
 
 use dav::Dav;

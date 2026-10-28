@@ -239,7 +239,7 @@ Adw.ApplicationWindow window {
                 // The journal's note of today, made if there is none.
                 [start]
                 Gtk.Button {
-                  icon-name: "x-office-calendar-symbolic";
+                  icon-name: "notav-today-symbolic";
                   tooltip-text: _("Today’s Note (Ctrl+T)");
                   action-name: "win.daily-note";
                 }
@@ -297,13 +297,13 @@ Adw.ApplicationWindow window {
 
                   Adw.Toggle {
                     name: "editor";
-                    icon-name: "format-text-rich-symbolic";
+                    icon-name: "notav-editor-mode-symbolic";
                     tooltip: _("Editor Mode");
                   }
 
                   Adw.Toggle {
                     name: "source";
-                    icon-name: "format-text-plaintext-symbolic";
+                    icon-name: "notav-source-mode-symbolic";
                     tooltip: _("Source Mode");
                   }
                 }

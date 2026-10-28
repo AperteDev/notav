@@ -101,6 +101,8 @@
     their place in a screenshot (`move_pointer_absolute`, `pointer_click`), or use the keyboard.
   - `read_text` on `(//TextBox)[last()]` is the open note's text; `press_key`, `type_text` type.
     A capital letter is typed with Shift: `Ctrl+z` undoes, `Ctrl+Z` is Ctrl+Shift+Z (redo).
+    `type_text` drops tabs: `press_key` `Tab`. A right click is `pointer_click` with button 273;
+    a click with a key held (Ctrl+click) cannot be made.
   - `read_value` on `(//ScrollBar)[1]` is the open note's scroll position.
 - Editor mode's reference note, `core/tests/reference.md`, has every piece of Markdown it styles;
   the core's tests parse it, and it can be put on the Test account (`notav new`) to look at in the

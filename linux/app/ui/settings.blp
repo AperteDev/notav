@@ -67,16 +67,6 @@ Adw.PreferencesDialog dialog {
         }
       }
     }
-
-    // The notes folder (synced); another one asks whether to move the notes there.
-    Adw.PreferencesGroup notes {
-      title: _("Notes");
-
-      Adw.EntryRow notes_folder {
-        title: _("Notes folder in Nextcloud Files");
-        show-apply-button: true;
-      }
-    }
   }
 
   Adw.PreferencesPage {
@@ -120,6 +110,16 @@ Adw.PreferencesDialog dialog {
           dropdown-tooltip: _("More Sign-In Options");
           valign: center;
         }
+      }
+    }
+
+    // The notes folder (synced); another one asks whether to move the notes there.
+    Adw.PreferencesGroup notes {
+      title: _("Notes");
+
+      Adw.EntryRow notes_folder {
+        title: _("Notes folder in Nextcloud Files");
+        show-apply-button: true;
       }
     }
 

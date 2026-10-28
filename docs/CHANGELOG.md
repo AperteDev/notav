@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Deleting a note no longer asks first: the toast can undo it
+- The notes folder is set in Preferences under Accounts, with the account it belongs to
 
 ### Fixed
 

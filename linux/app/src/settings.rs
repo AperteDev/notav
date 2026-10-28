@@ -1,5 +1,5 @@
-//! Preferences dialog: General (style, the tree's density and icons, the notes folder) and
-//! Accounts (account, settings sync).
+//! Preferences dialog: General (style, the tree's density and icons) and Accounts (account,
+//! notes folder, settings sync).
 
 use crate::connection::Connection;
 use crate::core;

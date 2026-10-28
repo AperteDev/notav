@@ -102,6 +102,7 @@ struct Ui {
     note_title: adw::WindowTitle,
     note_stack: gtk::Stack,
     title: gtk::Entry,
+    note_scroll: gtk::ScrolledWindow,
     buffer: sourceview5::Buffer,
     editor: sourceview5::View,
     current: RefCell<Option<Note>>,
@@ -555,6 +556,7 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         note_title: get(&b, "note_title"),
         note_stack: get(&b, "note_stack"),
         title: get(&b, "title"),
+        note_scroll: get(&b, "note_scroll"),
         buffer,
         editor,
         current: RefCell::new(None),
@@ -590,6 +592,38 @@ fn restyle(ui: &Rc<Ui>) {
             crate::editor::restyle(&ui.buffer, source_mode());
         }
         glib::ControlFlow::Break
+    });
+}
+
+/// Scroll the note to its cursor, once the text is laid out: what scrolls is the box with the
+/// title and the text, so the text view cannot do it itself.
+fn follow_cursor(ui: &Rc<Ui>) {
+    let weak = Rc::downgrade(ui);
+    glib::idle_add_local_once(move || {
+        let Some(ui) = weak.upgrade() else { return };
+        let (view, adj) = (&ui.editor, ui.note_scroll.vadjustment());
+        let cursor = ui.buffer.iter_at_mark(&ui.buffer.get_insert());
+        // On the first line, the title above it too.
+        if cursor.line() == 0 {
+            adj.set_value(0.0);
+            return;
+        }
+        let at = view.iter_location(&cursor);
+        let (x, y) = view.buffer_to_window_coords(gtk::TextWindowType::Widget, at.x(), at.y());
+        // Where it is in what scrolls, as that is not moved until it is laid out again.
+        let point = gtk::graphene::Point::new(x as f32, y as f32);
+        let Some(p) = view
+            .ancestor(adw::Clamp::static_type())
+            .and_then(|content| view.compute_point(&content, &point))
+        else {
+            return;
+        };
+        let (top, bottom, margin) = (p.y() as f64, (p.y() + at.height() as f32) as f64, 24.0);
+        if top - margin < adj.value() {
+            adj.set_value(top - margin);
+        } else if bottom + margin > adj.value() + adj.page_size() {
+            adj.set_value(bottom + margin - adj.page_size());
+        }
     });
 }
 
@@ -767,11 +801,60 @@ fn connect(ui: &Rc<Ui>) {
         }
     });
 
+    // Page Up and Down by what is shown: the text view's own would page by all of the note.
+    let keys = gtk::EventControllerKey::new();
+    keys.set_propagation_phase(gtk::PropagationPhase::Capture);
+    let weak = Rc::downgrade(ui);
+    keys.connect_key_pressed(move |_, key, _, state| {
+        use gtk::gdk::{Key, ModifierType};
+        let (Some(ui), Some(down)) = (
+            weak.upgrade(),
+            match key {
+                Key::Page_Down | Key::KP_Page_Down => Some(true),
+                Key::Page_Up | Key::KP_Page_Up => Some(false),
+                _ => None,
+            },
+        ) else {
+            return glib::Propagation::Proceed;
+        };
+        if state.intersects(!ModifierType::SHIFT_MASK & gtk::accelerator_get_default_mod_mask()) {
+            return glib::Propagation::Proceed;
+        }
+        let (view, adj) = (&ui.editor, ui.note_scroll.vadjustment());
+        let page = if down {
+            adj.page_size()
+        } else {
+            -adj.page_size()
+        } as i32;
+        let at = view.iter_location(&ui.buffer.iter_at_mark(&ui.buffer.get_insert()));
+        // Past the end of a shorter line: the line's start.
+        let y = at.y() + page;
+        let to = view
+            .iter_at_location(at.x(), y)
+            .unwrap_or_else(|| view.line_at_y(y).0);
+        adj.set_value(adj.value() + page as f64);
+        if state.contains(ModifierType::SHIFT_MASK) {
+            ui.buffer.move_mark(&ui.buffer.get_insert(), &to);
+        } else {
+            ui.buffer.place_cursor(&to);
+        }
+        glib::Propagation::Stop
+    });
+    ui.editor.add_controller(keys);
+
+    let weak = Rc::downgrade(ui);
+    ui.buffer.connect_mark_set(move |b, _, mark| {
+        if let Some(ui) = weak.upgrade().filter(|_| *mark == b.get_insert()) {
+            follow_cursor(&ui);
+        }
+    });
+
     // Typing saves after a pause.
     let weak = Rc::downgrade(ui);
     ui.buffer.connect_changed(move |_| {
         let Some(ui) = weak.upgrade() else { return };
         restyle(&ui);
+        follow_cursor(&ui);
         if ui.loading.get() {
             return;
         }

@@ -330,37 +330,43 @@ Adw.ApplicationWindow window {
                 Gtk.StackPage {
                   name: "note";
                   // The editor's background all the way, as in GNOME Text Editor.
-                  child: Gtk.ScrolledWindow {
+                  child: Gtk.ScrolledWindow note_scroll {
                     vexpand: true;
                     styles ["view"]
 
-                    // A line of about 80 characters, as Folio (720) and Iotas (800) keep it.
-                    Adw.Clamp {
-                      maximum-size: 720;
-                      tightening-threshold: 600;
+                    // Not to the focused widget: focusing the note's text would show its end.
+                    // The text follows its cursor in code (`follow_cursor`).
+                    Gtk.Viewport {
+                      scroll-to-focus: false;
 
-                      Gtk.Box {
-                        orientation: vertical;
-                        margin-top: 18;
-                        margin-bottom: 18;
-                        margin-start: 12;
-                        margin-end: 12;
-                        spacing: 6;
+                      // A line of about 80 characters, as Folio (720) and Iotas (800) keep it.
+                      Adw.Clamp {
+                        maximum-size: 720;
+                        tightening-threshold: 600;
 
-                        // The file name: renames the note when changed.
-                        Gtk.Entry title {
-                          placeholder-text: _("Title");
-                          styles ["flat", "note-title"]
-                        }
+                        Gtk.Box {
+                          orientation: vertical;
+                          margin-top: 18;
+                          margin-bottom: 18;
+                          margin-start: 12;
+                          margin-end: 12;
+                          spacing: 6;
 
-                        GtkSource.View editor {
-                          vexpand: true;
-                          wrap-mode: word_char;
-                          top-margin: 6;
-                          bottom-margin: 48;
-                          left-margin: 6;
-                          right-margin: 6;
-                          styles ["note-text"]
+                          // The file name: renames the note when changed.
+                          Gtk.Entry title {
+                            placeholder-text: _("Title");
+                            styles ["flat", "note-title"]
+                          }
+
+                          GtkSource.View editor {
+                            vexpand: true;
+                            wrap-mode: word_char;
+                            top-margin: 6;
+                            bottom-margin: 48;
+                            left-margin: 6;
+                            right-margin: 6;
+                            styles ["note-text"]
+                          }
                         }
                       }
                     }

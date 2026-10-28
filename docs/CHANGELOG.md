@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A folder moved before signing out or into another account, and not synced yet, no longer
   moves a folder of that name in the next account's files
 - Screen readers name the notes in the sidebar, not only the folders
+- Clicking into a long note no longer scrolls it to its end; the note follows the cursor, and
+  Page Up and Page Down move by a screen, not to the start or the end
 
 ## [0.1.0] - 2026-10-25
 

@@ -1,5 +1,5 @@
-//! Preferences dialog: General (style, the notes' font, the tree's density and icons), Editor
-//! (what Editor mode changes by itself) and Accounts (account, notes folder, settings sync).
+//! Preferences dialog: General (style, the tree's density and icons), Editor (each mode's font,
+//! what Editor mode changes by itself) and Accounts (account, notes folder, settings sync).
 
 use crate::connection::Connection;
 use crate::core;
@@ -61,7 +61,8 @@ pub fn present(parent: &impl IsA<gtk::Widget>) {
         let _ = core().set_setting("tree_icons".into(), name);
         crate::window::apply_tree_look();
     });
-    connect_font(&b);
+    connect_font(&b, "editor_font");
+    connect_font(&b, "source_font");
     let tables: adw::SwitchRow = get(&b, "format_tables");
     tables.set_active(crate::editor::format_tables());
     tables.connect_active_notify(|s| {
@@ -70,52 +71,71 @@ pub fn present(parent: &impl IsA<gtk::Widget>) {
     dialog.present(Some(parent));
 }
 
-/// The device-only `editor_font` setting (a Pango font description), if one is chosen.
-pub fn editor_font() -> Option<gtk::pango::FontDescription> {
+/// A device-only font setting, `editor_font` or `source_font` (a Pango font description), if
+/// one is chosen.
+pub fn font(key: &str) -> Option<gtk::pango::FontDescription> {
     core()
-        .setting("editor_font".into())
+        .setting(key.into())
         .filter(|f| !f.is_empty())
         .map(|f| gtk::pango::FontDescription::from_string(&f))
 }
 
-/// The notes' font: the one chosen, or the interface's at 12 pt (the default) shown.
-fn connect_font(b: &gtk::Builder) {
-    let button: gtk::FontDialogButton = get(b, "editor_font");
-    let default: gtk::Button = get(b, "font_default");
+/// A mode's font: the one chosen in `key`'s setting, or the default (shown, not chosen): the
+/// interface's font in Editor mode, the system's monospace one in Source mode, at 12 pt. Source
+/// mode offers monospace fonts only.
+fn connect_font(b: &gtk::Builder, key: &'static str) {
+    let source = key == "source_font";
+    let button: gtk::FontDialogButton = get(b, key);
+    let default: gtk::Button = get(b, &format!("{key}_default"));
+    if source && let Some(dialog) = button.dialog() {
+        // The dialog lists faces (at this level) or families.
+        let monospace = gtk::CustomFilter::new(|o| {
+            let family = match o.downcast_ref::<gtk::pango::FontFace>() {
+                Some(face) => Some(face.family()),
+                None => o.downcast_ref::<gtk::pango::FontFamily>().cloned(),
+            };
+            family.is_some_and(|f| f.is_monospace())
+        });
+        dialog.set_filter(Some(&monospace));
+    }
     // Set while the button is given the font to show, which is no choice.
     let showing = Rc::new(std::cell::Cell::new(false));
     let show = {
         let (button, default, showing) = (button.clone(), default.clone(), showing.clone());
         move || {
-            let chosen = editor_font();
+            let chosen = font(key);
             default.set_visible(chosen.is_some());
-            let font = chosen.unwrap_or_else(|| {
-                let name = gtk::Settings::default()
-                    .and_then(|s| s.gtk_font_name())
-                    .unwrap_or_default();
+            let shown = chosen.unwrap_or_else(|| {
+                let name = if source {
+                    "Monospace".into()
+                } else {
+                    gtk::Settings::default()
+                        .and_then(|s| s.gtk_font_name())
+                        .unwrap_or_default()
+                };
                 let mut f = gtk::pango::FontDescription::from_string(&name);
                 f.set_size(12 * gtk::pango::SCALE);
                 f
             });
             showing.set(true);
-            button.set_font_desc(&font);
+            button.set_font_desc(&shown);
             showing.set(false);
         }
     };
     show();
-    let (shown, default_) = (show.clone(), default.clone());
+    let default_ = default.clone();
     button.connect_font_desc_notify(move |b| {
         let Some(font) = b.font_desc().filter(|_| !showing.get()) else {
             return;
         };
-        let _ = core().set_setting("editor_font".into(), font.to_string());
+        let _ = core().set_setting(key.into(), font.to_string());
         crate::window::text_look_changed();
         default_.set_visible(true);
     });
     default.connect_clicked(move |_| {
-        let _ = core().set_setting("editor_font".into(), String::new());
+        let _ = core().set_setting(key.into(), String::new());
         crate::window::text_look_changed();
-        shown();
+        show();
     });
 }
 

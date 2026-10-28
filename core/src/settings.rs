@@ -16,6 +16,7 @@ pub const DEVICE_ONLY: &[&str] = &[
     "source_mode",
     // The text's font (fonts differ between devices), size and width suit the screen.
     "editor_font",
+    "source_font",
     "text_zoom",
     "full_width",
     "goa_account",

@@ -260,11 +260,16 @@ Adw.ApplicationWindow window {
                         styles ["flat"]
                       }
 
-                      Gtk.Button zoom_reset {
-                        label: "100%";
+                      // As wide as "300%" whatever it shows, so the menu keeps its width.
+                      Gtk.Button {
                         tooltip-text: _("Reset Text Size (Ctrl+0)");
                         action-name: "win.zoom-reset";
                         styles ["flat"]
+
+                        Gtk.Label zoom_reset {
+                          label: "100%";
+                          width-chars: 5;
+                        }
                       }
 
                       Gtk.Button {

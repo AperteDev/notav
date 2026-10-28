@@ -21,7 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the two toggles at the header's right switch between them
 - A view menu next to them: the text's size (also Ctrl+plus, Ctrl+minus, Ctrl+0) and Full
   Width, the text across the window without margins; kept on each device
-- The notes' font in Preferences, for each device
+- Each mode's font in Preferences, under Editor, for each device: Source mode's is monospace
+  (the system's by default, and only monospace ones are offered)
 - In Editor mode, a click on a task's `[ ]` or `[x]` ticks or unticks it
 - In Editor mode, Enter in a list starts the next item: the same bullet, the next number (the
   numbers below moved up), an open task after a task; Enter on an empty item ends the list

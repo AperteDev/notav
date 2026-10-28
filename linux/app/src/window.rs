@@ -106,7 +106,7 @@ struct Ui {
     note_clamp: adw::Clamp,
     note_box: gtk::Box,
     note_mode: adw::ToggleGroup,
-    zoom_reset: gtk::Button,
+    zoom_reset: gtk::Label,
     /// The note's font, size and width (`apply_text_look`).
     text_css: gtk::CssProvider,
     buffer: sourceview5::Buffer,
@@ -624,21 +624,58 @@ pub fn text_look_changed() {
     }
 }
 
-/// The note's text in the font from Preferences (the device-only `editor_font`; the
-/// interface's at 12 pt without one), at the size `text_zoom` scales it to, as wide as
-/// `full_width` says.
+/// The note's text in its mode's font from Preferences (the device-only `editor_font`, the
+/// interface's without one; `source_font`, the system's monospace one), at 12 pt or the font's
+/// size scaled by `text_zoom`, as wide as `full_width` says.
 fn apply_text_look(ui: &Ui) {
     let zoom = text_zoom();
-    let mut css = String::from(".note-text {");
+    let css = [
+        (".note-text", "editor_font", None),
+        (".note-text.source", "source_font", Some("monospace")),
+    ]
+    .map(|(selector, key, family)| font_css(selector, crate::settings::font(key), family, zoom));
+    ui.text_css.load_from_string(&css.concat());
+    if source_mode() {
+        ui.editor.add_css_class("source");
+    } else {
+        ui.editor.remove_css_class("source");
+    }
+    // Translators: the note's text size in the view menu, as "100%".
+    let percent = gettext("{percent}%");
+    ui.zoom_reset
+        .set_label(&percent.replace("{percent}", &zoom.to_string()));
+    let full = full_width();
+    // No limit: wider than any window.
+    ui.note_clamp
+        .set_maximum_size(if full { 100_000 } else { 720 });
+    ui.note_clamp
+        .set_tightening_threshold(if full { 100_000 } else { 600 });
+    let margin = if full { 0 } else { 12 };
+    ui.note_box.set_margin_start(margin);
+    ui.note_box.set_margin_end(margin);
+}
+
+/// A CSS rule giving `selector` `font` (`family` without one, else the inherited one) at its
+/// size, 12 pt without one, times `zoom` percent.
+fn font_css(
+    selector: &str,
+    font: Option<gtk::pango::FontDescription>,
+    family: Option<&str>,
+    zoom: i32,
+) -> String {
+    let mut css = format!("{selector} {{");
     let mut size = 12.0;
-    if let Some(font) = crate::settings::editor_font() {
-        let set = font.set_fields();
-        if let Some(family) = font
-            .family()
-            .filter(|_| set.contains(gtk::pango::FontMask::FAMILY))
-        {
-            css.push_str(&format!(" font-family: \"{}\";", family.replace('"', "")));
-        }
+    let set = font
+        .as_ref()
+        .map_or(gtk::pango::FontMask::empty(), |f| f.set_fields());
+    let chosen = font
+        .as_ref()
+        .and_then(|f| f.family())
+        .filter(|_| set.contains(gtk::pango::FontMask::FAMILY));
+    if let Some(family) = chosen.as_deref().or(family) {
+        css.push_str(&format!(" font-family: \"{}\";", family.replace('"', "")));
+    }
+    if let Some(font) = &font {
         if font.size() > 0 {
             size = font.size() as f64 / gtk::pango::SCALE as f64;
             if font.is_size_absolute() {
@@ -654,23 +691,10 @@ fn apply_text_look(ui: &Ui) {
         }
     }
     css.push_str(&format!(
-        " font-size: {:.1}pt; }}",
+        " font-size: {:.1}pt; }}\n",
         size * zoom as f64 / 100.0
     ));
-    ui.text_css.load_from_string(&css);
-    // Translators: the note's text size in the view menu, as "100%".
-    let percent = gettext("{percent}%");
-    ui.zoom_reset
-        .set_label(&percent.replace("{percent}", &zoom.to_string()));
-    let full = full_width();
-    // No limit: wider than any window.
-    ui.note_clamp
-        .set_maximum_size(if full { 100_000 } else { 720 });
-    ui.note_clamp
-        .set_tightening_threshold(if full { 100_000 } else { 600 });
-    let margin = if full { 0 } else { 12 };
-    ui.note_box.set_margin_start(margin);
-    ui.note_box.set_margin_end(margin);
+    css
 }
 
 /// The device-only `source_mode` setting: Source mode instead of Editor mode.
@@ -799,6 +823,7 @@ fn connect(ui: &Rc<Ui>) {
         let _ = core().set_setting("source_mode".into(), on.to_string());
         ui.note_mode
             .set_active_name(Some(if on { "source" } else { "editor" }));
+        apply_text_look(&ui); // the mode's font
         restyle(&ui);
     });
     ui.window.add_action(&source);

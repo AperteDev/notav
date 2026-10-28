@@ -36,30 +36,6 @@ Adw.PreferencesDialog dialog {
         }
       }
 
-      // The notes' font, kept on this device only (fonts differ between them); the button
-      // takes it back to the interface's.
-      Adw.ActionRow {
-        title: _("Font");
-
-        [suffix]
-        Gtk.Button font_default {
-          icon-name: "edit-undo-symbolic";
-          tooltip-text: _("Use the Default Font");
-          valign: center;
-          styles ["flat"]
-        }
-
-        [suffix]
-        Gtk.FontDialogButton editor_font {
-          valign: center;
-          level: font;
-
-          dialog: Gtk.FontDialog {
-            title: _("Note Font");
-          };
-        }
-      }
-
       // Kept on this device only.
       Adw.SwitchRow dense_tree {
         title: _("Dense tree");
@@ -96,6 +72,57 @@ Adw.PreferencesDialog dialog {
   Adw.PreferencesPage {
     title: _("Editor");
     icon-name: "document-edit-symbolic";
+
+    // Each mode's font, kept on this device only (fonts differ between them); each row's undo
+    // button takes it back to the default (`settings::connect_font`).
+    Adw.PreferencesGroup {
+      title: _("Fonts");
+
+      Adw.ActionRow {
+        title: _("Editor mode");
+
+        [suffix]
+        Gtk.Button editor_font_default {
+          icon-name: "edit-undo-symbolic";
+          tooltip-text: _("Use the Default Font");
+          valign: center;
+          styles ["flat"]
+        }
+
+        [suffix]
+        Gtk.FontDialogButton editor_font {
+          valign: center;
+          level: font;
+
+          dialog: Gtk.FontDialog {
+            title: _("Editor Mode Font");
+          };
+        }
+      }
+
+      Adw.ActionRow {
+        title: _("Source mode");
+
+        [suffix]
+        Gtk.Button source_font_default {
+          icon-name: "edit-undo-symbolic";
+          tooltip-text: _("Use the Default Font");
+          valign: center;
+          styles ["flat"]
+        }
+
+        // Monospace fonts only (filtered in code).
+        [suffix]
+        Gtk.FontDialogButton source_font {
+          valign: center;
+          level: font;
+
+          dialog: Gtk.FontDialog {
+            title: _("Source Mode Font");
+          };
+        }
+      }
+    }
 
     // What Editor mode does to the Markdown by itself, each to turn off (synced).
     Adw.PreferencesGroup {

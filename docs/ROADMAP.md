@@ -34,6 +34,27 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
 - **Tags**: `#tag` and front matter's `tags`, computed locally from the files, to list the notes
   with one. Backlinks read every note each time a note opens; an index of links (and tags) when
   that gets slow.
+- **Side panel** at the right of the note, as Obsidian's: buttons at its top switch between its
+  views, and it hides like the notes' sidebar.
+  - **Outline**: the open note's headings as a tree (from the core's parse), each level folding;
+    a click scrolls to the heading.
+  - **Backlinks**: the notes linking to the open one (linked mentions) and those naming its
+    title without a link (unlinked mentions), each with its line.
+  - **Outgoing links**: the notes the open one links to, missing ones marked, and the other
+    notes' titles it names without a link. Both link views need links between notes (Editor
+    mode) and read the notes as Tags does.
+- **Tabs**: several notes open at once, in tabs above the editor (`AdwTabBar`); a middle click
+  opens a note in a new tab; the open tabs are kept for the next launch (device-only).
+- **Notes' tree**: sorting by name (now), modified or created time, either way, from a menu
+  above the tree (device-only); buttons to fold and unfold every folder.
+- **Search**: filters as Obsidian's (`path:`, `file:`, `tag:`, `"exact phrase"`, `-word`) over
+  today's word-prefix match on FTS5, and the results with the matched line.
+- **Trash**: deleting a note or folder moves it into a folder of its own in the notes folder;
+  a view of it restores or deletes for good, and empties it (see
+  [Open questions](#open-questions-and-risks)).
+- **Templates**: notes in a folder chosen in Preferences (a synced setting); "New Note from
+  Template" copies one, filling `{{title}}`, `{{date}}` and `{{time}}` (dates from the locale).
+  The Journal's daily notes can start from one.
 - **Links to Todav's tasks**: a note links a task as `todav://task/<uid>`. Todav opens it (it
   handles the `todav` URI scheme), and Notav shows the task's title and state through Todav's
   D-Bus API (`GetTask`, to be added in Todav). Without Todav the link stays a plain link.
@@ -80,6 +101,12 @@ Later (v2):
 
 - **Journal**: the folder layout and name format of the daily notes, and whether a new one
   starts from a template.
+- **Trash**: the folder's name (`.trash` as Obsidian's, if Nextcloud Notes hides it; a visible
+  one shows there as a category), whether it is left out of search and links, and whether it
+  empties itself after some days. Nextcloud's own trash bin already keeps deleted files, but
+  only through the web interface.
+- **Created time** for sorting: from the server (`nc:creation_time`, not set by every storage)
+  or the time first seen here.
 - **Client Push**: its WebSocket needs a client: a minimal hand-written one over the TLS `ureq`
   already brings, or a crate (justified as `AGENTS.md` asks).
 - **Attachments**: Nextcloud Notes keeps them in `.attachments.<fileid>/` next to the note,

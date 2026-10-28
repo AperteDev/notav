@@ -186,6 +186,7 @@ pub fn setup_actions(app: &adw::Application) {
     app.set_accels_for_action("window.close", &["<Control>w"]);
     app.set_accels_for_action("win.preferences", &["<Control>comma"]);
     app.set_accels_for_action("win.new-note", &["<Control>n"]);
+    app.set_accels_for_action("win.daily-note", &["<Control>t"]);
     app.set_accels_for_action("win.search", &["<Control>f"]);
     app.set_accels_for_action("win.undo", &["<Control>z"]);
     app.set_accels_for_action(
@@ -805,6 +806,7 @@ fn connect(ui: &Rc<Ui>) {
     };
     add("preferences", |ui| crate::settings::present(&ui.window));
     let new = add("new-note", new_note);
+    let daily = add("daily-note", daily_note);
     let search = add("search", |ui| {
         ui.search_button.set_active(true);
         ui.search.grab_focus();
@@ -906,6 +908,7 @@ fn connect(ui: &Rc<Ui>) {
             let Some(ui) = ui.upgrade() else { return };
             let main = ui.stack.visible_child_name().as_deref() == Some("main");
             new.set_enabled(main);
+            daily.set_enabled(main);
             search.set_enabled(main);
             undo_last.set_enabled(main);
         }
@@ -1548,6 +1551,27 @@ fn new_note(ui: &Rc<Ui>) {
         .filter(|f| core().folders().contains(f))
         .unwrap_or_default();
     new_note_in(ui, folder);
+}
+
+/// Today's note in the journal (`notav_core::journal`), opened; made if there is none.
+fn daily_note(ui: &Rc<Ui>) {
+    save_now(ui);
+    let (year, month, day) = today();
+    match core().daily_note(year, month, day) {
+        Ok(n) => {
+            ui.search_button.set_active(false);
+            open_note(ui, &n);
+            ui.split.set_show_content(true);
+            request_sync();
+        }
+        Err(e) => toast(&e.to_string()),
+    }
+}
+
+/// Today's date here: year, month, day.
+pub fn today() -> (i32, u32, u32) {
+    let now = glib::DateTime::now_local().expect("the local time");
+    (now.year(), now.month() as u32, now.day_of_month() as u32)
 }
 
 /// A new note in `folder` ("": the top level), its title selected for typing over.

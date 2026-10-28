@@ -135,6 +135,45 @@ Adw.PreferencesDialog dialog {
     }
   }
 
+  // The journal's daily notes (synced settings, `notav_core::journal`); each field is saved
+  // with its apply button.
+  Adw.PreferencesPage {
+    title: _("Journal");
+    icon-name: "x-office-calendar-symbolic";
+
+    Adw.PreferencesGroup {
+      title: _("Daily Notes");
+      description: _("A new daily note is a copy of the template note, with {{title}} and {{date}} in it filled in.");
+
+      // Suggests the folders there are; another one is made.
+      Adw.EntryRow journal_folder {
+        title: _("Folder");
+        show-apply-button: true;
+      }
+
+      // Suggests the notes there are.
+      Adw.EntryRow journal_template {
+        title: _("Template note");
+        show-apply-button: true;
+      }
+    }
+
+    Adw.PreferencesGroup {
+      title: _("Note Name");
+      description: _("YYYY is the year, YY its last two digits, MM the month and DD the day; M and D are without a leading zero. A / starts a folder, and text in [brackets] stays as written.");
+
+      Adw.EntryRow journal_format {
+        title: _("Format");
+        show-apply-button: true;
+      }
+
+      Adw.ActionRow journal_preview {
+        title: _("Today’s note");
+        subtitle-selectable: true;
+      }
+    }
+  }
+
   Adw.PreferencesPage {
     title: _("Accounts");
     icon-name: "system-users-symbolic";

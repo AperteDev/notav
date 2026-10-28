@@ -61,6 +61,7 @@ pub fn present(parent: &impl IsA<gtk::Widget>) {
         let _ = core().set_setting("tree_icons".into(), name);
         crate::window::apply_tree_look();
     });
+    connect_journal(&b, &dialog);
     connect_font(&b, "editor_font");
     connect_font(&b, "source_font");
     let tables: adw::SwitchRow = get(&b, "format_tables");
@@ -69,6 +70,168 @@ pub fn present(parent: &impl IsA<gtk::Widget>) {
         let _ = core().set_setting("format_tables".into(), s.is_active().to_string());
     });
     dialog.present(Some(parent));
+}
+
+/// The Journal page: the daily notes' folder (made when new), template note and name format,
+/// with today's note's path as they make it.
+fn connect_journal(b: &gtk::Builder, dialog: &adw::PreferencesDialog) {
+    let folder: adw::EntryRow = get(b, "journal_folder");
+    let template: adw::EntryRow = get(b, "journal_template");
+    let format: adw::EntryRow = get(b, "journal_format");
+    let preview: adw::ActionRow = get(b, "journal_preview");
+    let show = {
+        let (folder, template, format) = (folder.clone(), template.clone(), format.clone());
+        move || {
+            // Only where it differs: setting a row's text shows its apply button again.
+            let template_name = core().setting("journal_template".into());
+            for (row, text) in [
+                (&folder, core().journal_folder()),
+                (&template, template_name.unwrap_or_default()),
+                (&format, core().journal_format()),
+            ] {
+                // Text set here is no edit to apply: the button is off meanwhile.
+                if row.text() != text {
+                    row.set_show_apply_button(false);
+                    row.set_text(&text);
+                    row.set_show_apply_button(true);
+                }
+            }
+            let (y, m, d) = crate::window::today();
+            preview.set_subtitle(&glib::markup_escape_text(&format!(
+                "{}.md",
+                core().daily_path(y, m, d)
+            )));
+        }
+    };
+    show();
+    suggest(&folder, || core().folders());
+    suggest(&template, || {
+        core()
+            .notes()
+            .into_iter()
+            .map(|n| n.path.strip_suffix(".md").unwrap_or(&n.path).to_string())
+            .collect()
+    });
+    let (d, shown) = (dialog.clone(), show.clone());
+    folder.connect_apply(move |row| {
+        let f = row.text().trim().trim_matches('/').to_string();
+        if !f.is_empty()
+            && let Err(e) = core().add_folder(f.clone())
+        {
+            d.add_toast(crate::window::note(&match e {
+                notav_core::Error::Invalid(_) => gettext("Not a folder name"),
+                e => e.to_string(),
+            }));
+            return shown();
+        }
+        let _ = core().set_setting("journal_folder".into(), f);
+        crate::window::apply_tree_look(); // the folder, if new
+        shown();
+    });
+    let (d, shown) = (dialog.clone(), show.clone());
+    template.connect_apply(move |row| {
+        let t = row.text().trim().trim_matches('/').to_string();
+        let path = if t.ends_with(".md") {
+            t.clone()
+        } else {
+            format!("{t}.md")
+        };
+        if !t.is_empty() && !core().notes().iter().any(|n| n.path == path) {
+            d.add_toast(crate::window::note(
+                &gettext("No note “{name}”").replace("{name}", &t),
+            ));
+            return shown();
+        }
+        let _ = core().set_setting("journal_template".into(), t);
+        shown();
+    });
+    format.connect_apply(move |row| {
+        let _ = core().set_setting("journal_format".into(), row.text().trim().to_string());
+        show();
+    });
+}
+
+/// Suggestions under `row` as it is typed in: those of `items()` with its text in them, a
+/// click (or Down, then Enter) putting one in; what is typed can be anything else too.
+fn suggest(row: &adw::EntryRow, items: impl Fn() -> Vec<String> + 'static) {
+    let list = gtk::ListBox::new();
+    list.add_css_class("navigation-sidebar");
+    let scroll = gtk::ScrolledWindow::builder()
+        .child(&list)
+        .hscrollbar_policy(gtk::PolicyType::Never)
+        .max_content_height(240)
+        .propagate_natural_height(true)
+        .build();
+    let popover = gtk::Popover::builder()
+        .child(&scroll)
+        .has_arrow(false)
+        .autohide(false)
+        .position(gtk::PositionType::Bottom)
+        .halign(gtk::Align::Start)
+        .build();
+    popover.set_parent(row);
+    row.connect_destroy({
+        let popover = popover.clone();
+        move |_| popover.unparent()
+    });
+    let (p, l) = (popover.clone(), list.clone());
+    row.connect_changed(move |row| {
+        let typed = row.text().to_lowercase();
+        let found: Vec<String> = items()
+            .into_iter()
+            .filter(|_| !typed.is_empty())
+            .filter(|i| i.to_lowercase().contains(&typed) && i.to_lowercase() != typed)
+            .take(50)
+            .collect();
+        l.remove_all();
+        for f in &found {
+            let label = gtk::Label::builder().label(f).xalign(0.0).build();
+            l.append(&label);
+        }
+        scroll.set_size_request(row.width(), -1);
+        if found.is_empty() || !row.has_focus() && row.focus_child().is_none() {
+            p.popdown();
+        } else {
+            p.popup();
+        }
+    });
+    let (p, r) = (popover.clone(), row.clone());
+    list.connect_row_activated(move |_, item| {
+        if let Some(label) = item.child().and_downcast::<gtk::Label>() {
+            r.set_text(&label.label());
+            r.set_position(-1);
+        }
+        p.popdown();
+        r.grab_focus();
+    });
+    // Down into the list; Escape or leaving closes it.
+    let keys = gtk::EventControllerKey::new();
+    let (p, l) = (popover.clone(), list.clone());
+    keys.connect_key_pressed(move |_, key, _, _| match key {
+        gtk::gdk::Key::Down if p.is_visible() => {
+            if let Some(first) = l.row_at_index(0) {
+                first.grab_focus();
+            }
+            glib::Propagation::Stop
+        }
+        gtk::gdk::Key::Escape if p.is_visible() => {
+            p.popdown();
+            glib::Propagation::Stop
+        }
+        _ => glib::Propagation::Proceed,
+    });
+    row.add_controller(keys);
+    let focus = gtk::EventControllerFocus::new();
+    let p = popover.clone();
+    focus.connect_leave(move |_| {
+        let p = p.clone();
+        glib::idle_add_local_once(move || {
+            if p.focus_child().is_none() {
+                p.popdown();
+            }
+        });
+    });
+    row.add_controller(focus);
 }
 
 /// A device-only font setting, `editor_font` or `source_font` (a Pango font description), if

@@ -29,8 +29,9 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
 
 ## Planned features
 
-- **Journal**: today's daily note, one per day in a dated folder (see
-  [Open questions](#open-questions-and-risks)).
+- **Journal**, more: a calendar of the days with a note (the previous and next day's note from
+  one), weekday and month names in the name format (from the locale), `{{time}}` and
+  `{{yesterday}}`-style placeholders.
 - **Tags**: `#tag` and front matter's `tags`, computed locally from the files, to list the notes
   with one. Backlinks read every note each time a note opens; an index of links (and tags) when
   that gets slow.
@@ -56,7 +57,8 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
   [Open questions](#open-questions-and-risks)).
 - **Templates**: notes in a folder chosen in Preferences (a synced setting); "New Note from
   Template" copies one, filling `{{title}}`, `{{date}}` and `{{time}}` (dates from the locale).
-  The Journal's daily notes can start from one.
+  The Journal's daily notes start from one template note already (`{{title}}`, `{{date}}`;
+  `core/src/journal.rs`): both should fill in the same way.
 - **Links to Todav's tasks**: a note links a task as `todav://task/<uid>`. Todav opens it (it
   handles the `todav` URI scheme), and Notav shows the task's title and state through Todav's
   D-Bus API (`GetTask`, to be added in Todav). Without Todav the link stays a plain link.
@@ -101,8 +103,6 @@ Later (v2):
   need them out of the text view. Tidying changes the file's text, which other devices and apps
   see.
 
-- **Journal**: the folder layout and name format of the daily notes, and whether a new one
-  starts from a template.
 - **Trash**: the folder's name (`.trash` as Obsidian's, if Nextcloud Notes hides it; a visible
   one shows there as a category), whether it is left out of search and links, and whether it
   empties itself after some days. Nextcloud's own trash bin already keeps deleted files, but

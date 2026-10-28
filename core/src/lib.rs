@@ -1,4 +1,5 @@
 pub mod dav;
+pub mod journal;
 pub mod json;
 mod login;
 pub mod markdown;

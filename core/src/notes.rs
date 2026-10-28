@@ -118,7 +118,7 @@ pub(crate) fn is_note(name: &str) -> bool {
 }
 
 /// A title as a file name: characters other systems refuse in names become "-".
-fn file_title(title: &str) -> Result<String> {
+pub(crate) fn file_title(title: &str) -> Result<String> {
     let t: String = title
         .trim()
         .chars()
@@ -136,7 +136,7 @@ fn file_title(title: &str) -> Result<String> {
 }
 
 /// A folder path: "a/b", no empty or dot segments.
-fn folder_path(folder: &str) -> Result<String> {
+pub(crate) fn folder_path(folder: &str) -> Result<String> {
     let parts: Vec<&str> = folder
         .split('/')
         .map(str::trim)
@@ -148,7 +148,7 @@ fn folder_path(folder: &str) -> Result<String> {
     Ok(parts.join("/"))
 }
 
-fn join(folder: &str, name: &str) -> String {
+pub(crate) fn join(folder: &str, name: &str) -> String {
     if folder.is_empty() {
         name.to_string()
     } else {
@@ -252,9 +252,12 @@ impl Client {
             .prepare("SELECT path FROM folders WHERE path != '' AND dirty != 2")
             .and_then(|mut st| st.query_map([], |r| r.get(0))?.collect())
             .unwrap_or_default();
-        // And the folders of notes made here, in folders not pulled yet.
-        for n in store::rows(&db, "dirty != ?", [DELETED]).unwrap_or_default() {
-            let mut f = split(&n.path).0;
+        // And the folders of notes made here, and above folders made here, not pulled yet.
+        let notes = store::rows(&db, "dirty != ?", [DELETED]).unwrap_or_default();
+        let mut paths: Vec<String> = notes.iter().map(|n| split(&n.path).0.to_string()).collect();
+        paths.extend(out.iter().map(|f| split(f).0.to_string()));
+        for p in paths {
+            let mut f = p.as_str();
             while !f.is_empty() {
                 out.push(f.to_string());
                 f = split(f).0;

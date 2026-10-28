@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notav\n"
 "Report-Msgid-Bugs-To: https://github.com/AperteDev/notav/issues\n"
-"POT-Creation-Date: 2026-10-28 22:40+0100\n"
+"POT-Creation-Date: 2026-10-28 22:56+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,7 +18,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: linux/app/src/connection.rs:39 linux/app/src/window.rs:1971
+#: linux/app/src/connection.rs:39 linux/app/src/window.rs:1995
 msgid "No Nextcloud account in Settings → Online Accounts"
 msgstr ""
 
@@ -120,79 +120,85 @@ msgstr ""
 msgid "Connecting failed"
 msgstr ""
 
-#: linux/app/src/settings.rs:161
+#: linux/app/src/settings.rs:122 linux/app/src/settings.rs:360
+#: linux/app/src/window.rs:1626 linux/app/src/window.rs:1658
+#: linux/app/src/window.rs:2199
+msgid "Not a folder name"
+msgstr ""
+
+#: linux/app/src/settings.rs:141
+#, rust-format
+msgid "No note “{name}”"
+msgstr ""
+
+#: linux/app/src/settings.rs:324
 msgid "Move the Notes?"
 msgstr ""
 
-#: linux/app/src/settings.rs:164
+#: linux/app/src/settings.rs:327
 #, rust-format
 msgid ""
 "Move your notes from “{old}” to “{new}”, or leave them there and show the "
 "notes in “{new}”?"
 msgstr ""
 
-#: linux/app/src/settings.rs:171 linux/app/src/window.rs:444
+#: linux/app/src/settings.rs:334 linux/app/src/window.rs:445
 #: linux/app/ui/new-folder.blp:11 linux/app/ui/password-login.blp:19
-#: linux/app/ui/settings.blp:157 linux/app/ui/window.blp:118
+#: linux/app/ui/settings.blp:196 linux/app/ui/window.blp:118
 msgid "Cancel"
 msgstr ""
 
-#: linux/app/src/settings.rs:172
+#: linux/app/src/settings.rs:335
 msgid "Leave Them"
 msgstr ""
 
-#: linux/app/src/settings.rs:173
+#: linux/app/src/settings.rs:336
 msgid "Move"
 msgstr ""
 
-#: linux/app/src/settings.rs:195
+#: linux/app/src/settings.rs:358
 #, rust-format
 msgid "Notes folder changed to “{folder}”"
 msgstr ""
 
-#: linux/app/src/settings.rs:197 linux/app/src/window.rs:1602
-#: linux/app/src/window.rs:1634 linux/app/src/window.rs:2175
-msgid "Not a folder name"
-msgstr ""
-
-#: linux/app/src/settings.rs:198
+#: linux/app/src/settings.rs:361
 #, rust-format
 msgid "Notes folder not changed: {error}"
 msgstr ""
 
-#: linux/app/src/settings.rs:200
+#: linux/app/src/settings.rs:363
 msgid "Notes folder not changed"
 msgstr ""
 
-#: linux/app/src/settings.rs:235 linux/app/src/settings.rs:274
+#: linux/app/src/settings.rs:398 linux/app/src/settings.rs:437
 #, rust-format
 msgid "Connected as {name}"
 msgstr ""
 
-#: linux/app/src/settings.rs:236 linux/app/src/window.rs:1986
+#: linux/app/src/settings.rs:399 linux/app/src/window.rs:2010
 #: linux/app/ui/window.blp:43
 msgid "GNOME Online Accounts"
 msgstr ""
 
-#: linux/app/src/settings.rs:239 linux/app/src/settings.rs:281
-#: linux/app/src/settings.rs:413
+#: linux/app/src/settings.rs:402 linux/app/src/settings.rs:444
+#: linux/app/src/settings.rs:576
 #, rust-format
 msgid "Signed in as {name}"
 msgstr ""
 
-#: linux/app/src/settings.rs:243
+#: linux/app/src/settings.rs:406
 msgid "Not signed in"
 msgstr ""
 
-#: linux/app/src/settings.rs:285
+#: linux/app/src/settings.rs:448
 msgid "Disconnected"
 msgstr ""
 
-#: linux/app/src/settings.rs:336 linux/app/src/window.rs:2103
+#: linux/app/src/settings.rs:499 linux/app/src/window.rs:2127
 msgid "Waiting for Sign-In…"
 msgstr ""
 
-#: linux/app/src/settings.rs:338 linux/app/src/window.rs:2105
+#: linux/app/src/settings.rs:501 linux/app/src/window.rs:2129
 msgid "Waiting for Browser…"
 msgstr ""
 
@@ -208,39 +214,39 @@ msgstr ""
 msgid "Donate on Liberapay"
 msgstr ""
 
-#: linux/app/src/window.rs:205
+#: linux/app/src/window.rs:206
 msgid ""
 "Notav is developed in my free time. If it keeps your notes in order, you can "
 "support its development."
 msgstr ""
 
 #. Translators: the About row that opens the page with the donation links.
-#: linux/app/src/window.rs:235
+#: linux/app/src/window.rs:236
 msgid "_Support"
 msgstr ""
 
 #. Translators: title of About's page with the donation links.
-#: linux/app/src/window.rs:237
+#: linux/app/src/window.rs:238
 msgid "Support"
 msgstr ""
 
-#: linux/app/src/window.rs:321 linux/app/ui/shortcuts.blp:54
+#: linux/app/src/window.rs:322 linux/app/ui/shortcuts.blp:59
 msgid "Undo"
 msgstr ""
 
-#: linux/app/src/window.rs:365
+#: linux/app/src/window.rs:366
 #, rust-format
 msgid "Sync failed: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:382
+#: linux/app/src/window.rs:383
 #, rust-format
 msgid ""
 "“{title}” was changed elsewhere too: your version is kept next to it as a "
 "copy"
 msgstr ""
 
-#: linux/app/src/window.rs:386
+#: linux/app/src/window.rs:387
 #, rust-format
 msgid ""
 "{n} note was changed elsewhere too: your version is kept next to it as a copy"
@@ -250,175 +256,175 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: linux/app/src/window.rs:412
+#: linux/app/src/window.rs:413
 #, rust-format
 msgid "Something in “{title}” is locked on the server"
 msgstr ""
 
-#: linux/app/src/window.rs:414
+#: linux/app/src/window.rs:415
 #, rust-format
 msgid "“{title}” is locked on the server by {owner} since {time}"
 msgstr ""
 
-#: linux/app/src/window.rs:416
+#: linux/app/src/window.rs:417
 #, rust-format
 msgid "“{title}” is locked on the server by {owner}"
 msgstr ""
 
-#: linux/app/src/window.rs:417
+#: linux/app/src/window.rs:418
 #, rust-format
 msgid "“{title}” is locked on the server"
 msgstr ""
 
-#: linux/app/src/window.rs:425
+#: linux/app/src/window.rs:426
 msgid "Unlock…"
 msgstr ""
 
-#: linux/app/src/window.rs:438
+#: linux/app/src/window.rs:439
 #, rust-format
 msgid "Unlock “{title}”?"
 msgstr ""
 
-#: linux/app/src/window.rs:440
+#: linux/app/src/window.rs:441
 msgid ""
 "Your change to it waits for the lock. If it is still open in an editor, what "
 "is saved there afterwards may be lost: unlock it only if nobody is editing "
 "it."
 msgstr ""
 
-#: linux/app/src/window.rs:445
+#: linux/app/src/window.rs:446
 msgid "Unlock"
 msgstr ""
 
-#: linux/app/src/window.rs:459
+#: linux/app/src/window.rs:460
 #, rust-format
 msgid "Cannot unlock “{title}”: {error}"
 msgstr ""
 
 #. Translators: the note's text size in the view menu, as "100%".
-#: linux/app/src/window.rs:653
+#: linux/app/src/window.rs:654
 #, rust-format
 msgid "{percent}%"
 msgstr ""
 
-#: linux/app/src/window.rs:1423
+#: linux/app/src/window.rs:1426
 #, rust-format
 msgid "Linked from {count} note"
 msgid_plural "Linked from {count} notes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: linux/app/src/window.rs:1483
+#: linux/app/src/window.rs:1486
 #, rust-format
 msgid "Cannot save the note: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:1534
+#: linux/app/src/window.rs:1537
 msgid "A note with this name exists already"
 msgstr ""
 
-#: linux/app/src/window.rs:1556
+#: linux/app/src/window.rs:1580
 msgid "Untitled"
 msgstr ""
 
-#: linux/app/src/window.rs:1592 linux/app/src/window.rs:1632
+#: linux/app/src/window.rs:1616 linux/app/src/window.rs:1656
 msgid "A folder with this name exists already"
 msgstr ""
 
-#: linux/app/src/window.rs:1613
+#: linux/app/src/window.rs:1637
 msgid "Rename Folder"
 msgstr ""
 
-#: linux/app/src/window.rs:1614
+#: linux/app/src/window.rs:1638
 msgid "Rename"
 msgstr ""
 
-#: linux/app/src/window.rs:1650 linux/app/src/window.rs:1669
+#: linux/app/src/window.rs:1674 linux/app/src/window.rs:1693
 #, rust-format
 msgid "“{title}” deleted"
 msgstr ""
 
-#: linux/app/src/window.rs:1706 linux/app/ui/shortcuts.blp:10
+#: linux/app/src/window.rs:1730 linux/app/ui/shortcuts.blp:10
 msgid "New Note"
 msgstr ""
 
-#: linux/app/src/window.rs:1708 linux/app/ui/new-folder.blp:6
+#: linux/app/src/window.rs:1732 linux/app/ui/new-folder.blp:6
 msgid "New Folder"
 msgstr ""
 
-#: linux/app/src/window.rs:1715 linux/app/src/window.rs:1723
+#: linux/app/src/window.rs:1739 linux/app/src/window.rs:1747
 msgid "Delete"
 msgstr ""
 
-#: linux/app/src/window.rs:1722
+#: linux/app/src/window.rs:1746
 msgid "Rename…"
 msgstr ""
 
-#: linux/app/src/window.rs:1873
+#: linux/app/src/window.rs:1897
 msgid "A note with this name exists in that folder already"
 msgstr ""
 
-#: linux/app/src/window.rs:1876
+#: linux/app/src/window.rs:1900
 msgid "A folder with this name exists in that folder already"
 msgstr ""
 
-#: linux/app/src/window.rs:1989
+#: linux/app/src/window.rs:2013
 msgid "Connect with a Nextcloud account from GNOME Settings"
 msgstr ""
 
-#: linux/app/src/window.rs:1992 linux/app/ui/window.blp:58
+#: linux/app/src/window.rs:2016 linux/app/ui/window.blp:58
 msgid "Nextcloud Server"
 msgstr ""
 
-#: linux/app/src/window.rs:1995
+#: linux/app/src/window.rs:2019
 msgid "Sign in to your Nextcloud; Notav gets an app password of its own"
 msgstr ""
 
-#: linux/app/src/window.rs:2076
+#: linux/app/src/window.rs:2100
 msgid "Enter the Nextcloud server first"
 msgstr ""
 
-#: linux/app/src/window.rs:2192 linux/app/ui/settings.blp:174
+#: linux/app/src/window.rs:2216 linux/app/ui/settings.blp:213
 #: linux/app/ui/window.blp:110
 msgid "Sign In with Browser"
 msgstr ""
 
-#: linux/app/src/window.rs:2206
+#: linux/app/src/window.rs:2230
 msgid "Cannot start login"
 msgstr ""
 
-#: linux/app/src/window.rs:2207
+#: linux/app/src/window.rs:2231
 #, rust-format
 msgid "Cannot start login: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:2215
+#: linux/app/src/window.rs:2239
 msgid "Login link copied to clipboard"
 msgstr ""
 
-#: linux/app/src/window.rs:2235
+#: linux/app/src/window.rs:2259
 #, rust-format
 msgid "Login failed: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:2237
+#: linux/app/src/window.rs:2261
 msgid "Login failed"
 msgstr ""
 
-#: linux/app/src/window.rs:2240
+#: linux/app/src/window.rs:2264
 msgid "Login timed out"
 msgstr ""
 
-#: linux/app/src/window.rs:2289
+#: linux/app/src/window.rs:2313
 msgid "Wrong login name or password"
 msgstr ""
 
-#: linux/app/src/window.rs:2290
+#: linux/app/src/window.rs:2314
 #, rust-format
 msgid "Sign-in failed: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:2291
+#: linux/app/src/window.rs:2315
 msgid "Sign-in failed"
 msgstr ""
 
@@ -426,7 +432,7 @@ msgstr ""
 msgid "Use GNOME Online Accounts"
 msgstr ""
 
-#: linux/app/ui/connection.blp:11 linux/app/ui/settings.blp:144
+#: linux/app/ui/connection.blp:11 linux/app/ui/settings.blp:183
 msgid "Account"
 msgstr ""
 
@@ -516,7 +522,7 @@ msgctxt "tree icons"
 msgid "None"
 msgstr ""
 
-#: linux/app/ui/settings.blp:73 linux/app/ui/shortcuts.blp:51
+#: linux/app/ui/settings.blp:73 linux/app/ui/shortcuts.blp:56
 msgid "Editor"
 msgstr ""
 
@@ -556,93 +562,138 @@ msgstr ""
 msgid "Line up a table’s columns when the cursor leaves a changed row"
 msgstr ""
 
-#: linux/app/ui/settings.blp:139
+#: linux/app/ui/settings.blp:141
+msgid "Journal"
+msgstr ""
+
+#: linux/app/ui/settings.blp:145
+msgid "Daily Notes"
+msgstr ""
+
+#: linux/app/ui/settings.blp:146
+msgid ""
+"A new daily note is a copy of the template note, with {{title}} and {{date}} "
+"in it filled in."
+msgstr ""
+
+#: linux/app/ui/settings.blp:150 linux/app/ui/window.blp:155
+msgid "Folder"
+msgstr ""
+
+#: linux/app/ui/settings.blp:156
+msgid "Template note"
+msgstr ""
+
+#: linux/app/ui/settings.blp:162
+msgid "Note Name"
+msgstr ""
+
+#: linux/app/ui/settings.blp:163
+msgid ""
+"YYYY is the year, YY its last two digits, MM the month and DD the day; M and "
+"D are without a leading zero. A / starts a folder, and text in [brackets] "
+"stays as written."
+msgstr ""
+
+#: linux/app/ui/settings.blp:166
+msgid "Format"
+msgstr ""
+
+#: linux/app/ui/settings.blp:171
+msgid "Today’s note"
+msgstr ""
+
+#: linux/app/ui/settings.blp:178
 msgid "Accounts"
 msgstr ""
 
-#: linux/app/ui/settings.blp:165
+#: linux/app/ui/settings.blp:204
 msgid "Sign Out"
 msgstr ""
 
-#: linux/app/ui/settings.blp:167 linux/app/ui/settings.blp:205
+#: linux/app/ui/settings.blp:206 linux/app/ui/settings.blp:244
 msgid "Sign In Again"
 msgstr ""
 
-#: linux/app/ui/settings.blp:176 linux/app/ui/window.blp:112
+#: linux/app/ui/settings.blp:215 linux/app/ui/window.blp:112
 msgid "More Sign-In Options"
 msgstr ""
 
-#: linux/app/ui/settings.blp:184
+#: linux/app/ui/settings.blp:223
 msgid "Notes"
 msgstr ""
 
-#: linux/app/ui/settings.blp:187
+#: linux/app/ui/settings.blp:226
 msgid "Notes folder in Nextcloud Files"
 msgstr ""
 
-#: linux/app/ui/settings.blp:193 linux/app/ui/shortcuts.blp:25
+#: linux/app/ui/settings.blp:232 linux/app/ui/shortcuts.blp:30
 msgid "Sync"
 msgstr ""
 
-#: linux/app/ui/settings.blp:196
+#: linux/app/ui/settings.blp:235
 msgid "Sync settings with server"
 msgstr ""
 
-#: linux/app/ui/settings.blp:197
+#: linux/app/ui/settings.blp:236
 msgid "The Nextcloud server always stays on this device"
 msgstr ""
 
-#: linux/app/ui/settings.blp:206 linux/app/ui/settings.blp:211
-#: linux/app/ui/window.blp:495
+#: linux/app/ui/settings.blp:245 linux/app/ui/settings.blp:250
+#: linux/app/ui/window.blp:503
 msgid "Copy Login Link"
 msgstr ""
 
-#: linux/app/ui/settings.blp:207 linux/app/ui/settings.blp:212
-#: linux/app/ui/window.blp:496
+#: linux/app/ui/settings.blp:246 linux/app/ui/settings.blp:251
+#: linux/app/ui/window.blp:504
 msgid "Sign In with Password…"
 msgstr ""
 
 #: linux/app/ui/shortcuts.blp:15
-msgid "Search"
+msgid "Today’s Note"
 msgstr ""
 
 #: linux/app/ui/shortcuts.blp:20
+msgid "Search"
+msgstr ""
+
+#: linux/app/ui/shortcuts.blp:25
 msgid "Undo Delete or Move"
 msgstr ""
 
-#: linux/app/ui/shortcuts.blp:30 linux/app/ui/window.blp:488
+#: linux/app/ui/shortcuts.blp:35 linux/app/ui/window.blp:496
 msgid "Preferences"
 msgstr ""
 
-#: linux/app/ui/shortcuts.blp:35 linux/app/ui/window.blp:489
+#: linux/app/ui/shortcuts.blp:40 linux/app/ui/window.blp:497
 msgid "Keyboard Shortcuts"
 msgstr ""
 
-#: linux/app/ui/shortcuts.blp:40
+#: linux/app/ui/shortcuts.blp:45
 msgid "Close Window"
 msgstr ""
 
-#: linux/app/ui/shortcuts.blp:45 linux/app/ui/window.blp:491
+#: linux/app/ui/shortcuts.blp:50 linux/app/ui/window.blp:499
 msgid "Quit"
 msgstr ""
 
-#: linux/app/ui/shortcuts.blp:59
+#: linux/app/ui/shortcuts.blp:64
 msgid "Redo"
 msgstr ""
 
-#: linux/app/ui/shortcuts.blp:64
+#: linux/app/ui/shortcuts.blp:69
 msgid "Open the Link at the Cursor"
 msgstr ""
 
-#: linux/app/ui/shortcuts.blp:69
+#: linux/app/ui/shortcuts.blp:74
 msgid "Larger Text"
 msgstr ""
 
-#: linux/app/ui/shortcuts.blp:74
+#: linux/app/ui/shortcuts.blp:79
 msgid "Smaller Text"
 msgstr ""
 
-#: linux/app/ui/shortcuts.blp:79
+#: linux/app/ui/shortcuts.blp:84
 msgid "Reset Text Size"
 msgstr ""
 
@@ -666,10 +717,6 @@ msgstr ""
 msgid ""
 "The folder in Nextcloud Files your notes are kept in. The Nextcloud Notes "
 "app uses the same one; it is created if it does not exist."
-msgstr ""
-
-#: linux/app/ui/window.blp:155
-msgid "Folder"
 msgstr ""
 
 #: linux/app/ui/window.blp:161
@@ -697,62 +744,66 @@ msgid "New Note (Ctrl+N)"
 msgstr ""
 
 #: linux/app/ui/window.blp:243
+msgid "Today’s Note (Ctrl+T)"
+msgstr ""
+
+#: linux/app/ui/window.blp:251
 msgid "View Options"
 msgstr ""
 
-#: linux/app/ui/window.blp:258
+#: linux/app/ui/window.blp:266
 msgid "Smaller Text (Ctrl+−)"
 msgstr ""
 
-#: linux/app/ui/window.blp:265
+#: linux/app/ui/window.blp:273
 msgid "Reset Text Size (Ctrl+0)"
 msgstr ""
 
-#: linux/app/ui/window.blp:277
+#: linux/app/ui/window.blp:285
 msgid "Larger Text (Ctrl++)"
 msgstr ""
 
-#: linux/app/ui/window.blp:293
+#: linux/app/ui/window.blp:301
 msgid "Editor Mode"
 msgstr ""
 
-#: linux/app/ui/window.blp:299
+#: linux/app/ui/window.blp:307
 msgid "Source Mode"
 msgstr ""
 
-#: linux/app/ui/window.blp:306
+#: linux/app/ui/window.blp:314
 msgid "Sync (F5)"
 msgstr ""
 
-#: linux/app/ui/window.blp:330
+#: linux/app/ui/window.blp:338
 msgid "Search (Ctrl+F)"
 msgstr ""
 
-#: linux/app/ui/window.blp:344
+#: linux/app/ui/window.blp:352
 msgid "Search notes"
 msgstr ""
 
-#: linux/app/ui/window.blp:355
+#: linux/app/ui/window.blp:363
 msgid "No Note Selected"
 msgstr ""
 
-#: linux/app/ui/window.blp:356
+#: linux/app/ui/window.blp:364
 msgid "Pick a note or add one with Ctrl+N"
 msgstr ""
 
-#: linux/app/ui/window.blp:388
+#: linux/app/ui/window.blp:396
 msgid "No Results"
 msgstr ""
 
-#: linux/app/ui/window.blp:422
+#: linux/app/ui/window.blp:430
 msgid "Title"
 msgstr ""
 
-#: linux/app/ui/window.blp:483
+#: linux/app/ui/window.blp:491
 msgid "Full Width"
 msgstr ""
 
-#: linux/app/ui/window.blp:490
+#: linux/app/ui/window.blp:498
 msgid "About Notav"
 msgstr ""
 

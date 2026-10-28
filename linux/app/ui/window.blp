@@ -236,6 +236,14 @@ Adw.ApplicationWindow window {
                   action-name: "win.new-note";
                 }
 
+                // The journal's note of today, made if there is none.
+                [start]
+                Gtk.Button {
+                  icon-name: "x-office-calendar-symbolic";
+                  tooltip-text: _("Today’s Note (Ctrl+T)");
+                  action-name: "win.daily-note";
+                }
+
                 // Font size and the text area's width, for this device.
                 [end]
                 Gtk.MenuButton {

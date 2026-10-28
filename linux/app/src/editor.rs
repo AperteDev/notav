@@ -72,6 +72,75 @@ pub fn setup(buffer: &sourceview5::Buffer) {
     }
 }
 
+/// What a click does in Editor mode: ticks a task.
+pub fn connect(view: &sourceview5::View) {
+    // Before the text view's own, which would move the cursor there.
+    let click = gtk::GestureClick::new();
+    click.set_button(gtk::gdk::BUTTON_PRIMARY);
+    click.set_propagation_phase(gtk::PropagationPhase::Capture);
+    click.connect_pressed(|gesture, n, x, y| {
+        let Some(view) = gesture.widget().and_downcast::<sourceview5::View>() else {
+            return;
+        };
+        let plain = !gesture
+            .current_event_state()
+            .intersects(gtk::accelerator_get_default_mod_mask());
+        if n == 1 && plain && toggle_task(&view, x, y) {
+            gesture.set_state(gtk::EventSequenceState::Claimed);
+        }
+    });
+    view.add_controller(click);
+    // A hand over what a click acts on.
+    let motion = gtk::EventControllerMotion::new();
+    motion.connect_motion(|motion, x, y| {
+        let Some(view) = motion.widget().and_downcast::<sourceview5::View>() else {
+            return;
+        };
+        let task = task_at(&view, x, y).is_some();
+        view.set_cursor_from_name(Some(if task { "pointer" } else { "text" }));
+    });
+    view.add_controller(motion);
+}
+
+/// The text under the widget's point `x`, `y`, if it has Editor mode's tag `name`.
+fn tagged_at(view: &sourceview5::View, name: &str, x: f64, y: f64) -> Option<gtk::TextIter> {
+    let (x, y) = view.window_to_buffer_coords(gtk::TextWindowType::Widget, x as i32, y as i32);
+    let at = view.iter_at_location(x, y)?;
+    let tag = view.buffer().tag_table().lookup(name)?;
+    at.has_tag(&tag).then_some(at)
+}
+
+/// The start of the task box (`[ ]`, `[x]`) under the point.
+fn task_at(view: &sourceview5::View, x: f64, y: f64) -> Option<gtk::TextIter> {
+    let mut at = tagged_at(view, "md-task", x, y)?;
+    let tag = view.buffer().tag_table().lookup("md-task")?;
+    if !at.starts_tag(Some(&tag)) {
+        at.backward_to_tag_toggle(Some(&tag));
+    }
+    Some(at)
+}
+
+/// Tick or untick the task box under the point, as one step to undo; whether there was one.
+fn toggle_task(view: &sourceview5::View, x: f64, y: f64) -> bool {
+    let Some(mut start) = task_at(view, x, y) else {
+        return false;
+    };
+    let buffer = view.buffer();
+    start.forward_char();
+    let mut end = start;
+    end.forward_char();
+    let mark = if buffer.text(&start, &end, false) == " " {
+        "x"
+    } else {
+        " "
+    };
+    buffer.begin_user_action();
+    buffer.delete(&mut start, &mut end);
+    buffer.insert(&mut start, mark);
+    buffer.end_user_action();
+    true
+}
+
 /// Give the tags the look of `buffer`'s style scheme, light or dark (again when it changes).
 pub fn look(buffer: &sourceview5::Buffer) {
     let (Some(scheme), table) = (buffer.style_scheme(), buffer.tag_table()) else {

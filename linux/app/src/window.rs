@@ -518,6 +518,7 @@ fn build(app: &adw::Application) -> Rc<Ui> {
             .as_ref(),
     );
     crate::editor::setup(&buffer);
+    crate::editor::connect(&editor);
     follow_style(&buffer);
 
     let ui = Rc::new(Ui {

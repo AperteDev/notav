@@ -14,7 +14,6 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
      request. From the right-click menu: insert a table, add, delete and move rows and columns,
      align a column, sort by one. Text pasted from a spreadsheet (tab-separated) becomes a
      table. Each change is one undo step.
-   - Task lists: a click on `[ ]` or `[x]` ticks or unticks it, though it still looks like text.
    - Lists: Enter continues a bullet, a number (renumbering what follows) or a task; Enter on
      an empty item ends the list.
    - Links: Ctrl+click opens one.

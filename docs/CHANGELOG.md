@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (headings, emphasis, code, quotes, lists and tasks, tables in columns, links and bare URLs,
   footnotes, front matter), the Markdown marks dimmed. Source mode, in the main menu, keeps the
   editor as it was
+- In Editor mode, a click on a task's `[ ]` or `[x]` ticks or unticks it
 
 ### Changed
 

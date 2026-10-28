@@ -91,10 +91,15 @@ Adw.PreferencesDialog dialog {
         }
       }
     }
+  }
 
-    // What Editor mode does by itself, each to turn off (synced).
+  Adw.PreferencesPage {
+    title: _("Editor");
+    icon-name: "document-edit-symbolic";
+
+    // What Editor mode does to the Markdown by itself, each to turn off (synced).
     Adw.PreferencesGroup {
-      title: _("Editing");
+      title: _("Markdown");
 
       Adw.SwitchRow format_tables {
         title: _("Format tables");

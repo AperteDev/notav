@@ -1,5 +1,5 @@
-//! Preferences dialog: General (style, the tree's density and icons, Editor mode's automatic
-//! changes) and Accounts (account, notes folder, settings sync).
+//! Preferences dialog: General (style, the notes' font, the tree's density and icons), Editor
+//! (what Editor mode changes by itself) and Accounts (account, notes folder, settings sync).
 
 use crate::connection::Connection;
 use crate::core;

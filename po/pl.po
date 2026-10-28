@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notav\n"
 "Report-Msgid-Bugs-To: https://github.com/AperteDev/notav/issues\n"
-"POT-Creation-Date: 2026-10-28 18:29+0100\n"
+"POT-Creation-Date: 2026-10-28 18:30+0100\n"
 "PO-Revision-Date: 2026-10-24 20:03+0200\n"
 "Last-Translator: SelfRef\n"
 "Language-Team: Polish\n"
@@ -135,7 +135,7 @@ msgstr ""
 
 #: linux/app/src/settings.rs:151 linux/app/src/window.rs:439
 #: linux/app/ui/new-folder.blp:11 linux/app/ui/password-login.blp:19
-#: linux/app/ui/settings.blp:125 linux/app/ui/window.blp:118
+#: linux/app/ui/settings.blp:130 linux/app/ui/window.blp:118
 msgid "Cancel"
 msgstr "Anuluj"
 
@@ -388,7 +388,7 @@ msgstr ""
 msgid "Enter the Nextcloud server first"
 msgstr "Najpierw podaj serwer Nextcloud"
 
-#: linux/app/src/window.rs:2066 linux/app/ui/settings.blp:142
+#: linux/app/src/window.rs:2066 linux/app/ui/settings.blp:147
 #: linux/app/ui/window.blp:110
 msgid "Sign In with Browser"
 msgstr "Zaloguj się w przeglądarce"
@@ -436,7 +436,7 @@ msgstr "Logowanie nie powiodło się"
 msgid "Use GNOME Online Accounts"
 msgstr "Użyj Kont online GNOME"
 
-#: linux/app/ui/connection.blp:11 linux/app/ui/settings.blp:112
+#: linux/app/ui/connection.blp:11 linux/app/ui/settings.blp:117
 msgid "Account"
 msgstr "Konto"
 
@@ -538,60 +538,64 @@ msgctxt "tree icons"
 msgid "None"
 msgstr "Brak"
 
-#: linux/app/ui/settings.blp:97
-msgid "Editing"
-msgstr "Edycja"
+#: linux/app/ui/settings.blp:97 linux/app/ui/shortcuts.blp:51
+msgid "Editor"
+msgstr "Edytor"
 
-#: linux/app/ui/settings.blp:100
+#: linux/app/ui/settings.blp:102
+msgid "Markdown"
+msgstr "Markdown"
+
+#: linux/app/ui/settings.blp:105
 msgid "Format tables"
 msgstr "Formatowanie tabel"
 
-#: linux/app/ui/settings.blp:101
+#: linux/app/ui/settings.blp:106
 msgid "Line up a table’s columns when the cursor leaves a changed row"
 msgstr "Wyrównuje kolumny tabeli, gdy kursor opuści zmieniony wiersz"
 
-#: linux/app/ui/settings.blp:107
+#: linux/app/ui/settings.blp:112
 msgid "Accounts"
 msgstr "Konta"
 
-#: linux/app/ui/settings.blp:133
+#: linux/app/ui/settings.blp:138
 msgid "Sign Out"
 msgstr "Wyloguj się"
 
-#: linux/app/ui/settings.blp:135 linux/app/ui/settings.blp:173
+#: linux/app/ui/settings.blp:140 linux/app/ui/settings.blp:178
 msgid "Sign In Again"
 msgstr "Zaloguj się ponownie"
 
-#: linux/app/ui/settings.blp:144 linux/app/ui/window.blp:112
+#: linux/app/ui/settings.blp:149 linux/app/ui/window.blp:112
 msgid "More Sign-In Options"
 msgstr "Więcej opcji logowania"
 
-#: linux/app/ui/settings.blp:152
+#: linux/app/ui/settings.blp:157
 msgid "Notes"
 msgstr "Notatki"
 
-#: linux/app/ui/settings.blp:155
+#: linux/app/ui/settings.blp:160
 msgid "Notes folder in Nextcloud Files"
 msgstr "Folder notatek w plikach Nextcloud"
 
-#: linux/app/ui/settings.blp:161 linux/app/ui/shortcuts.blp:25
+#: linux/app/ui/settings.blp:166 linux/app/ui/shortcuts.blp:25
 msgid "Sync"
 msgstr "Synchronizacja"
 
-#: linux/app/ui/settings.blp:164
+#: linux/app/ui/settings.blp:169
 msgid "Sync settings with server"
 msgstr "Synchronizuj ustawienia z serwerem"
 
-#: linux/app/ui/settings.blp:165
+#: linux/app/ui/settings.blp:170
 msgid "The Nextcloud server always stays on this device"
 msgstr "Serwer Nextcloud zawsze pozostaje tylko na tym urządzeniu"
 
-#: linux/app/ui/settings.blp:174 linux/app/ui/settings.blp:179
+#: linux/app/ui/settings.blp:179 linux/app/ui/settings.blp:184
 #: linux/app/ui/window.blp:472
 msgid "Copy Login Link"
 msgstr "Skopiuj odnośnik logowania"
 
-#: linux/app/ui/settings.blp:175 linux/app/ui/settings.blp:180
+#: linux/app/ui/settings.blp:180 linux/app/ui/settings.blp:185
 #: linux/app/ui/window.blp:473
 msgid "Sign In with Password…"
 msgstr "Zaloguj się hasłem…"
@@ -619,10 +623,6 @@ msgstr "Zamknij okno"
 #: linux/app/ui/shortcuts.blp:45 linux/app/ui/window.blp:468
 msgid "Quit"
 msgstr "Zakończ"
-
-#: linux/app/ui/shortcuts.blp:51
-msgid "Editor"
-msgstr "Edytor"
 
 #: linux/app/ui/shortcuts.blp:59
 msgid "Redo"
@@ -791,6 +791,9 @@ msgstr "Foldery, wyszukiwanie i edytor Markdown"
 #: linux/data/dev.aperte.Notav.metainfo.xml:18
 msgid "Connects through GNOME Online Accounts or a browser sign-in"
 msgstr "Łączy się przez Konta online GNOME lub logowanie w przeglądarce"
+
+#~ msgid "Editing"
+#~ msgstr "Edycja"
 
 #~ msgid "Notifications"
 #~ msgstr "Powiadomienia"

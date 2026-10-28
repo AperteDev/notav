@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notav\n"
 "Report-Msgid-Bugs-To: https://github.com/AperteDev/notav/issues\n"
-"POT-Creation-Date: 2026-10-28 18:29+0100\n"
+"POT-Creation-Date: 2026-10-28 18:30+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -133,7 +133,7 @@ msgstr ""
 
 #: linux/app/src/settings.rs:151 linux/app/src/window.rs:439
 #: linux/app/ui/new-folder.blp:11 linux/app/ui/password-login.blp:19
-#: linux/app/ui/settings.blp:125 linux/app/ui/window.blp:118
+#: linux/app/ui/settings.blp:130 linux/app/ui/window.blp:118
 msgid "Cancel"
 msgstr ""
 
@@ -371,7 +371,7 @@ msgstr ""
 msgid "Enter the Nextcloud server first"
 msgstr ""
 
-#: linux/app/src/window.rs:2066 linux/app/ui/settings.blp:142
+#: linux/app/src/window.rs:2066 linux/app/ui/settings.blp:147
 #: linux/app/ui/window.blp:110
 msgid "Sign In with Browser"
 msgstr ""
@@ -419,7 +419,7 @@ msgstr ""
 msgid "Use GNOME Online Accounts"
 msgstr ""
 
-#: linux/app/ui/connection.blp:11 linux/app/ui/settings.blp:112
+#: linux/app/ui/connection.blp:11 linux/app/ui/settings.blp:117
 msgid "Account"
 msgstr ""
 
@@ -521,60 +521,64 @@ msgctxt "tree icons"
 msgid "None"
 msgstr ""
 
-#: linux/app/ui/settings.blp:97
-msgid "Editing"
+#: linux/app/ui/settings.blp:97 linux/app/ui/shortcuts.blp:51
+msgid "Editor"
 msgstr ""
 
-#: linux/app/ui/settings.blp:100
+#: linux/app/ui/settings.blp:102
+msgid "Markdown"
+msgstr ""
+
+#: linux/app/ui/settings.blp:105
 msgid "Format tables"
 msgstr ""
 
-#: linux/app/ui/settings.blp:101
+#: linux/app/ui/settings.blp:106
 msgid "Line up a table’s columns when the cursor leaves a changed row"
 msgstr ""
 
-#: linux/app/ui/settings.blp:107
+#: linux/app/ui/settings.blp:112
 msgid "Accounts"
 msgstr ""
 
-#: linux/app/ui/settings.blp:133
+#: linux/app/ui/settings.blp:138
 msgid "Sign Out"
 msgstr ""
 
-#: linux/app/ui/settings.blp:135 linux/app/ui/settings.blp:173
+#: linux/app/ui/settings.blp:140 linux/app/ui/settings.blp:178
 msgid "Sign In Again"
 msgstr ""
 
-#: linux/app/ui/settings.blp:144 linux/app/ui/window.blp:112
+#: linux/app/ui/settings.blp:149 linux/app/ui/window.blp:112
 msgid "More Sign-In Options"
 msgstr ""
 
-#: linux/app/ui/settings.blp:152
+#: linux/app/ui/settings.blp:157
 msgid "Notes"
 msgstr ""
 
-#: linux/app/ui/settings.blp:155
+#: linux/app/ui/settings.blp:160
 msgid "Notes folder in Nextcloud Files"
 msgstr ""
 
-#: linux/app/ui/settings.blp:161 linux/app/ui/shortcuts.blp:25
+#: linux/app/ui/settings.blp:166 linux/app/ui/shortcuts.blp:25
 msgid "Sync"
 msgstr ""
 
-#: linux/app/ui/settings.blp:164
+#: linux/app/ui/settings.blp:169
 msgid "Sync settings with server"
 msgstr ""
 
-#: linux/app/ui/settings.blp:165
+#: linux/app/ui/settings.blp:170
 msgid "The Nextcloud server always stays on this device"
 msgstr ""
 
-#: linux/app/ui/settings.blp:174 linux/app/ui/settings.blp:179
+#: linux/app/ui/settings.blp:179 linux/app/ui/settings.blp:184
 #: linux/app/ui/window.blp:472
 msgid "Copy Login Link"
 msgstr ""
 
-#: linux/app/ui/settings.blp:175 linux/app/ui/settings.blp:180
+#: linux/app/ui/settings.blp:180 linux/app/ui/settings.blp:185
 #: linux/app/ui/window.blp:473
 msgid "Sign In with Password…"
 msgstr ""
@@ -601,10 +605,6 @@ msgstr ""
 
 #: linux/app/ui/shortcuts.blp:45 linux/app/ui/window.blp:468
 msgid "Quit"
-msgstr ""
-
-#: linux/app/ui/shortcuts.blp:51
-msgid "Editor"
 msgstr ""
 
 #: linux/app/ui/shortcuts.blp:59

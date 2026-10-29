@@ -319,9 +319,9 @@ const HANDLES_REACH: i32 = 28;
 const BAR: i32 = 16;
 const BAR_GAP: i32 = 4;
 
-/// The handles of the table under the pointer, as Obsidian has them: a grip on the top edge
-/// of the column and on the left edge of the row the pointer is on (a click opens its menu, a
-/// drag moves it), and bars past the last column and under the last row that add one.
+/// The handles of the table under the pointer, as Obsidian has them: a grip on the delimiter
+/// row in the column and on the left edge of the row the pointer is on (a click opens its
+/// menu, a drag moves it), and bars past the last column and under the last row that add one.
 struct Handles {
     view: glib::WeakRef<sourceview5::View>,
     row: gtk::MenuButton,
@@ -339,8 +339,10 @@ struct Handles {
 /// coordinates, and the row and column of the grips.
 struct Shown {
     layout: table::Layout,
-    /// Each row's top and height.
+    /// Each row's top and height, and the delimiter row's (the column grip's place: on the
+    /// header, it would hide the column's name).
     rows: Vec<(i32, i32)>,
+    delimiter: (i32, i32),
     /// Each column edge's x (its pipe's middle).
     edges: Vec<i32>,
     row: usize,
@@ -352,6 +354,7 @@ impl Shown {
         let mut s = Self {
             layout,
             rows: Vec::new(),
+            delimiter: (0, 0),
             edges: Vec::new(),
             row: 0,
             column: 0,
@@ -370,6 +373,9 @@ impl Shown {
             .iter()
             .map(|&r| view.line_yrange(&at(r)))
             .collect();
+        let mut delimiter = at(self.layout.rows[0]);
+        delimiter.forward_line();
+        self.delimiter = view.line_yrange(&delimiter);
         self.edges = self
             .layout
             .edges
@@ -614,7 +620,8 @@ impl Handles {
         };
         let (w, h) = size(self.column.upcast_ref());
         let middle = (s.edges[s.column] + s.edges[s.column + 1]) / 2;
-        view.move_overlay(&self.column, middle - w / 2, (s.top() - h / 2).max(0));
+        let (top, height) = s.delimiter;
+        view.move_overlay(&self.column, middle - w / 2, top + height / 2 - h / 2);
         let (w, h) = size(self.row.upcast_ref());
         let (top, height) = s.rows[s.row];
         view.move_overlay(

@@ -40,8 +40,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   once the cursor leaves a changed row; from the right-click menu, insert a table, add, move,
   duplicate and delete rows and columns, align a column or sort by it; rows copied from a
   spreadsheet are pasted as a table
-- Table handles in Editor mode, as in Obsidian: over a table, a grip on the column's top edge
-  and on the row's left edge opens its menu or, dragged, moves it; bars past the last column
+- Table handles in Editor mode, as in Obsidian: over a table, a grip in the column (on the
+  `|---|` row) and on the row's left edge opens its menu or, dragged, moves it; bars past the last column
   and under the last row add one
 - An Editor page in Preferences for what Editor mode does by itself: "Format tables", under
   Markdown, turns off the tables' tidying as the cursor leaves a row (Format Table in the menu

@@ -37,9 +37,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   format (`YYYY-MM-DD` by default, `/` for folders) are set on a Journal page in Preferences,
   the folder and template fields suggesting what there is
 - Tables in Editor mode: kept aligned (the pipes lined up, the alignment in the `|---|` row)
-  once the cursor leaves a changed row; from the right-click menu, insert a table, add, move
-  and delete rows and columns, align a column or sort by it; rows copied from a spreadsheet
-  are pasted as a table
+  once the cursor leaves a changed row; from the right-click menu, insert a table, add, move,
+  duplicate and delete rows and columns, align a column or sort by it; rows copied from a
+  spreadsheet are pasted as a table
 - An Editor page in Preferences for what Editor mode does by itself: "Format tables", under
   Markdown, turns off the tables' tidying as the cursor leaves a row (Format Table in the menu
   still works)

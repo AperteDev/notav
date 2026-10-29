@@ -26,11 +26,23 @@ pub enum Op {
     DeleteRow,
     MoveRowUp,
     MoveRowDown,
+    /// To be row `to` (1 the first below the header).
+    MoveRow {
+        to: usize,
+    },
+    /// A copy of the row below it.
+    DuplicateRow,
     ColumnLeft,
     ColumnRight,
     DeleteColumn,
     MoveColumnLeft,
     MoveColumnRight,
+    /// To be column `to` (0 the first).
+    MoveColumn {
+        to: usize,
+    },
+    /// A copy of the column right of it.
+    DuplicateColumn,
     Align(Align),
     /// The rows below the header, by the column: numbers by value, the rest alphabetically.
     Sort {
@@ -64,6 +76,17 @@ pub fn apply(text: &str, at: usize, cursor: usize, op: Op) -> Option<Change> {
             spot: Spot::Text(0),
         })
     };
+    let op = match op {
+        Op::MoveRowUp => Op::MoveRow {
+            to: row.checked_sub(1)?,
+        },
+        Op::MoveRowDown => Op::MoveRow { to: row + 1 },
+        Op::MoveColumnLeft => Op::MoveColumn {
+            to: column.checked_sub(1)?,
+        },
+        Op::MoveColumnRight => Op::MoveColumn { to: column + 1 },
+        op => op,
+    };
     match op {
         Op::Tidy => {}
         Op::RowAbove | Op::RowBelow => {
@@ -81,18 +104,18 @@ pub fn apply(text: &str, at: usize, cursor: usize, op: Op) -> Option<Change> {
             t.rows.remove(row);
             go(row.min(rows - 2), column);
         }
-        Op::MoveRowUp | Op::MoveRowDown => {
-            let other = if op == Op::MoveRowUp {
-                row.checked_sub(1)?
-            } else {
-                row + 1
-            };
-            if row == 0 || other == 0 || other >= rows {
+        Op::MoveRow { to } => {
+            if row == 0 || to == 0 || to >= rows || to == row {
                 return None;
             }
-            t.rows.swap(row, other);
+            let moved = t.rows.remove(row);
+            t.rows.insert(to, moved);
+            place = Some(Place { row: to, ..target });
+        }
+        Op::DuplicateRow => {
+            t.rows.insert(row + 1, t.rows[row].clone());
             place = Some(Place {
-                row: other,
+                row: row + 1,
                 ..target
             });
         }
@@ -118,23 +141,33 @@ pub fn apply(text: &str, at: usize, cursor: usize, op: Op) -> Option<Change> {
             t.aligns.remove(column);
             go(row, column.min(columns - 2));
         }
-        Op::MoveColumnLeft | Op::MoveColumnRight => {
-            let other = if op == Op::MoveColumnLeft {
-                column.checked_sub(1)?
-            } else {
-                column + 1
-            };
-            if other >= columns {
+        Op::MoveColumn { to } => {
+            if to >= columns || to == column {
                 return None;
             }
             for r in &mut t.rows {
-                r.swap(column, other);
+                let moved = r.remove(column);
+                r.insert(to, moved);
             }
-            t.aligns.swap(column, other);
+            let moved = t.aligns.remove(column);
+            t.aligns.insert(to, moved);
             place = Some(Place {
-                column: other,
+                column: to,
                 ..target
             });
+        }
+        Op::DuplicateColumn => {
+            for r in &mut t.rows {
+                r.insert(column + 1, r[column].clone());
+            }
+            t.aligns.insert(column + 1, t.aligns[column]);
+            place = Some(Place {
+                column: column + 1,
+                ..target
+            });
+        }
+        Op::MoveRowUp | Op::MoveRowDown | Op::MoveColumnLeft | Op::MoveColumnRight => {
+            unreachable!()
         }
         Op::Align(a) => t.aligns[column] = a,
         Op::Sort { descending } => {
@@ -614,6 +647,29 @@ mod tests {
             after(t, Op::Align(Align::Center)).unwrap(),
             "| a   |  b‸  |\n| --- | :-: |\n| 1   |  2  |\n| 3   |  4  |"
         );
+        assert_eq!(
+            after(t, Op::DuplicateColumn).unwrap(),
+            "| a   |   b |   b‸ |\n| --- | --: | --: |\n| 1   |   2 |   2 |\n| 3   |   4 |   4 |"
+        );
+        let body = "| a | b |\n|---|---|\n| 1‸ | 2 |\n| 3 | 4 |\n| 5 | 6 |";
+        assert_eq!(
+            after(body, Op::DuplicateRow).unwrap(),
+            "| a   | b   |\n| --- | --- |\n| 1   | 2   |\n| 1‸   | 2   |\n| 3   | 4   |\n| 5   | 6   |"
+        );
+        assert_eq!(
+            after(body, Op::MoveRow { to: 3 }).unwrap(),
+            "| a   | b   |\n| --- | --- |\n| 3   | 4   |\n| 5   | 6   |\n| 1‸   | 2   |"
+        );
+        assert_eq!(after(body, Op::MoveRow { to: 0 }), None);
+        assert_eq!(after(body, Op::MoveRow { to: 4 }), None);
+        assert_eq!(
+            after(
+                "| a‸ | b | c |\n|---|---|--:|\n| 1 | 2 | 3 |",
+                Op::MoveColumn { to: 2 }
+            )
+            .unwrap(),
+            "| b   |   c | a‸   |\n| --- | --: | --- |\n| 2   |   3 | 1   |"
+        );
     }
 
     #[test]
@@ -661,6 +717,10 @@ mod tests {
             Op::DeleteColumn,
             Op::MoveColumnLeft,
             Op::MoveColumnRight,
+            Op::MoveRow { to: 2 },
+            Op::MoveColumn { to: 0 },
+            Op::DuplicateRow,
+            Op::DuplicateColumn,
             Op::Align(Align::Right),
             Op::Sort { descending: true },
         ];

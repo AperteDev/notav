@@ -22,11 +22,13 @@ const TABLE_OPS: &[(&str, Op)] = &[
     ("row-below", Op::RowBelow),
     ("move-row-up", Op::MoveRowUp),
     ("move-row-down", Op::MoveRowDown),
+    ("duplicate-row", Op::DuplicateRow),
     ("delete-row", Op::DeleteRow),
     ("column-left", Op::ColumnLeft),
     ("column-right", Op::ColumnRight),
     ("move-column-left", Op::MoveColumnLeft),
     ("move-column-right", Op::MoveColumnRight),
+    ("duplicate-column", Op::DuplicateColumn),
     ("delete-column", Op::DeleteColumn),
     ("align-left", Op::Align(Align::Left)),
     ("align-center", Op::Align(Align::Center)),
@@ -366,13 +368,26 @@ fn enable(group: &gio::SimpleActionGroup, name: &str, enabled: bool) {
 
 /// The context menu's items in a table.
 fn table_menu() -> gio::Menu {
-    let section = |items: &[(String, &str)]| {
-        let s = gio::Menu::new();
-        for (label, action) in items {
-            s.append(Some(label), Some(&format!("table.{action}")));
-        }
-        s
-    };
+    let menu = gio::Menu::new();
+    menu.append_submenu(Some(&gettext("Row")), &row_menu());
+    menu.append_submenu(Some(&gettext("Column")), &column_menu());
+    menu.append(Some(&gettext("Format Table")), Some("table.format"));
+    let outer = gio::Menu::new();
+    outer.append_section(None, &menu);
+    outer
+}
+
+/// A menu section of `table.<action>` items.
+fn section(items: &[(String, &str)]) -> gio::Menu {
+    let s = gio::Menu::new();
+    for (label, action) in items {
+        s.append(Some(label), Some(&format!("table.{action}")));
+    }
+    s
+}
+
+/// What can be done to the cursor's row (the context menu's Row, a row grip's menu).
+fn row_menu() -> gio::Menu {
     let row = gio::Menu::new();
     row.append_section(
         None,
@@ -388,7 +403,18 @@ fn table_menu() -> gio::Menu {
             (gettext("Move Down"), "move-row-down"),
         ]),
     );
-    row.append_section(None, &section(&[(gettext("Delete Row"), "delete-row")]));
+    row.append_section(
+        None,
+        &section(&[
+            (gettext("Duplicate Row"), "duplicate-row"),
+            (gettext("Delete Row"), "delete-row"),
+        ]),
+    );
+    row
+}
+
+/// What can be done to the cursor's column (the context menu's Column, a column grip's menu).
+fn column_menu() -> gio::Menu {
     let column = gio::Menu::new();
     column.append_section(
         None,
@@ -421,15 +447,12 @@ fn table_menu() -> gio::Menu {
     );
     column.append_section(
         None,
-        &section(&[(gettext("Delete Column"), "delete-column")]),
+        &section(&[
+            (gettext("Duplicate Column"), "duplicate-column"),
+            (gettext("Delete Column"), "delete-column"),
+        ]),
     );
-    let menu = gio::Menu::new();
-    menu.append_submenu(Some(&gettext("Row")), &row);
-    menu.append_submenu(Some(&gettext("Column")), &column);
-    menu.append(Some(&gettext("Format Table")), Some("table.format"));
-    let outer = gio::Menu::new();
-    outer.append_section(None, &menu);
-    outer
+    column
 }
 
 /// The context menu's item out of tables.

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notav\n"
 "Report-Msgid-Bugs-To: https://github.com/AperteDev/notav/issues\n"
-"POT-Creation-Date: 2026-10-28 22:56+0100\n"
+"POT-Creation-Date: 2026-10-29 11:51+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -22,79 +22,87 @@ msgstr ""
 msgid "No Nextcloud account in Settings → Online Accounts"
 msgstr ""
 
-#: linux/app/src/editor.rs:380
-msgid "Insert Above"
-msgstr ""
-
-#: linux/app/src/editor.rs:381
-msgid "Insert Below"
-msgstr ""
-
-#: linux/app/src/editor.rs:387
-msgid "Move Up"
-msgstr ""
-
-#: linux/app/src/editor.rs:388
-msgid "Move Down"
-msgstr ""
-
-#: linux/app/src/editor.rs:391
-msgid "Delete Row"
-msgstr ""
-
-#: linux/app/src/editor.rs:396
-msgid "Insert Left"
-msgstr ""
-
-#: linux/app/src/editor.rs:397
-msgid "Insert Right"
-msgstr ""
-
-#: linux/app/src/editor.rs:403
-msgid "Move Left"
-msgstr ""
-
-#: linux/app/src/editor.rs:404
-msgid "Move Right"
-msgstr ""
-
-#: linux/app/src/editor.rs:410
-msgid "Align Left"
-msgstr ""
-
-#: linux/app/src/editor.rs:411
-msgid "Align Center"
-msgstr ""
-
-#: linux/app/src/editor.rs:412
-msgid "Align Right"
-msgstr ""
-
-#: linux/app/src/editor.rs:418
-msgid "Sort Ascending"
-msgstr ""
-
-#: linux/app/src/editor.rs:419
-msgid "Sort Descending"
-msgstr ""
-
-#: linux/app/src/editor.rs:424
-msgid "Delete Column"
-msgstr ""
-
-#: linux/app/src/editor.rs:427
+#: linux/app/src/editor.rs:372
 msgid "Row"
 msgstr ""
 
-#: linux/app/src/editor.rs:428
+#: linux/app/src/editor.rs:373
 msgid "Column"
 msgstr ""
 
-#: linux/app/src/editor.rs:429
+#: linux/app/src/editor.rs:374
 msgid "Format Table"
 msgstr ""
 
+#: linux/app/src/editor.rs:395
+msgid "Insert Above"
+msgstr ""
+
+#: linux/app/src/editor.rs:396
+msgid "Insert Below"
+msgstr ""
+
+#: linux/app/src/editor.rs:402
+msgid "Move Up"
+msgstr ""
+
+#: linux/app/src/editor.rs:403
+msgid "Move Down"
+msgstr ""
+
+#: linux/app/src/editor.rs:409
+msgid "Duplicate Row"
+msgstr ""
+
+#: linux/app/src/editor.rs:410
+msgid "Delete Row"
+msgstr ""
+
+#: linux/app/src/editor.rs:422
+msgid "Insert Left"
+msgstr ""
+
+#: linux/app/src/editor.rs:423
+msgid "Insert Right"
+msgstr ""
+
+#: linux/app/src/editor.rs:429
+msgid "Move Left"
+msgstr ""
+
+#: linux/app/src/editor.rs:430
+msgid "Move Right"
+msgstr ""
+
+#: linux/app/src/editor.rs:436
+msgid "Align Left"
+msgstr ""
+
+#: linux/app/src/editor.rs:437
+msgid "Align Center"
+msgstr ""
+
 #: linux/app/src/editor.rs:438
+msgid "Align Right"
+msgstr ""
+
+#: linux/app/src/editor.rs:444
+msgid "Sort Ascending"
+msgstr ""
+
+#: linux/app/src/editor.rs:445
+msgid "Sort Descending"
+msgstr ""
+
+#: linux/app/src/editor.rs:451
+msgid "Duplicate Column"
+msgstr ""
+
+#: linux/app/src/editor.rs:452
+msgid "Delete Column"
+msgstr ""
+
+#: linux/app/src/editor.rs:461
 msgid "Insert Table"
 msgstr ""
 

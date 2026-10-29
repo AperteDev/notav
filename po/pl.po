@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notav\n"
 "Report-Msgid-Bugs-To: https://github.com/AperteDev/notav/issues\n"
-"POT-Creation-Date: 2026-10-28 22:56+0100\n"
+"POT-Creation-Date: 2026-10-29 11:51+0100\n"
 "PO-Revision-Date: 2026-10-24 20:03+0200\n"
 "Last-Translator: SelfRef\n"
 "Language-Team: Polish\n"
@@ -22,79 +22,87 @@ msgstr ""
 msgid "No Nextcloud account in Settings → Online Accounts"
 msgstr "Brak konta Nextcloud w Ustawienia → Konta online"
 
-#: linux/app/src/editor.rs:380
-msgid "Insert Above"
-msgstr "Wstaw powyżej"
-
-#: linux/app/src/editor.rs:381
-msgid "Insert Below"
-msgstr "Wstaw poniżej"
-
-#: linux/app/src/editor.rs:387
-msgid "Move Up"
-msgstr "Przenieś w górę"
-
-#: linux/app/src/editor.rs:388
-msgid "Move Down"
-msgstr "Przenieś w dół"
-
-#: linux/app/src/editor.rs:391
-msgid "Delete Row"
-msgstr "Usuń wiersz"
-
-#: linux/app/src/editor.rs:396
-msgid "Insert Left"
-msgstr "Wstaw z lewej"
-
-#: linux/app/src/editor.rs:397
-msgid "Insert Right"
-msgstr "Wstaw z prawej"
-
-#: linux/app/src/editor.rs:403
-msgid "Move Left"
-msgstr "Przenieś w lewo"
-
-#: linux/app/src/editor.rs:404
-msgid "Move Right"
-msgstr "Przenieś w prawo"
-
-#: linux/app/src/editor.rs:410
-msgid "Align Left"
-msgstr "Wyrównaj do lewej"
-
-#: linux/app/src/editor.rs:411
-msgid "Align Center"
-msgstr "Wyśrodkuj"
-
-#: linux/app/src/editor.rs:412
-msgid "Align Right"
-msgstr "Wyrównaj do prawej"
-
-#: linux/app/src/editor.rs:418
-msgid "Sort Ascending"
-msgstr "Sortuj rosnąco"
-
-#: linux/app/src/editor.rs:419
-msgid "Sort Descending"
-msgstr "Sortuj malejąco"
-
-#: linux/app/src/editor.rs:424
-msgid "Delete Column"
-msgstr "Usuń kolumnę"
-
-#: linux/app/src/editor.rs:427
+#: linux/app/src/editor.rs:372
 msgid "Row"
 msgstr "Wiersz"
 
-#: linux/app/src/editor.rs:428
+#: linux/app/src/editor.rs:373
 msgid "Column"
 msgstr "Kolumna"
 
-#: linux/app/src/editor.rs:429
+#: linux/app/src/editor.rs:374
 msgid "Format Table"
 msgstr "Formatuj tabelę"
 
+#: linux/app/src/editor.rs:395
+msgid "Insert Above"
+msgstr "Wstaw powyżej"
+
+#: linux/app/src/editor.rs:396
+msgid "Insert Below"
+msgstr "Wstaw poniżej"
+
+#: linux/app/src/editor.rs:402
+msgid "Move Up"
+msgstr "Przenieś w górę"
+
+#: linux/app/src/editor.rs:403
+msgid "Move Down"
+msgstr "Przenieś w dół"
+
+#: linux/app/src/editor.rs:409
+msgid "Duplicate Row"
+msgstr "Powiel wiersz"
+
+#: linux/app/src/editor.rs:410
+msgid "Delete Row"
+msgstr "Usuń wiersz"
+
+#: linux/app/src/editor.rs:422
+msgid "Insert Left"
+msgstr "Wstaw z lewej"
+
+#: linux/app/src/editor.rs:423
+msgid "Insert Right"
+msgstr "Wstaw z prawej"
+
+#: linux/app/src/editor.rs:429
+msgid "Move Left"
+msgstr "Przenieś w lewo"
+
+#: linux/app/src/editor.rs:430
+msgid "Move Right"
+msgstr "Przenieś w prawo"
+
+#: linux/app/src/editor.rs:436
+msgid "Align Left"
+msgstr "Wyrównaj do lewej"
+
+#: linux/app/src/editor.rs:437
+msgid "Align Center"
+msgstr "Wyśrodkuj"
+
 #: linux/app/src/editor.rs:438
+msgid "Align Right"
+msgstr "Wyrównaj do prawej"
+
+#: linux/app/src/editor.rs:444
+msgid "Sort Ascending"
+msgstr "Sortuj rosnąco"
+
+#: linux/app/src/editor.rs:445
+msgid "Sort Descending"
+msgstr "Sortuj malejąco"
+
+#: linux/app/src/editor.rs:451
+msgid "Duplicate Column"
+msgstr "Powiel kolumnę"
+
+#: linux/app/src/editor.rs:452
+msgid "Delete Column"
+msgstr "Usuń kolumnę"
+
+#: linux/app/src/editor.rs:461
 msgid "Insert Table"
 msgstr "Wstaw tabelę"
 
@@ -593,8 +601,8 @@ msgid ""
 "A new daily note is a copy of the template note, with {{title}} and {{date}} "
 "in it filled in."
 msgstr ""
-"Nowa notatka dzienna jest kopią notatki-szablonu, z uzupełnionymi {{title}} i "
-"{{date}}."
+"Nowa notatka dzienna jest kopią notatki-szablonu, z uzupełnionymi {{title}} "
+"i {{date}}."
 
 #: linux/app/ui/settings.blp:150 linux/app/ui/window.blp:155
 msgid "Folder"

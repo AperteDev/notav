@@ -8,6 +8,7 @@ use gtk::{gio, glib};
 use notav_core::markdown::{self, Style};
 use notav_core::table::{self, Align, Op};
 use sourceview5::prelude::*;
+use std::cmp::Ordering;
 use std::rc::Rc;
 
 /// Above this many characters a note is not styled: each change parses it whole.
@@ -333,6 +334,8 @@ struct Handles {
     shown: std::cell::RefCell<Option<Shown>>,
     /// While a grip is pressed: its row or column, then where a drag would take it.
     target: std::cell::Cell<Option<usize>>,
+    /// Whether the pressed grip has gone far enough to be dragged, not clicked.
+    dragging: std::cell::Cell<bool>,
 }
 
 /// The table the handles are on: where its rows and columns are, in the text and in buffer
@@ -476,6 +479,7 @@ fn handles(view: &sourceview5::View, update: impl Fn(&sourceview5::View) + 'stat
             .build(),
         shown: Default::default(),
         target: Default::default(),
+        dragging: Default::default(),
     });
     h.row.set_direction(gtk::ArrowType::Right);
     for w in [
@@ -612,23 +616,11 @@ impl Handles {
         ] {
             w.set_visible(true);
         }
-        let size = |w: &gtk::Widget| {
-            (
-                w.measure(gtk::Orientation::Horizontal, -1).1,
-                w.measure(gtk::Orientation::Vertical, -1).1,
-            )
-        };
-        let (w, h) = size(self.column.upcast_ref());
-        let middle = (s.edges[s.column] + s.edges[s.column + 1]) / 2;
         let (top, height) = s.delimiter;
-        view.move_overlay(&self.column, middle - w / 2, top + height / 2 - h / 2);
-        let (w, h) = size(self.row.upcast_ref());
+        let middle = (s.edges[s.column] + s.edges[s.column + 1]) / 2;
+        center(view, &self.column, middle, top + height / 2);
         let (top, height) = s.rows[s.row];
-        view.move_overlay(
-            &self.row,
-            (s.left() - w / 2).max(0),
-            top + height / 2 - h / 2,
-        );
+        center(view, &self.row, s.left(), top + height / 2);
         self.add_column.set_size_request(BAR, s.bottom() - s.top());
         view.move_overlay(&self.add_column, s.right() + BAR_GAP, s.top());
         self.add_row.set_size_request(s.right() - s.left(), BAR);
@@ -636,11 +628,20 @@ impl Handles {
     }
 }
 
+/// Put `w`, a child of `view`, with its middle at buffer coordinates `x`, `y` (not past the
+/// view's left edge).
+fn center(view: &sourceview5::View, w: &impl IsA<gtk::Widget>, x: i32, y: i32) {
+    let width = w.measure(gtk::Orientation::Horizontal, -1).1;
+    let height = w.measure(gtk::Orientation::Vertical, -1).1;
+    view.move_overlay(w, (x - width / 2).max(0), y - height / 2);
+}
+
 /// How far the pointer goes from where a grip was pressed before it is a drag, not a click.
 const DRAG_THRESHOLD: f64 = 8.0;
 
-/// Dragging `grip` moves its row (`rows`) or column: a line shows where it would go. Not the
-/// header row, which stays first. A click opens its menu.
+/// Dragging `grip` moves its row (`rows`) or column: a line shows where it would go, the grip
+/// on it, the other handles hidden. Not the header row, which stays first. A click opens its
+/// menu.
 fn drag(h: &Rc<Handles>, grip: &gtk::MenuButton, rows: bool) {
     let gesture = gtk::GestureDrag::new();
     // The press is the grip's alone: a button does not claim it, so it would go on to the
@@ -664,12 +665,31 @@ fn drag(h: &Rc<Handles>, grip: &gtk::MenuButton, rows: bool) {
         let shown = h.shown.borrow();
         let Some(s) = shown.as_ref() else { return };
         let source = if rows { s.row } else { s.column };
-        if dx.hypot(dy) < DRAG_THRESHOLD || (rows && source == 0) {
-            return;
+        if !h.dragging.get() {
+            // The offsets are the grip's, which moves once dragged.
+            if dx.hypot(dy) < DRAG_THRESHOLD || (rows && source == 0) {
+                return;
+            }
+            h.dragging.set(true);
+            let others = [
+                h.row.upcast_ref::<gtk::Widget>(),
+                h.column.upcast_ref(),
+                h.add_row.upcast_ref(),
+                h.add_column.upcast_ref(),
+            ];
+            for w in others.into_iter().filter(|w| **w != grip) {
+                w.set_visible(false);
+            }
         }
-        let (sx, sy) = g.start_point().unwrap_or_default();
-        let point = gtk::graphene::Point::new((sx + dx) as f32, (sy + dy) as f32);
-        let Some(p) = grip.compute_point(&view, &point) else {
+        // The pointer, from the event: not moving with the grip.
+        let (Some(native), Some((px, py))) =
+            (view.native(), g.current_event().and_then(|e| e.position()))
+        else {
+            return;
+        };
+        let (tx, ty) = native.surface_transform();
+        let point = gtk::graphene::Point::new((px - tx) as f32, (py - ty) as f32);
+        let Some(p) = native.compute_point(&view, &point) else {
             return;
         };
         let (x, y) =
@@ -681,19 +701,40 @@ fn drag(h: &Rc<Handles>, grip: &gtk::MenuButton, rows: bool) {
         };
         h.target.set(Some(target));
         h.drop.set_visible(target != source);
-        if target == source {
-            return;
-        }
-        // The line at the edge it would go past.
+        // The line at the edge it would go past, the grip on it; where it was if it stays.
         if rows {
             let (top, height) = s.rows[target];
-            let y = if target > source { top + height } else { top };
-            h.drop.set_size_request(s.right() - s.left(), 2);
-            view.move_overlay(&h.drop, s.left(), y - 1);
+            let y = match target.cmp(&source) {
+                Ordering::Less => top,
+                Ordering::Equal => top + height / 2,
+                Ordering::Greater => top + height,
+            };
+            if target != source {
+                h.drop.set_size_request(s.right() - s.left(), 2);
+                view.move_overlay(&h.drop, s.left(), y - 1);
+            }
+            center(&view, &grip, s.left(), y);
         } else {
-            let x = s.edges[if target > source { target + 1 } else { target }];
-            h.drop.set_size_request(2, s.bottom() - s.top());
-            view.move_overlay(&h.drop, x - 1, s.top());
+            let x = match target.cmp(&source) {
+                Ordering::Less => s.edges[target],
+                Ordering::Equal => (s.edges[target] + s.edges[target + 1]) / 2,
+                Ordering::Greater => s.edges[target + 1],
+            };
+            if target != source {
+                h.drop.set_size_request(2, s.bottom() - s.top());
+                view.move_overlay(&h.drop, x - 1, s.top());
+            }
+            let (top, height) = s.delimiter;
+            center(&view, &grip, x, top + height / 2);
+        }
+    });
+    // Stopped by GTK while pressed (a grab elsewhere, a screenshot): no drag-end follows. Not
+    // after it, when the menu it opened takes the grab.
+    let hh = h.clone();
+    gesture.connect_cancel(move |_, _| {
+        if hh.target.take().is_some() {
+            hh.dragging.set(false);
+            hh.hide();
         }
     });
     let h = h.clone();
@@ -702,8 +743,10 @@ fn drag(h: &Rc<Handles>, grip: &gtk::MenuButton, rows: bool) {
             return;
         };
         h.drop.set_visible(false);
-        if dx.hypot(dy) < DRAG_THRESHOLD {
-            if let Some(grip) = g.widget().and_downcast::<gtk::MenuButton>() {
+        // Not dragged, the grip never moved: its offsets hold. Not the header row's pulled away.
+        if !h.dragging.replace(false) {
+            let grip = g.widget().and_downcast::<gtk::MenuButton>();
+            if let (true, Some(grip)) = (dx.hypot(dy) < DRAG_THRESHOLD, grip) {
                 grip.popup();
             }
             return;

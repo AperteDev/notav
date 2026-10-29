@@ -139,12 +139,11 @@ pub fn connect(view: &sourceview5::View) {
         let (start, end) = buffer.bounds();
         let text = buffer.text(&start, &end, true);
         // In a table Tab and Shift+Tab go from cell to cell (a tab would break it), Enter to the
-        // next row; a header line typed out of one starts it.
+        // next row, tidying it as leaving a row does; a header line typed out of one starts it.
+        let c = table::step(&text, cursor, step, format_tables());
         let c = match step {
-            table::Step::Down => {
-                table::step(&text, cursor, step).or_else(|| table::start(&text, cursor))
-            }
-            _ => table::step(&text, cursor, step),
+            table::Step::Down => c.or_else(|| table::start(&text, cursor)),
+            _ => c,
         };
         if let Some(c) = c {
             change(&buffer, &c);

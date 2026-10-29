@@ -217,12 +217,13 @@ pub enum Step {
     Down,
 }
 
-/// Move the cursor at character `cursor` in a table by `step`, to the end of a cell's text (an
-/// empty edit: nothing changes). Past the last row, Next and Down add one, the table tidied;
-/// Down from an empty last row takes it away and leaves the table, on a line of its own below.
-/// None out of tables, before the header's first cell with Previous, and at the header's start
-/// with Down (Enter there makes room above the table).
-pub fn step(text: &str, cursor: usize, step: Step) -> Option<Change> {
+/// Move the cursor at character `cursor` in a table by `step`, to the end of a cell's text (in
+/// an empty cell, where its text would start), the table tidied with `tidy` (else an empty
+/// edit: nothing changes). Past the last row, Next and Down add one, the table tidied; Down
+/// from an empty last row takes it away and leaves the table, on a line of its own below. None
+/// out of tables, before the header's first cell with Previous, and at the header's start with
+/// Down (Enter there makes room above the table).
+pub fn step(text: &str, cursor: usize, step: Step, tidy: bool) -> Option<Change> {
     let b = byte(text, cursor)?;
     let mut t = Table::find(text, b)?;
     let Place { row, column, spot } = t.place(text, b);
@@ -242,10 +243,17 @@ pub fn step(text: &str, cursor: usize, step: Step) -> Option<Change> {
         t.start + lines[..i].iter().map(|l| l.len() + 1).sum::<usize>()
     };
     if let Some((r, c)) = target {
+        if tidy {
+            return Some(tidied(text, &t, r, c));
+        }
         let line = lines[if r == 0 { 0 } else { r + 1 }];
-        let end = cells(line)
-            .get(c)
-            .map_or(line.trim_end().len(), |c| c.text_start + c.text.len());
+        let end = cells(line).get(c).map_or(line.trim_end().len(), |c| {
+            if c.text.is_empty() {
+                (c.stretch.start + 1).min(c.stretch.end)
+            } else {
+                c.text_start + c.text.len()
+            }
+        });
         let at = chars(text, line_at(r) + end);
         return Some(Change {
             edit: Edit {
@@ -268,17 +276,30 @@ pub fn step(text: &str, cursor: usize, step: Step) -> Option<Change> {
         });
     }
     t.rows.push(vec![String::new(); columns]);
+    let column = if step == Step::Next { 0 } else { column };
+    Some(tidied(text, &t, rows, column))
+}
+
+/// `t` tidied, the cursor at the end of the text of row `row`'s cell in `column`; an empty edit
+/// where its lines stay as they are.
+fn tidied(text: &str, t: &Table, row: usize, column: usize) -> Change {
     let (new, starts) = t.format();
     let start = chars(text, t.start);
-    let column = if step == Step::Next { 0 } else { column };
-    Some(Change {
-        cursor: start + chars(&new, starts[rows].1[column]),
-        edit: Edit {
+    let cursor = start + chars(&new, starts[row].1[column] + t.rows[row][column].len());
+    let edit = if new == text[t.start..t.end] {
+        Edit {
+            start: cursor,
+            end: cursor,
+            text: String::new(),
+        }
+    } else {
+        Edit {
             start,
             end: chars(text, t.end),
             text: new,
-        },
-    })
+        }
+    };
+    Change { edit, cursor }
 }
 
 /// Enter at the end of a line written as a table's header (`| a | b |`) that no table holds
@@ -885,7 +906,9 @@ mod tests {
         ];
         let mut changed = 0;
         for at in (0..=n).step_by(3) {
-            let keys = [Step::Next, Step::Previous, Step::Down].map(|s| step(t, at, s));
+            let keys = [Step::Next, Step::Previous, Step::Down]
+                .into_iter()
+                .flat_map(|s| [step(t, at, s, false), step(t, at, s, true)]);
             let all = ops.iter().map(|&op| apply(t, at, at, op));
             for c in all.chain(keys).chain([start(t, at)]).flatten() {
                 let len = n - (c.edit.end - c.edit.start) + c.edit.text.chars().count();
@@ -909,7 +932,21 @@ mod tests {
 
     #[test]
     fn tab_and_enter_go_through_the_cells() {
-        let by = |text: &str, s: Step| changed(text, |t, at| step(t, at, s));
+        let by = |text: &str, s: Step| changed(text, |t, at| step(t, at, s, false));
+        let tidy = |text: &str, s: Step| changed(text, |t, at| step(t, at, s, true));
+        // A row typed in, not tidied yet: to an empty cell's start, or tidied first.
+        let typed = "| a   | b   |\n| --- | --- |\n| xxxx‸     |     |";
+        assert_eq!(
+            by(typed, Step::Next).unwrap(),
+            "| a   | b   |\n| --- | --- |\n| xxxx     | ‸    |"
+        );
+        assert_eq!(
+            tidy(typed, Step::Next).unwrap(),
+            "| a    | b   |\n| ---- | --- |\n| xxxx | ‸    |"
+        );
+        let tidy_already = "| a   | b   |\n| --- | --- |\n| 1‸   | 2   |";
+        let c = step(&tidy_already.replace('‸', ""), 17, Step::Next, true).unwrap();
+        assert!(c.edit.text.is_empty() && c.edit.start == c.edit.end);
         let t = "| a | bb |\n|---|---|\n| 1 | 2 |\n\nMore";
         let at = |i: usize| {
             let mut s = t.to_string();

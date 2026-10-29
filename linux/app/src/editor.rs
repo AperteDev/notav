@@ -482,12 +482,13 @@ fn handles(view: &sourceview5::View, update: impl Fn(&sourceview5::View) + 'stat
         dragging: Default::default(),
     });
     h.row.set_direction(gtk::ArrowType::Right);
+    // Drawn in this order: the drop line under the grip dragged on it.
     for w in [
-        h.row.upcast_ref::<gtk::Widget>(),
-        h.column.upcast_ref(),
+        h.drop.upcast_ref::<gtk::Widget>(),
         h.add_row.upcast_ref(),
         h.add_column.upcast_ref(),
-        h.drop.upcast_ref(),
+        h.row.upcast_ref(),
+        h.column.upcast_ref(),
     ] {
         view.add_overlay(w, 0, 0);
     }

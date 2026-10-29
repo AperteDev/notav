@@ -14,9 +14,8 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
    - Links between notes: `[[` offers the notes' titles as you type; renaming or moving a note
      updates the links to it (asked first, as Obsidian does); Alt+Left back to the note a
      link was followed from.
-2. **Keyboard shortcuts**, later: Tab and Shift+Tab between table cells, Enter to the next row
-   (a new one at the end); Tab and Shift+Tab to indent list items; Ctrl+B, Ctrl+I, Ctrl+K around
-   the selection; Ctrl+E between Editor and Source mode.
+2. **Keyboard shortcuts**, later: Tab and Shift+Tab to indent list items; Ctrl+B, Ctrl+I,
+   Ctrl+K around the selection; Ctrl+E between Editor and Source mode.
 3. **Hiding the marks**, later, as Obsidian's Live Preview: `**`, `_`, backticks, `#`, `>` and
    link targets hidden except in the element (or the heading's line) the cursor is in; drawn
    bullets, quote bars, rules and table grids; images below their line. Blocked for now (see

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notav\n"
 "Report-Msgid-Bugs-To: https://github.com/AperteDev/notav/issues\n"
-"POT-Creation-Date: 2026-10-29 16:57+0100\n"
+"POT-Creation-Date: 2026-10-29 22:08+0100\n"
 "PO-Revision-Date: 2026-10-24 20:03+0200\n"
 "Last-Translator: SelfRef\n"
 "Language-Team: Polish\n"
@@ -22,95 +22,95 @@ msgstr ""
 msgid "No Nextcloud account in Settings → Online Accounts"
 msgstr "Brak konta Nextcloud w Ustawienia → Konta online"
 
-#: linux/app/src/editor.rs:467 linux/app/src/editor.rs:844
+#: linux/app/src/editor.rs:493 linux/app/src/editor.rs:872
 msgid "Row"
 msgstr "Wiersz"
 
-#: linux/app/src/editor.rs:470 linux/app/src/editor.rs:845
+#: linux/app/src/editor.rs:496 linux/app/src/editor.rs:873
 msgid "Column"
 msgstr "Kolumna"
 
-#: linux/app/src/editor.rs:473
+#: linux/app/src/editor.rs:499
 msgid "Add Row"
 msgstr "Dodaj wiersz"
 
-#: linux/app/src/editor.rs:474
+#: linux/app/src/editor.rs:500
 msgid "Add Column"
 msgstr "Dodaj kolumnę"
 
-#: linux/app/src/editor.rs:846
+#: linux/app/src/editor.rs:874
 msgid "Format Table"
 msgstr "Formatuj tabelę"
 
-#: linux/app/src/editor.rs:867
+#: linux/app/src/editor.rs:895
 msgid "Insert Above"
 msgstr "Wstaw powyżej"
 
-#: linux/app/src/editor.rs:868
+#: linux/app/src/editor.rs:896
 msgid "Insert Below"
 msgstr "Wstaw poniżej"
 
-#: linux/app/src/editor.rs:874
+#: linux/app/src/editor.rs:902
 msgid "Move Up"
 msgstr "Przenieś w górę"
 
-#: linux/app/src/editor.rs:875
+#: linux/app/src/editor.rs:903
 msgid "Move Down"
 msgstr "Przenieś w dół"
 
-#: linux/app/src/editor.rs:881
+#: linux/app/src/editor.rs:909
 msgid "Duplicate Row"
 msgstr "Powiel wiersz"
 
-#: linux/app/src/editor.rs:882
+#: linux/app/src/editor.rs:910
 msgid "Delete Row"
 msgstr "Usuń wiersz"
 
-#: linux/app/src/editor.rs:894
+#: linux/app/src/editor.rs:922
 msgid "Insert Left"
 msgstr "Wstaw z lewej"
 
-#: linux/app/src/editor.rs:895
+#: linux/app/src/editor.rs:923
 msgid "Insert Right"
 msgstr "Wstaw z prawej"
 
-#: linux/app/src/editor.rs:901
+#: linux/app/src/editor.rs:929
 msgid "Move Left"
 msgstr "Przenieś w lewo"
 
-#: linux/app/src/editor.rs:902
+#: linux/app/src/editor.rs:930
 msgid "Move Right"
 msgstr "Przenieś w prawo"
 
-#: linux/app/src/editor.rs:908
+#: linux/app/src/editor.rs:936
 msgid "Align Left"
 msgstr "Wyrównaj do lewej"
 
-#: linux/app/src/editor.rs:909
+#: linux/app/src/editor.rs:937
 msgid "Align Center"
 msgstr "Wyśrodkuj"
 
-#: linux/app/src/editor.rs:910
+#: linux/app/src/editor.rs:938
 msgid "Align Right"
 msgstr "Wyrównaj do prawej"
 
-#: linux/app/src/editor.rs:916
+#: linux/app/src/editor.rs:944
 msgid "Sort Ascending"
 msgstr "Sortuj rosnąco"
 
-#: linux/app/src/editor.rs:917
+#: linux/app/src/editor.rs:945
 msgid "Sort Descending"
 msgstr "Sortuj malejąco"
 
-#: linux/app/src/editor.rs:923
+#: linux/app/src/editor.rs:951
 msgid "Duplicate Column"
 msgstr "Powiel kolumnę"
 
-#: linux/app/src/editor.rs:924
+#: linux/app/src/editor.rs:952
 msgid "Delete Column"
 msgstr "Usuń kolumnę"
 
-#: linux/app/src/editor.rs:933
+#: linux/app/src/editor.rs:961
 msgid "Insert Table"
 msgstr "Wstaw tabelę"
 
@@ -729,14 +729,26 @@ msgid "Open the Link at the Cursor"
 msgstr "Otwórz odnośnik pod kursorem"
 
 #: linux/app/ui/shortcuts.blp:74
+msgid "Next Table Cell"
+msgstr "Następna komórka tabeli"
+
+#: linux/app/ui/shortcuts.blp:79
+msgid "Previous Table Cell"
+msgstr "Poprzednia komórka tabeli"
+
+#: linux/app/ui/shortcuts.blp:84
+msgid "Next Table Row"
+msgstr "Następny wiersz tabeli"
+
+#: linux/app/ui/shortcuts.blp:89
 msgid "Larger Text"
 msgstr "Większy tekst"
 
-#: linux/app/ui/shortcuts.blp:79
+#: linux/app/ui/shortcuts.blp:94
 msgid "Smaller Text"
 msgstr "Mniejszy tekst"
 
-#: linux/app/ui/shortcuts.blp:84
+#: linux/app/ui/shortcuts.blp:99
 msgid "Reset Text Size"
 msgstr "Domyślny rozmiar tekstu"
 

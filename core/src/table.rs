@@ -207,6 +207,120 @@ pub fn apply(text: &str, at: usize, cursor: usize, op: Op) -> Option<Change> {
     })
 }
 
+/// Where Tab, Shift+Tab and Enter take the cursor in a table.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Step {
+    /// To the next cell, the next row's first after a row's last.
+    Next,
+    Previous,
+    /// To the same column in the next row.
+    Down,
+}
+
+/// Move the cursor at character `cursor` in a table by `step`, to the end of a cell's text (an
+/// empty edit: nothing changes). Past the last row, Next and Down add one, the table tidied;
+/// Down from an empty last row takes it away and leaves the table, on a line of its own below.
+/// None out of tables, before the header's first cell with Previous, and at the header's start
+/// with Down (Enter there makes room above the table).
+pub fn step(text: &str, cursor: usize, step: Step) -> Option<Change> {
+    let b = byte(text, cursor)?;
+    let mut t = Table::find(text, b)?;
+    let Place { row, column, spot } = t.place(text, b);
+    let (rows, columns) = (t.rows.len(), t.aligns.len());
+    let target = match step {
+        Step::Down if row == 0 && matches!(spot, Spot::Start) => return None,
+        Step::Next if column + 1 < columns => Some((row, column + 1)),
+        Step::Next => (row + 1 < rows).then_some((row + 1, 0)),
+        Step::Previous if column > 0 => Some((row, column - 1)),
+        Step::Previous => Some((row.checked_sub(1)?, columns - 1)),
+        Step::Down => (row + 1 < rows).then_some((row + 1, column)),
+    };
+    let lines: Vec<&str> = text[t.start..t.end].split('\n').collect();
+    // Where row `r`'s line starts (bytes): the delimiter row is the second line.
+    let line_at = |r: usize| {
+        let i = if r == 0 { 0 } else { r + 1 };
+        t.start + lines[..i].iter().map(|l| l.len() + 1).sum::<usize>()
+    };
+    if let Some((r, c)) = target {
+        let line = lines[if r == 0 { 0 } else { r + 1 }];
+        let end = cells(line)
+            .get(c)
+            .map_or(line.trim_end().len(), |c| c.text_start + c.text.len());
+        let at = chars(text, line_at(r) + end);
+        return Some(Change {
+            edit: Edit {
+                start: at,
+                end: at,
+                text: String::new(),
+            },
+            cursor: at,
+        });
+    }
+    if step == Step::Down && row > 0 && t.rows[row].iter().all(String::is_empty) {
+        let start = chars(text, line_at(row));
+        return Some(Change {
+            edit: Edit {
+                start,
+                end: chars(text, t.end),
+                text: "\n".into(),
+            },
+            cursor: start + 1,
+        });
+    }
+    t.rows.push(vec![String::new(); columns]);
+    let (new, starts) = t.format();
+    let start = chars(text, t.start);
+    let column = if step == Step::Next { 0 } else { column };
+    Some(Change {
+        cursor: start + chars(&new, starts[rows].1[column]),
+        edit: Edit {
+            start,
+            end: chars(text, t.end),
+            text: new,
+        },
+    })
+}
+
+/// Enter at the end of a line written as a table's header (`| a | b |`) that no table holds
+/// yet: the table it starts, tidied, with an empty row and the cursor in its first cell. None
+/// when the parser would not take it for a table (in a code block, a quote).
+pub fn start(text: &str, cursor: usize) -> Option<Change> {
+    let b = byte(text, cursor)?;
+    let line_start = text[..b].rfind('\n').map_or(0, |n| n + 1);
+    let line_end = text[b..].find('\n').map_or(text.len(), |n| b + n);
+    let line = &text[line_start..line_end];
+    let trimmed = line.trim();
+    let header = trimmed.len() > 1 && trimmed.starts_with('|') && trimmed.ends_with('|');
+    if !header || !text[b..line_end].trim().is_empty() || Table::find(text, b).is_some() {
+        return None;
+    }
+    let indent = &line[..line.len() - line.trim_start().len()];
+    let names = cells(line).into_iter().map(|c| c.text).collect();
+    let (table, starts) = Table::new(indent.into(), vec![names, Vec::new()], Vec::new()).format();
+    // A line of text under it would be its next row.
+    let next = text
+        .get(line_end + 1..)
+        .map(|t| t.split('\n').next().unwrap_or(t));
+    let after = if next.is_some_and(|l| !l.trim().is_empty()) {
+        "\n"
+    } else {
+        ""
+    };
+    let new = format!("{}{table}{after}{}", &text[..line_start], &text[line_end..]);
+    if Table::find(&new, line_start + indent.len()).is_none_or(|t| t.start != line_start) {
+        return None;
+    }
+    let start = chars(text, line_start);
+    Some(Change {
+        cursor: start + chars(&table, starts[1].1[0]),
+        edit: Edit {
+            start,
+            end: chars(text, line_end),
+            text: format!("{table}{after}"),
+        },
+    })
+}
+
 /// Whether character `at` is in a table's lines.
 pub fn is_at(text: &str, at: usize) -> bool {
     byte(text, at).and_then(|b| Table::find(text, b)).is_some()
@@ -771,15 +885,82 @@ mod tests {
         ];
         let mut changed = 0;
         for at in (0..=n).step_by(3) {
-            for op in ops {
-                if let Some(c) = apply(t, at, at, op) {
-                    let len = n - (c.edit.end - c.edit.start) + c.edit.text.chars().count();
-                    assert!(c.edit.start <= c.edit.end && c.edit.end <= n && c.cursor <= len);
-                    changed += 1;
-                }
+            let keys = [Step::Next, Step::Previous, Step::Down].map(|s| step(t, at, s));
+            let all = ops.iter().map(|&op| apply(t, at, at, op));
+            for c in all.chain(keys).chain([start(t, at)]).flatten() {
+                let len = n - (c.edit.end - c.edit.start) + c.edit.text.chars().count();
+                assert!(c.edit.start <= c.edit.end && c.edit.end <= n && c.cursor <= len);
+                changed += 1;
             }
         }
         assert!(changed > 100, "{changed}");
+    }
+
+    /// `text` (with `‸` where the cursor is) after `change` there, with `‸` where the cursor goes.
+    fn changed(text: &str, change: impl Fn(&str, usize) -> Option<Change>) -> Option<String> {
+        let at = text[..text.find('‸').unwrap()].chars().count();
+        let t = text.replace('‸', "");
+        let c = change(&t, at)?;
+        let mut chars: Vec<char> = t.chars().collect();
+        chars.splice(c.edit.start..c.edit.end, c.edit.text.chars());
+        chars.insert(c.cursor, '‸');
+        Some(chars.into_iter().collect())
+    }
+
+    #[test]
+    fn tab_and_enter_go_through_the_cells() {
+        let by = |text: &str, s: Step| changed(text, |t, at| step(t, at, s));
+        let t = "| a | bb |\n|---|---|\n| 1 | 2 |\n\nMore";
+        let at = |i: usize| {
+            let mut s = t.to_string();
+            s.insert(s.char_indices().nth(i).unwrap().0, '‸');
+            s
+        };
+        // From the header's "a": its "bb", then row 1, at the end of each cell's text.
+        assert_eq!(by(&at(2), Step::Next).unwrap(), at(8));
+        assert_eq!(by(&at(8), Step::Next).unwrap(), at(24));
+        assert_eq!(by(&at(24), Step::Previous).unwrap(), at(8));
+        assert_eq!(by(&at(2), Step::Down).unwrap(), at(24));
+        assert_eq!(by(&at(2), Step::Previous), None);
+        // Enter at the header's start makes room above the table.
+        assert_eq!(by(&at(0), Step::Down), None);
+        // Past the last row a new one, tidied.
+        let new = "| a   | bb  |\n| --- | --- |\n| 1   | 2   |\n";
+        assert_eq!(
+            by("| a | bb |\n|---|---|\n| 1 | 2‸ |\n\nMore", Step::Next).unwrap(),
+            format!("{new}| ‸    |     |\n\nMore")
+        );
+        assert_eq!(
+            by("| a | bb |\n|---|---|\n| 1 | 2‸ |", Step::Down).unwrap(),
+            format!("{new}|     | ‸    |")
+        );
+        // Enter on an empty last row leaves the table.
+        assert_eq!(
+            by("| a | bb |\n|---|---|\n|  ‸ |  |\n\nMore", Step::Down).unwrap(),
+            "| a | bb |\n|---|---|\n\n‸\n\nMore"
+        );
+        assert_eq!(by("Text‸\n", Step::Next), None);
+    }
+
+    #[test]
+    fn a_header_line_starts_a_table() {
+        let enter = |text: &str| changed(text, start);
+        assert_eq!(
+            enter("Text\n\n| Name | Value |‸\n").unwrap(),
+            "Text\n\n| Name | Value |\n| ---- | ----- |\n| ‸     |       |\n"
+        );
+        assert_eq!(
+            enter("  | a |‸\nMore").unwrap(),
+            "  | a   |\n  | --- |\n  | ‸    |\n\nMore"
+        );
+        assert_eq!(
+            enter("Text\n| a |‸").unwrap(),
+            "Text\n| a   |\n| --- |\n| ‸    |"
+        );
+        assert_eq!(enter("| a |‸ x"), None);
+        assert_eq!(enter("| a | b‸ |"), None);
+        assert_eq!(enter("```\n| a |‸\n```"), None);
+        assert_eq!(enter("| a |\n|---|\n| 1 |‸"), None);
     }
 
     #[test]

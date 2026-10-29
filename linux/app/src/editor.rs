@@ -103,7 +103,8 @@ pub fn setup(buffer: &sourceview5::Buffer) {
 }
 
 /// What a click and keys do in Editor mode: a click ticks a task, Ctrl+click opens a link (Alt+
-/// Enter the one at the cursor, as in Obsidian), Enter continues a list.
+/// Enter the one at the cursor, as in Obsidian), Enter continues a list; Tab, Shift+Tab and
+/// Enter go through a table's cells, and Enter after a header line starts one.
 pub fn connect(view: &sourceview5::View) {
     let keys = gtk::EventControllerKey::new();
     keys.set_propagation_phase(gtk::PropagationPhase::Capture);
@@ -124,14 +125,39 @@ pub fn connect(view: &sourceview5::View) {
             return glib::Propagation::Stop;
         }
         let plain = mods.is_empty();
-        if !enter || !plain || buffer.has_selection() || !editor_mode(&buffer) {
+        let step = match key {
+            Key::Tab | Key::KP_Tab if plain => table::Step::Next,
+            Key::ISO_Left_Tab if mods == gtk::gdk::ModifierType::SHIFT_MASK => {
+                table::Step::Previous
+            }
+            _ if enter && plain => table::Step::Down,
+            _ => return glib::Propagation::Proceed,
+        };
+        if buffer.has_selection() || !editor_mode(&buffer) {
             return glib::Propagation::Proceed;
         }
         let (start, end) = buffer.bounds();
-        let edits = markdown::enter(
-            &buffer.text(&start, &end, true),
-            buffer.cursor_position() as usize,
-        );
+        let text = buffer.text(&start, &end, true);
+        // In a table Tab and Shift+Tab go from cell to cell (a tab would break it), Enter to the
+        // next row; a header line typed out of one starts it.
+        let c = match step {
+            table::Step::Down => {
+                table::step(&text, cursor, step).or_else(|| table::start(&text, cursor))
+            }
+            _ => table::step(&text, cursor, step),
+        };
+        if let Some(c) = c {
+            change(&buffer, &c);
+            return glib::Propagation::Stop;
+        }
+        if step != table::Step::Down {
+            return if table::is_at(&text, cursor) {
+                glib::Propagation::Stop
+            } else {
+                glib::Propagation::Proceed
+            };
+        }
+        let edits = markdown::enter(&text, cursor);
         if edits.is_empty() {
             return glib::Propagation::Proceed;
         }
@@ -825,7 +851,9 @@ fn state(view: &sourceview5::View) -> (sourceview5::Buffer, glib::GString, usize
 
 /// Make a table change, as one step to undo, and put the cursor where it says.
 fn change(buffer: &sourceview5::Buffer, c: &table::Change) {
-    apply(buffer, std::slice::from_ref(&c.edit));
+    if c.edit.start != c.edit.end || !c.edit.text.is_empty() {
+        apply(buffer, std::slice::from_ref(&c.edit));
+    }
     buffer.place_cursor(&buffer.iter_at_offset(c.cursor as i32));
 }
 

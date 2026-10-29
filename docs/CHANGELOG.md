@@ -46,6 +46,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Table handles in Editor mode, as in Obsidian: over a table, a grip in the column (on the
   `|---|` row) and on the row's left edge opens its menu or, dragged, moves it; bars past the last column
   and under the last row add one
+- Tables from the keyboard in Editor mode: Enter after a header line (`| Name | Size |`) makes
+  it a table with an empty row; in a table, Tab and Shift+Tab go from cell to cell and Enter to
+  the next row, past the last one adding a row, and Enter on an empty last row leaves the table
 - An Editor page in Preferences for what Editor mode does by itself: "Format tables", under
   Markdown, turns off the tables' tidying as the cursor leaves a row (Format Table in the menu
   still works)

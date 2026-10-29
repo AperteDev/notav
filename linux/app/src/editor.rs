@@ -608,15 +608,16 @@ impl Handles {
             s.row = s.row_at(y);
             s.column = s.column_at(x);
         }
-        // Shown first: a hidden widget keeps the size it was measured at.
+        // Shown first: a hidden widget keeps the size it was measured at. No row grip on the
+        // header, which stays first (its row items are in the context menu).
         for w in [
-            self.row.upcast_ref::<gtk::Widget>(),
-            self.column.upcast_ref(),
+            self.column.upcast_ref::<gtk::Widget>(),
             self.add_row.upcast_ref(),
             self.add_column.upcast_ref(),
         ] {
             w.set_visible(true);
         }
+        self.row.set_visible(s.row != 0);
         let (top, height) = s.delimiter;
         let middle = (s.edges[s.column] + s.edges[s.column + 1]) / 2;
         center(view, &self.column, middle, top + height / 2);
@@ -641,8 +642,7 @@ fn center(view: &sourceview5::View, w: &impl IsA<gtk::Widget>, x: i32, y: i32) {
 const DRAG_THRESHOLD: f64 = 8.0;
 
 /// Dragging `grip` moves its row (`rows`) or column: a line shows where it would go, the grip
-/// on it, the other handles hidden. Not the header row, which stays first. A click opens its
-/// menu.
+/// on it, the other handles hidden (rows not above the header). A click opens its menu.
 fn drag(h: &Rc<Handles>, grip: &gtk::MenuButton, rows: bool) {
     let gesture = gtk::GestureDrag::new();
     // The press is the grip's alone: a button does not claim it, so it would go on to the
@@ -668,7 +668,7 @@ fn drag(h: &Rc<Handles>, grip: &gtk::MenuButton, rows: bool) {
         let source = if rows { s.row } else { s.column };
         if !h.dragging.get() {
             // The offsets are the grip's, which moves once dragged.
-            if dx.hypot(dy) < DRAG_THRESHOLD || (rows && source == 0) {
+            if dx.hypot(dy) < DRAG_THRESHOLD {
                 return;
             }
             h.dragging.set(true);
@@ -739,15 +739,13 @@ fn drag(h: &Rc<Handles>, grip: &gtk::MenuButton, rows: bool) {
         }
     });
     let h = h.clone();
-    gesture.connect_drag_end(move |g, dx, dy| {
+    gesture.connect_drag_end(move |g, _, _| {
         let Some(target) = h.target.take() else {
             return;
         };
         h.drop.set_visible(false);
-        // Not dragged, the grip never moved: its offsets hold. Not the header row's pulled away.
         if !h.dragging.replace(false) {
-            let grip = g.widget().and_downcast::<gtk::MenuButton>();
-            if let (true, Some(grip)) = (dx.hypot(dy) < DRAG_THRESHOLD, grip) {
+            if let Some(grip) = g.widget().and_downcast::<gtk::MenuButton>() {
                 grip.popup();
             }
             return;

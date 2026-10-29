@@ -69,6 +69,10 @@
 
 ## Linux UI
 
+- Features should be easy to use without extra UI: prefer what fits where the user already is
+  (keys that do the expected thing in context, as Tab in a table or Enter after a header line,
+  a context menu, a click on the text) over new buttons, panels or dialogs. Add visible UI only
+  where nothing in place would do, or where it is planned (`docs/ROADMAP.md`).
 - Static views are Blueprint files in `linux/app/ui/`, compiled by `build.rs`; dynamic UI (note
   rows) stays in Rust code.
 - What Editor mode changes by itself (a table tidied as the cursor leaves it) gets a switch in

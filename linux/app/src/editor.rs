@@ -331,7 +331,7 @@ struct Handles {
     /// Where a dragged row or column would go.
     drop: gtk::Box,
     shown: std::cell::RefCell<Option<Shown>>,
-    /// Where the row or column being dragged would go.
+    /// While a grip is pressed: its row or column, then where a drag would take it.
     target: std::cell::Cell<Option<usize>>,
 }
 
@@ -636,12 +636,26 @@ impl Handles {
     }
 }
 
+/// How far the pointer goes from where a grip was pressed before it is a drag, not a click.
+const DRAG_THRESHOLD: f64 = 8.0;
+
 /// Dragging `grip` moves its row (`rows`) or column: a line shows where it would go. Not the
-/// header row, which stays first.
+/// header row, which stays first. A click opens its menu.
 fn drag(h: &Rc<Handles>, grip: &gtk::MenuButton, rows: bool) {
     let gesture = gtk::GestureDrag::new();
-    // Before the button's own click, which a drag cancels.
+    // The press is the grip's alone: a button does not claim it, so it would go on to the
+    // text, which selects from the first move.
     gesture.set_propagation_phase(gtk::PropagationPhase::Capture);
+    let hh = h.clone();
+    gesture.connect_drag_begin(move |g, _, _| {
+        g.set_state(gtk::EventSequenceState::Claimed);
+        let source = hh
+            .shown
+            .borrow()
+            .as_ref()
+            .map(|s| if rows { s.row } else { s.column });
+        hh.target.set(source);
+    });
     let hh = h.clone();
     gesture.connect_drag_update(move |g, dx, dy| {
         let (h, Some(view), Some(grip)) = (&hh, hh.view.upgrade(), g.widget()) else {
@@ -650,11 +664,8 @@ fn drag(h: &Rc<Handles>, grip: &gtk::MenuButton, rows: bool) {
         let shown = h.shown.borrow();
         let Some(s) = shown.as_ref() else { return };
         let source = if rows { s.row } else { s.column };
-        if h.target.get().is_none() {
-            if dx.hypot(dy) < 8.0 || (rows && source == 0) {
-                return;
-            }
-            g.set_state(gtk::EventSequenceState::Claimed);
+        if dx.hypot(dy) < DRAG_THRESHOLD || (rows && source == 0) {
+            return;
         }
         let (sx, sy) = g.start_point().unwrap_or_default();
         let point = gtk::graphene::Point::new((sx + dx) as f32, (sy + dy) as f32);
@@ -686,11 +697,17 @@ fn drag(h: &Rc<Handles>, grip: &gtk::MenuButton, rows: bool) {
         }
     });
     let h = h.clone();
-    gesture.connect_drag_end(move |_, _, _| {
+    gesture.connect_drag_end(move |g, dx, dy| {
         let Some(target) = h.target.take() else {
             return;
         };
         h.drop.set_visible(false);
+        if dx.hypot(dy) < DRAG_THRESHOLD {
+            if let Some(grip) = g.widget().and_downcast::<gtk::MenuButton>() {
+                grip.popup();
+            }
+            return;
+        }
         let at = h.shown.borrow().as_ref().map(|s| {
             if rows {
                 (s.layout.rows[s.row], Op::MoveRow { to: target })

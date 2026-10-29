@@ -1144,7 +1144,11 @@ fn refresh_tree(ui: &Rc<Ui>) {
     let icons = tree_icons();
     for (depth, item) in &items {
         let open = matches!(item, Item::Folder(f) if ui.expanded.borrow().contains(f));
-        let row = tree_row(*depth, item, open, icons);
+        let count = match item {
+            Item::Folder(f) => notes_in(&notes, f),
+            Item::Note(_) => 0,
+        };
+        let row = tree_row(*depth, item, open, icons, count);
         match item {
             Item::Folder(f) => {
                 // Every click opens or closes it: the list's own activation skips the second
@@ -1208,6 +1212,18 @@ fn tree(folders: &[String], notes: &[Note], expanded: &HashSet<String>) -> Vec<(
     out
 }
 
+/// How many notes are in `folder` and its folders.
+fn notes_in(notes: &[Note], folder: &str) -> usize {
+    notes
+        .iter()
+        .filter(|n| {
+            n.folder
+                .strip_prefix(folder)
+                .is_some_and(|rest| rest.is_empty() || rest.starts_with('/'))
+        })
+        .count()
+}
+
 /// Names in the locale's order, case ignored.
 fn by_name(a: &str, b: &str) -> std::cmp::Ordering {
     glib::casefold(a).as_gstr().collate(glib::casefold(b))
@@ -1236,8 +1252,14 @@ pub fn apply_tree_look() {
 }
 
 /// A folder (its arrow showing whether it is open) or a note, indented by its depth, with its
-/// icon if `icons` (folders, notes) says so.
-fn tree_row(depth: usize, item: &Item, open: bool, icons: (bool, bool)) -> gtk::ListBoxRow {
+/// icon if `icons` (folders, notes) says so; a folder with its `count` of notes, dimmed.
+fn tree_row(
+    depth: usize,
+    item: &Item,
+    open: bool,
+    icons: (bool, bool),
+    count: usize,
+) -> gtk::ListBoxRow {
     let line = gtk::Box::new(gtk::Orientation::Horizontal, 4);
     line.set_margin_start(INDENT * depth as i32);
     let (name, folder) = match item {
@@ -1266,7 +1288,15 @@ fn tree_row(depth: usize, item: &Item, open: bool, icons: (bool, bool)) -> gtk::
     let label = gtk::Label::new(Some(name));
     label.set_xalign(0.0);
     label.set_ellipsize(gtk::pango::EllipsizeMode::End);
+    label.set_hexpand(true);
     line.append(&label);
+    if folder {
+        let count = gtk::Label::new(Some(&count.to_string()));
+        count.add_css_class("dim-label");
+        count.add_css_class("numeric");
+        count.set_margin_end(4);
+        line.append(&count);
+    }
     let row = gtk::ListBoxRow::new();
     row.set_child(Some(&line));
     row.set_selectable(!folder);
@@ -2407,5 +2437,13 @@ mod tests {
                 s(0, "b")
             ]
         );
+    }
+
+    #[test]
+    fn folders_count_their_notes_and_their_folders_notes() {
+        let notes = ["a.md", "Work/Plan.md", "Work/Old/x.md", "Workshop/y.md"].map(note);
+        assert_eq!(notes_in(&notes, "Work"), 2);
+        assert_eq!(notes_in(&notes, "Work/Old"), 1);
+        assert_eq!(notes_in(&notes, "Workshop"), 1);
     }
 }

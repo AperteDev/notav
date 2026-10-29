@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - A dense tree in Preferences: smaller rows, as in Files
+- Folders in the tree show how many notes they hold, their folders' included, dimmed
 - Note icons in the tree, set in Preferences: on notes only (the default), on folders too, or none
 - Rename and delete folders from the sidebar menu; a note changed on another device meanwhile
   is kept, and its folder with it

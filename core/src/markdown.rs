@@ -307,30 +307,51 @@ pub fn links(text: &str) -> Vec<Link> {
         .collect()
 }
 
-/// Where the heading titled `heading` starts in `text` (a character), its case and spaces as a
-/// link writes them aside.
-pub fn heading_at(text: &str, heading: &str) -> Option<usize> {
-    let wanted = heading.trim().to_lowercase();
-    let mut current: Option<(usize, String)> = None;
+/// A heading of a note: its level (1 to 6), its title's text and where it starts (a character).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Heading {
+    pub level: u8,
+    pub title: String,
+    pub at: usize,
+}
+
+/// The headings in `text`, in order.
+pub fn headings(text: &str) -> Vec<Heading> {
+    let mut out = Vec::new();
+    let mut current: Option<(u8, usize, String)> = None;
     for (event, range) in Parser::new_ext(text, options()).into_offset_iter() {
         match event {
-            Event::Start(Tag::Heading { .. }) => current = Some((range.start, String::new())),
+            Event::Start(Tag::Heading { level, .. }) => {
+                current = Some((heading(level), range.start, String::new()))
+            }
             Event::Text(t) | Event::Code(t) => {
-                if let Some((_, title)) = &mut current {
+                if let Some((_, _, title)) = &mut current {
                     title.push_str(&t);
                 }
             }
             Event::End(TagEnd::Heading(_)) => {
-                if let Some((start, title)) = current.take()
-                    && title.trim().to_lowercase() == wanted
-                {
-                    return Some(text[..start].chars().count());
+                if let Some((level, start, title)) = current.take() {
+                    out.push(Heading {
+                        level,
+                        title: title.trim().to_string(),
+                        at: text[..start].chars().count(),
+                    });
                 }
             }
             _ => {}
         }
     }
-    None
+    out
+}
+
+/// Where the heading titled `heading` starts in `text` (a character), its case and spaces as a
+/// link writes them aside.
+pub fn heading_at(text: &str, heading: &str) -> Option<usize> {
+    let wanted = heading.trim().to_lowercase();
+    headings(text)
+        .into_iter()
+        .find(|h| h.title.to_lowercase() == wanted)
+        .map(|h| h.at)
 }
 
 /// What Enter at character `at` does in a list item, in the order of the text (none: a plain
@@ -772,6 +793,11 @@ mod tests {
             Some(t[..t.find("Łódź").unwrap()].chars().count())
         );
         assert_eq!(heading_at(t, "Text"), None);
+        let outline: Vec<_> = headings(t)
+            .into_iter()
+            .map(|h| (h.level, h.title))
+            .collect();
+        assert_eq!(outline, [(2, "Sub part".into()), (1, "Łódź".into())]);
     }
 
     /// `text` (with `|` where the cursor is) after Enter, with `|` where the cursor goes.

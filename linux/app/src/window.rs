@@ -118,6 +118,10 @@ struct Ui {
     backlinks_box: gtk::Box,
     backlinks_title: gtk::Label,
     backlinks: gtk::ListBox,
+    outline_button: gtk::ToggleButton,
+    /// The open note's headings, where each starts (a character) as `outline`'s rows.
+    outline: gtk::ListBox,
+    outline_at: RefCell<Vec<usize>>,
     zoom_reset: gtk::Label,
     /// The note's font, size and width (`apply_text_look`).
     text_css: gtk::CssProvider,
@@ -591,6 +595,9 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         backlinks_box: get(&b, "backlinks_box"),
         backlinks_title: get(&b, "backlinks_title"),
         backlinks: get(&b, "backlinks"),
+        outline_button: get(&b, "outline_button"),
+        outline: get(&b, "outline"),
+        outline_at: RefCell::new(Vec::new()),
         zoom_reset: get(&b, "zoom_reset"),
         text_css: gtk::CssProvider::new(),
         buffer,
@@ -732,9 +739,31 @@ fn restyle(ui: &Rc<Ui>) {
         if let Some(ui) = weak.upgrade() {
             ui.restyle_pending.set(false);
             crate::editor::restyle(&ui.buffer, source_mode());
+            refresh_outline(&ui);
         }
         glib::ControlFlow::Break
     });
+}
+
+/// The open note's headings in the outline, while it shows: indented by level, the highest
+/// at the left.
+fn refresh_outline(ui: &Ui) {
+    if !ui.outline_button.is_active() {
+        return;
+    }
+    let (start, end) = ui.buffer.bounds();
+    let headings = notav_core::markdown::headings(&ui.buffer.text(&start, &end, true));
+    let top = headings.iter().map(|h| h.level).min().unwrap_or(1);
+    ui.outline.remove_all();
+    for h in &headings {
+        let label = gtk::Label::new(Some(&h.title));
+        label.set_xalign(0.0);
+        label.set_ellipsize(gtk::pango::EllipsizeMode::End);
+        label.set_margin_start(12 * (h.level - top) as i32);
+        label.set_tooltip_text(Some(&h.title));
+        ui.outline.append(&label);
+    }
+    *ui.outline_at.borrow_mut() = headings.iter().map(|h| h.at).collect();
 }
 
 /// Scroll the note to its cursor (its line at the top with `top`), once the text is laid out:
@@ -894,6 +923,30 @@ fn connect(ui: &Rc<Ui>) {
         apply_text_look(&ui);
     });
     ui.window.add_action(&full);
+    // The outline: shown as last time; a click puts the heading at the top, the cursor on it.
+    let none = gtk::Label::new(Some(&gettext("No Headings")));
+    none.set_margin_top(12);
+    none.add_css_class("dim-label");
+    ui.outline.set_placeholder(Some(&none));
+    ui.outline_button
+        .set_active(core().setting("show_outline".into()).as_deref() == Some("true"));
+    let weak = Rc::downgrade(ui);
+    ui.outline_button.connect_active_notify(move |b| {
+        let _ = core().set_setting("show_outline".into(), b.is_active().to_string());
+        if let Some(ui) = weak.upgrade() {
+            refresh_outline(&ui);
+        }
+    });
+    let weak = Rc::downgrade(ui);
+    ui.outline.connect_row_activated(move |_, row| {
+        let Some(ui) = weak.upgrade() else { return };
+        let Some(&at) = ui.outline_at.borrow().get(row.index() as usize) else {
+            return;
+        };
+        ui.buffer.place_cursor(&ui.buffer.iter_at_offset(at as i32));
+        ui.editor.grab_focus();
+        follow_cursor(&ui, true);
+    });
     // Undo the latest change; in a text field, the typing there (as in Todav).
     let window = ui.window.downgrade();
     let undo_last = gio::SimpleAction::new("undo", None);

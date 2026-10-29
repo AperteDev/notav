@@ -35,10 +35,9 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
 - **Tags**: `#tag` and front matter's `tags`, computed locally from the files, to list the notes
   with one. Backlinks read every note each time a note opens; an index of links (and tags) when
   that gets slow.
-- **Side panel** at the right of the note, as Obsidian's: buttons at its top switch between its
-  views, and it hides like the notes' sidebar.
-  - **Outline**: the open note's headings as a tree (from the core's parse), each level folding;
-    a click scrolls to the heading.
+- **Side panel**: the outline at the right of the note (the Outline button) gets more views, as
+  Obsidian's: buttons at its top switch between them.
+  - **Outline**: each level folding; the heading the cursor is under marked.
   - **Backlinks**: the notes linking to the open one (linked mentions) and those naming its
     title without a link (unlinked mentions), each with its line.
   - **Outgoing links**: the notes the open one links to, missing ones marked, and the other

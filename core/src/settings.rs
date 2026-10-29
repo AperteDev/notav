@@ -25,6 +25,7 @@ pub const DEVICE_ONLY: &[&str] = &[
     // UI state.
     "last_note",
     "expanded_folders",
+    "show_outline",
     "window_size",
     "window_maximized",
 ];

@@ -244,6 +244,14 @@ Adw.ApplicationWindow window {
                   action-name: "win.daily-note";
                 }
 
+                // The outline panel at the window's edge, above it (the device-only
+                // `show_outline` setting).
+                [end]
+                Gtk.ToggleButton outline_button {
+                  icon-name: "sidebar-show-right-symbolic";
+                  tooltip-text: _("Outline");
+                }
+
                 // Font size and the text area's width, for this device.
                 [end]
                 Gtk.MenuButton {
@@ -355,114 +363,132 @@ Adw.ApplicationWindow window {
                 }
               }
 
-              content: Gtk.Stack note_stack {
-                Gtk.StackPage {
-                  name: "none";
-                  child: Adw.StatusPage {
-                    icon-name: "dev.aperte.Notav-symbolic";
-                    title: _("No Note Selected");
-                    description: _("Pick a note or add one with Ctrl+N");
-                  };
-                }
+              // The open note's headings at its right; a click goes to one (src/window.rs
+              // `refresh_outline`).
+              content: Adw.OverlaySplitView outline_split {
+                sidebar-position: end;
+                show-sidebar: bind outline_button.active bidirectional;
+                min-sidebar-width: 200;
+                max-sidebar-width: 280;
 
-                Gtk.StackPage {
-                  name: "results";
-                  child: Gtk.Stack results_stack {
-                    Gtk.StackPage {
-                      name: "list";
-                      child: Gtk.ScrolledWindow {
-                        vexpand: true;
+                sidebar: Gtk.ScrolledWindow {
+                  hscrollbar-policy: never;
 
-                        Adw.Clamp {
-                          maximum-size: 860;
+                  Gtk.ListBox outline {
+                    selection-mode: none;
+                    styles ["navigation-sidebar"]
+                  }
+                };
 
-                          Gtk.ListBox results {
-                            selection-mode: none;
-                            valign: start;
-                            margin-top: 12;
-                            margin-bottom: 24;
+                content: Gtk.Stack note_stack {
+                  Gtk.StackPage {
+                    name: "none";
+                    child: Adw.StatusPage {
+                      icon-name: "dev.aperte.Notav-symbolic";
+                      title: _("No Note Selected");
+                      description: _("Pick a note or add one with Ctrl+N");
+                    };
+                  }
+
+                  Gtk.StackPage {
+                    name: "results";
+                    child: Gtk.Stack results_stack {
+                      Gtk.StackPage {
+                        name: "list";
+                        child: Gtk.ScrolledWindow {
+                          vexpand: true;
+
+                          Adw.Clamp {
+                            maximum-size: 860;
+
+                            Gtk.ListBox results {
+                              selection-mode: none;
+                              valign: start;
+                              margin-top: 12;
+                              margin-bottom: 24;
+                              margin-start: 12;
+                              margin-end: 12;
+                              styles ["boxed-list"]
+                            }
+                          }
+                        };
+                      }
+
+                      Gtk.StackPage {
+                        name: "none";
+                        child: Adw.StatusPage {
+                          icon-name: "system-search-symbolic";
+                          title: _("No Results");
+                        };
+                      }
+                    };
+                  }
+
+                  Gtk.StackPage {
+                    name: "note";
+                    // The editor's background all the way, as in GNOME Text Editor.
+                    child: Gtk.ScrolledWindow note_scroll {
+                      vexpand: true;
+                      styles ["view"]
+
+                      // Not to the focused widget: focusing the note's text would show its end.
+                      // The text follows its cursor in code (`follow_cursor`).
+                      Gtk.Viewport {
+                        scroll-to-focus: false;
+
+                        // A line of about 80 characters, as Folio (720) and Iotas (800) keep it;
+                        // all the width with Full Width (`apply_text_look`).
+                        Adw.Clamp note_clamp {
+                          maximum-size: 720;
+                          tightening-threshold: 600;
+
+                          Gtk.Box note_box {
+                            orientation: vertical;
+                            margin-top: 18;
+                            margin-bottom: 18;
                             margin-start: 12;
                             margin-end: 12;
-                            styles ["boxed-list"]
-                          }
-                        }
-                      };
-                    }
+                            spacing: 6;
 
-                    Gtk.StackPage {
-                      name: "none";
-                      child: Adw.StatusPage {
-                        icon-name: "system-search-symbolic";
-                        title: _("No Results");
-                      };
-                    }
-                  };
-                }
-
-                Gtk.StackPage {
-                  name: "note";
-                  // The editor's background all the way, as in GNOME Text Editor.
-                  child: Gtk.ScrolledWindow note_scroll {
-                    vexpand: true;
-                    styles ["view"]
-
-                    // Not to the focused widget: focusing the note's text would show its end.
-                    // The text follows its cursor in code (`follow_cursor`).
-                    Gtk.Viewport {
-                      scroll-to-focus: false;
-
-                      // A line of about 80 characters, as Folio (720) and Iotas (800) keep it;
-                      // all the width with Full Width (`apply_text_look`).
-                      Adw.Clamp note_clamp {
-                        maximum-size: 720;
-                        tightening-threshold: 600;
-
-                        Gtk.Box note_box {
-                          orientation: vertical;
-                          margin-top: 18;
-                          margin-bottom: 18;
-                          margin-start: 12;
-                          margin-end: 12;
-                          spacing: 6;
-
-                          // The file name: renames the note when changed.
-                          Gtk.Entry title {
-                            placeholder-text: _("Title");
-                            styles ["flat", "note-title"]
-                          }
-
-                          GtkSource.View editor {
-                            vexpand: true;
-                            wrap-mode: word_char;
-                            top-margin: 6;
-                            bottom-margin: 48;
-                            left-margin: 6;
-                            right-margin: 6;
-                            styles ["note-text"]
-                          }
-
-                          // The notes linking to this one, under its text (`show_backlinks`).
-                          Gtk.Box backlinks_box {
-                            orientation: vertical;
-                            spacing: 12;
-                            visible: false;
-
-                            Gtk.Label backlinks_title {
-                              xalign: 0;
-                              margin-start: 6;
-                              styles ["heading"]
+                            // The file name: renames the note when changed.
+                            Gtk.Entry title {
+                              placeholder-text: _("Title");
+                              styles ["flat", "note-title"]
                             }
 
-                            Gtk.ListBox backlinks {
-                              selection-mode: none;
-                              styles ["boxed-list"]
+                            GtkSource.View editor {
+                              vexpand: true;
+                              wrap-mode: word_char;
+                              top-margin: 6;
+                              bottom-margin: 48;
+                              left-margin: 6;
+                              right-margin: 6;
+                              styles ["note-text"]
+                            }
+
+                            // The notes linking to this one, under its text (`show_backlinks`).
+                            Gtk.Box backlinks_box {
+                              orientation: vertical;
+                              spacing: 12;
+                              visible: false;
+
+                              Gtk.Label backlinks_title {
+                                xalign: 0;
+                                margin-start: 6;
+                                styles ["heading"]
+                              }
+
+                              Gtk.ListBox backlinks {
+                                selection-mode: none;
+                                styles ["boxed-list"]
+                              }
                             }
                           }
                         }
                       }
-                    }
-                  };
-                }
+                    };
+                  }
+                };
               };
             };
           };
@@ -476,6 +502,15 @@ Adw.ApplicationWindow window {
 
     setters {
       split.collapsed: true;
+    }
+  }
+
+  // Narrower, the outline covers the note instead of taking its room.
+  Adw.Breakpoint {
+    condition ("max-width: 900sp")
+
+    setters {
+      outline_split.collapsed: true;
     }
   }
 }

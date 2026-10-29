@@ -232,6 +232,7 @@ fn tables(view: &sourceview5::View) {
             enable(&group, "insert", editor && !inside);
         }
     };
+    handles(view, update.clone());
     let click = gtk::GestureClick::new();
     click.set_button(gtk::gdk::BUTTON_SECONDARY);
     click.set_propagation_phase(gtk::PropagationPhase::Capture);
@@ -310,6 +311,411 @@ fn tables(view: &sourceview5::View) {
                 buffer.end_user_action();
             });
     });
+}
+
+/// How far past a table the pointer can go with its handles still shown, how thick the bars
+/// that add a row or column are and how far from the table (pixels).
+const HANDLES_REACH: i32 = 28;
+const BAR: i32 = 16;
+const BAR_GAP: i32 = 4;
+
+/// The handles of the table under the pointer, as Obsidian has them: a grip on the top edge
+/// of the column and on the left edge of the row the pointer is on (a click opens its menu, a
+/// drag moves it), and bars past the last column and under the last row that add one.
+struct Handles {
+    view: glib::WeakRef<sourceview5::View>,
+    row: gtk::MenuButton,
+    column: gtk::MenuButton,
+    add_row: gtk::Button,
+    add_column: gtk::Button,
+    /// Where a dragged row or column would go.
+    drop: gtk::Box,
+    shown: std::cell::RefCell<Option<Shown>>,
+    /// Where the row or column being dragged would go.
+    target: std::cell::Cell<Option<usize>>,
+}
+
+/// The table the handles are on: where its rows and columns are, in the text and in buffer
+/// coordinates, and the row and column of the grips.
+struct Shown {
+    layout: table::Layout,
+    /// Each row's top and height.
+    rows: Vec<(i32, i32)>,
+    /// Each column edge's x (its pipe's middle).
+    edges: Vec<i32>,
+    row: usize,
+    column: usize,
+}
+
+impl Shown {
+    fn new(view: &sourceview5::View, layout: table::Layout) -> Self {
+        let mut s = Self {
+            layout,
+            rows: Vec::new(),
+            edges: Vec::new(),
+            row: 0,
+            column: 0,
+        };
+        s.measure(view);
+        s
+    }
+
+    /// Where the rows and columns are now (after a change of font or size).
+    fn measure(&mut self, view: &sourceview5::View) {
+        let buffer = view.buffer();
+        let at = |offset: usize| buffer.iter_at_offset(offset as i32);
+        self.rows = self
+            .layout
+            .rows
+            .iter()
+            .map(|&r| view.line_yrange(&at(r)))
+            .collect();
+        self.edges = self
+            .layout
+            .edges
+            .iter()
+            .map(|&e| {
+                let r = view.iter_location(&at(e));
+                r.x() + r.width() / 2
+            })
+            .collect();
+    }
+
+    fn top(&self) -> i32 {
+        self.rows[0].0
+    }
+
+    fn bottom(&self) -> i32 {
+        self.rows.last().map_or(0, |(y, h)| y + h)
+    }
+
+    fn left(&self) -> i32 {
+        self.edges[0]
+    }
+
+    fn right(&self) -> i32 {
+        self.edges.last().copied().unwrap_or_default()
+    }
+
+    /// The row and the column at buffer coordinates `y` and `x`, the nearest past the edges.
+    fn row_at(&self, y: i32) -> usize {
+        let last = self.rows.len() - 1;
+        self.rows
+            .iter()
+            .position(|(top, h)| y < top + h)
+            .unwrap_or(last)
+    }
+
+    fn column_at(&self, x: i32) -> usize {
+        let last = self.edges.len() - 2;
+        self.edges[1..].iter().position(|&e| x < e).unwrap_or(last)
+    }
+
+    /// A character in the grips' row or column (the header's cell), past its pipe and space.
+    fn cell(&self, rows: bool) -> usize {
+        let (start, end) = if rows {
+            (self.layout.rows[self.row], usize::MAX)
+        } else {
+            (
+                self.layout.edges[self.column],
+                self.layout.edges[self.column + 1],
+            )
+        };
+        (start + 2).min(end)
+    }
+}
+
+/// Show `view`'s table handles as the pointer goes over a table in Editor mode; `update` sets
+/// the table actions for the cursor's cell before a grip's menu opens.
+fn handles(view: &sourceview5::View, update: impl Fn(&sourceview5::View) + 'static) {
+    let grip = |icon: &str, tooltip: String, menu: gio::Menu| {
+        let b = gtk::MenuButton::builder()
+            .icon_name(icon)
+            .tooltip_text(tooltip)
+            .menu_model(&menu)
+            .can_focus(false)
+            .focus_on_click(false)
+            .visible(false)
+            .css_classes(["table-grip"])
+            .build();
+        b.set_cursor_from_name(Some("grab"));
+        b
+    };
+    let bar = |tooltip: String| {
+        let b = gtk::Button::builder()
+            .icon_name("list-add-symbolic")
+            .tooltip_text(tooltip)
+            .can_focus(false)
+            .focus_on_click(false)
+            .visible(false)
+            .css_classes(["table-add"])
+            .build();
+        b.set_cursor_from_name(Some("default"));
+        b
+    };
+    let h = Rc::new(Handles {
+        view: view.downgrade(),
+        row: grip("list-drag-handle-symbolic", gettext("Row"), row_menu()),
+        column: grip(
+            "notav-drag-handle-horizontal-symbolic",
+            gettext("Column"),
+            column_menu(),
+        ),
+        add_row: bar(gettext("Add Row")),
+        add_column: bar(gettext("Add Column")),
+        drop: gtk::Box::builder()
+            .visible(false)
+            .can_target(false)
+            .css_classes(["table-drop"])
+            .build(),
+        shown: Default::default(),
+        target: Default::default(),
+    });
+    h.row.set_direction(gtk::ArrowType::Right);
+    for w in [
+        h.row.upcast_ref::<gtk::Widget>(),
+        h.column.upcast_ref(),
+        h.add_row.upcast_ref(),
+        h.add_column.upcast_ref(),
+        h.drop.upcast_ref(),
+    ] {
+        view.add_overlay(w, 0, 0);
+    }
+
+    // The closures hold the handles: they live as long as the view, which is never dropped.
+    // A grip's menu is for its row or column: the cursor goes there first.
+    let update = Rc::new(update);
+    for (grip, rows) in [(&h.row, true), (&h.column, false)] {
+        let (hh, update) = (h.clone(), update.clone());
+        grip.set_create_popup_func(move |_| {
+            let Some(view) = hh.view.upgrade() else {
+                return;
+            };
+            let Some(at) = hh.shown.borrow().as_ref().map(|s| s.cell(rows)) else {
+                return;
+            };
+            let buffer = view.buffer();
+            // Not past a row of one character.
+            let mut iter = buffer.iter_at_offset(at as i32);
+            if iter.line() != buffer.iter_at_offset(at as i32 - 2).line() {
+                iter.backward_char();
+            }
+            buffer.place_cursor(&iter);
+            update(&view);
+        });
+        let hh = h.clone();
+        grip.connect_active_notify(move |grip| {
+            if !grip.is_active() {
+                hh.hide();
+            }
+        });
+        drag(&h, grip, rows);
+    }
+
+    for (bar, op) in [(&h.add_row, Op::RowBelow), (&h.add_column, Op::ColumnRight)] {
+        let h = h.clone();
+        bar.connect_clicked(move |_| {
+            let Some(view) = h.view.upgrade() else { return };
+            // The last row or column's.
+            let at = h.shown.borrow().as_ref().map(|s| match op {
+                Op::RowBelow => s.layout.rows[s.layout.rows.len() - 1],
+                _ => s.layout.edges[s.layout.edges.len() - 2] + 1,
+            });
+            let (buffer, text, _) = state(&view);
+            if let Some(c) = at.and_then(|at| table::apply(&text, at, at, op)) {
+                change(&buffer, &c);
+                view.grab_focus();
+            }
+        });
+    }
+
+    let motion = gtk::EventControllerMotion::new();
+    let hh = h.clone();
+    motion.connect_motion(move |m, x, y| {
+        if let Some(view) = m.widget().and_downcast() {
+            hh.hover(&view, x, y);
+        }
+    });
+    let hh = h.clone();
+    motion.connect_leave(move |_| {
+        if !hh.busy() {
+            hh.hide();
+        }
+    });
+    view.add_controller(motion);
+    // Typing moves the table: its handles go until the pointer moves.
+    view.buffer().connect_changed(move |_| {
+        if !h.busy() {
+            h.hide();
+        }
+    });
+}
+
+impl Handles {
+    /// Whether a grip's menu is open or a grip is being dragged.
+    fn busy(&self) -> bool {
+        self.row.is_active() || self.column.is_active() || self.target.get().is_some()
+    }
+
+    fn hide(&self) {
+        self.shown.replace(None);
+        for w in [
+            self.row.upcast_ref::<gtk::Widget>(),
+            self.column.upcast_ref(),
+            self.add_row.upcast_ref(),
+            self.add_column.upcast_ref(),
+            self.drop.upcast_ref(),
+        ] {
+            w.set_visible(false);
+        }
+    }
+
+    /// The pointer at the view's `x`, `y`: the handles on the table under it, or near the one
+    /// they are on, at the row and column it is in.
+    fn hover(&self, view: &sourceview5::View, x: f64, y: f64) {
+        if self.busy() {
+            return;
+        }
+        let (x, y) = view.window_to_buffer_coords(gtk::TextWindowType::Widget, x as i32, y as i32);
+        let mut shown = self.shown.borrow_mut();
+        if let Some(s) = shown.as_mut() {
+            s.measure(view);
+        }
+        let near = |s: &Shown| {
+            (s.left() - HANDLES_REACH..s.right() + HANDLES_REACH).contains(&x)
+                && (s.top() - HANDLES_REACH..s.bottom() + HANDLES_REACH).contains(&y)
+        };
+        if !shown.as_ref().is_some_and(near) {
+            *shown = table_under(view, x, y).map(|layout| Shown::new(view, layout));
+        }
+        let Some(s) = shown.as_mut() else {
+            drop(shown);
+            self.hide();
+            return;
+        };
+        if (s.left()..s.right()).contains(&x) && (s.top()..s.bottom()).contains(&y) {
+            s.row = s.row_at(y);
+            s.column = s.column_at(x);
+        }
+        // Shown first: a hidden widget keeps the size it was measured at.
+        for w in [
+            self.row.upcast_ref::<gtk::Widget>(),
+            self.column.upcast_ref(),
+            self.add_row.upcast_ref(),
+            self.add_column.upcast_ref(),
+        ] {
+            w.set_visible(true);
+        }
+        let size = |w: &gtk::Widget| {
+            (
+                w.measure(gtk::Orientation::Horizontal, -1).1,
+                w.measure(gtk::Orientation::Vertical, -1).1,
+            )
+        };
+        let (w, h) = size(self.column.upcast_ref());
+        let middle = (s.edges[s.column] + s.edges[s.column + 1]) / 2;
+        view.move_overlay(&self.column, middle - w / 2, (s.top() - h / 2).max(0));
+        let (w, h) = size(self.row.upcast_ref());
+        let (top, height) = s.rows[s.row];
+        view.move_overlay(
+            &self.row,
+            (s.left() - w / 2).max(0),
+            top + height / 2 - h / 2,
+        );
+        self.add_column.set_size_request(BAR, s.bottom() - s.top());
+        view.move_overlay(&self.add_column, s.right() + BAR_GAP, s.top());
+        self.add_row.set_size_request(s.right() - s.left(), BAR);
+        view.move_overlay(&self.add_row, s.left(), s.bottom() + BAR_GAP);
+    }
+}
+
+/// Dragging `grip` moves its row (`rows`) or column: a line shows where it would go. Not the
+/// header row, which stays first.
+fn drag(h: &Rc<Handles>, grip: &gtk::MenuButton, rows: bool) {
+    let gesture = gtk::GestureDrag::new();
+    // Before the button's own click, which a drag cancels.
+    gesture.set_propagation_phase(gtk::PropagationPhase::Capture);
+    let hh = h.clone();
+    gesture.connect_drag_update(move |g, dx, dy| {
+        let (h, Some(view), Some(grip)) = (&hh, hh.view.upgrade(), g.widget()) else {
+            return;
+        };
+        let shown = h.shown.borrow();
+        let Some(s) = shown.as_ref() else { return };
+        let source = if rows { s.row } else { s.column };
+        if h.target.get().is_none() {
+            if dx.hypot(dy) < 8.0 || (rows && source == 0) {
+                return;
+            }
+            g.set_state(gtk::EventSequenceState::Claimed);
+        }
+        let (sx, sy) = g.start_point().unwrap_or_default();
+        let point = gtk::graphene::Point::new((sx + dx) as f32, (sy + dy) as f32);
+        let Some(p) = grip.compute_point(&view, &point) else {
+            return;
+        };
+        let (x, y) =
+            view.window_to_buffer_coords(gtk::TextWindowType::Widget, p.x() as i32, p.y() as i32);
+        let target = if rows {
+            s.row_at(y).max(1)
+        } else {
+            s.column_at(x)
+        };
+        h.target.set(Some(target));
+        h.drop.set_visible(target != source);
+        if target == source {
+            return;
+        }
+        // The line at the edge it would go past.
+        if rows {
+            let (top, height) = s.rows[target];
+            let y = if target > source { top + height } else { top };
+            h.drop.set_size_request(s.right() - s.left(), 2);
+            view.move_overlay(&h.drop, s.left(), y - 1);
+        } else {
+            let x = s.edges[if target > source { target + 1 } else { target }];
+            h.drop.set_size_request(2, s.bottom() - s.top());
+            view.move_overlay(&h.drop, x - 1, s.top());
+        }
+    });
+    let h = h.clone();
+    gesture.connect_drag_end(move |_, _, _| {
+        let Some(target) = h.target.take() else {
+            return;
+        };
+        h.drop.set_visible(false);
+        let at = h.shown.borrow().as_ref().map(|s| {
+            if rows {
+                (s.layout.rows[s.row], Op::MoveRow { to: target })
+            } else {
+                (s.layout.edges[s.column] + 1, Op::MoveColumn { to: target })
+            }
+        });
+        let Some(view) = h.view.upgrade() else { return };
+        let (buffer, text, _) = state(&view);
+        match at.and_then(|(at, op)| table::apply(&text, at, at, op)) {
+            Some(c) => change(&buffer, &c),
+            None => h.hide(),
+        }
+    });
+    grip.add_controller(gesture);
+}
+
+/// The layout of the table at buffer coordinates `x`, `y`, in Editor mode.
+fn table_under(view: &sourceview5::View, x: i32, y: i32) -> Option<table::Layout> {
+    let buffer = view.buffer().downcast::<sourceview5::Buffer>().ok()?;
+    let at = view.iter_at_location(x, y)?;
+    // Parsing the note on each move only where it may be.
+    let mut end = at;
+    if !end.ends_line() {
+        end.forward_to_line_end();
+    }
+    let start = buffer.iter_at_line(at.line())?;
+    if !editor_mode(&buffer) || !buffer.text(&start, &end, false).contains('|') {
+        return None;
+    }
+    let (start, end) = buffer.bounds();
+    table::layout(&buffer.text(&start, &end, true), at.offset() as usize)
 }
 
 /// The synced `format_tables` setting (on unless "false"): tables tidied by themselves.

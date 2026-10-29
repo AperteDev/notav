@@ -27,6 +27,15 @@ const CSS: &str = "
 .navigation-sidebar.dense > row { min-height: 28px; margin-bottom: 0; border-radius: 6px; }
 .drag-card { padding: 6px 12px; border-radius: 6px; background-color: var(--popover-bg-color);
   box-shadow: 0 1px 4px alpha(black, 0.3); }
+.table-grip > button { min-width: 0; min-height: 0; padding: 1px 3px; border-radius: 4px;
+  background-color: var(--view-bg-color); box-shadow: inset 0 0 0 1px alpha(currentColor, 0.2); }
+.table-grip > button:hover, .table-grip > button:checked { background-color: var(--accent-bg-color);
+  color: var(--accent-fg-color); }
+.table-add { min-width: 0; min-height: 0; padding: 0; border-radius: 4px;
+  background-color: alpha(currentColor, 0.04); }
+.table-add:hover { background-color: alpha(currentColor, 0.12); }
+.table-grip image, .table-add image { -gtk-icon-size: 12px; }
+.table-drop { background-color: var(--accent-bg-color); }
 ";
 
 /// How far each folder level is indented in the tree, and the width of a folder's arrow.

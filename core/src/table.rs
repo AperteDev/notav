@@ -212,6 +212,37 @@ pub fn is_at(text: &str, at: usize) -> bool {
     byte(text, at).and_then(|b| Table::find(text, b)).is_some()
 }
 
+/// Where a table's rows and columns are (characters), for the editor to point at them.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Layout {
+    /// Each row's first character past its indent: the header first, the delimiter row left out.
+    pub rows: Vec<usize>,
+    /// The header's column edges: its first character, then each cell's closing pipe (the
+    /// line's end where that is left out). Column `c` is between `edges[c]` and `edges[c + 1]`.
+    pub edges: Vec<usize>,
+}
+
+/// The layout of the table holding character `at`.
+pub fn layout(text: &str, at: usize) -> Option<Layout> {
+    let t = Table::find(text, byte(text, at)?)?;
+    let lines: Vec<&str> = text[t.start..t.end].split('\n').collect();
+    let indent = |line: &str| line.len() - line.trim_start().len();
+    let mut rows = Vec::new();
+    let mut line_start = t.start;
+    for (i, line) in lines.iter().enumerate() {
+        if i != 1 {
+            rows.push(chars(text, line_start + indent(line)));
+        }
+        line_start += line.len() + 1;
+    }
+    let edges = [indent(lines[0])]
+        .into_iter()
+        .chain(cells(lines[0]).iter().map(|c| c.stretch.end))
+        .map(|b| chars(text, t.start + b))
+        .collect();
+    Some(Layout { rows, edges })
+}
+
 /// An empty table of two columns, a header and one row.
 pub fn empty() -> String {
     Table::new(String::new(), vec![vec![String::new(); 2]; 2], Vec::new())
@@ -670,6 +701,20 @@ mod tests {
             .unwrap(),
             "| b   |   c | a‸   |\n| --- | --: | --- |\n| 2   |   3 | 1   |"
         );
+    }
+
+    #[test]
+    fn layout_points_at_rows_and_columns() {
+        let t = "Text\n\n  | a | bb |\n  |---|---|\n  | 1 | 2 |\n";
+        assert_eq!(
+            layout(t, 30).unwrap(),
+            Layout {
+                rows: vec![8, 33],
+                edges: vec![8, 12, 17],
+            }
+        );
+        assert_eq!(layout("a | b\n--|--\n1 | 2", 0).unwrap().edges, [0, 2, 5]);
+        assert_eq!(layout(t, 0), None);
     }
 
     #[test]

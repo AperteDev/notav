@@ -99,8 +99,9 @@ Later (v2):
   from the common wide ranges (CJK, Hangul, emoji; `width` in `core/src/table.rs`). A script
   that still lines up wrong needs Unicode's whole East Asian Width table (the `unicode-width`
   crate) or measuring with Pango, and fallback fonts may not be exactly two columns wide anyway.
-  Tables wider than the text column wrap and lose the alignment; scrolling them sideways would
-  need them out of the text view. Tidying changes the file's text, which other devices and apps
+  Tables wider than the text column wrap and lose the alignment (and their handles, placed from
+  the header's pipes, land off the columns); scrolling them sideways would need them out of the
+  text view. Tidying changes the file's text, which other devices and apps
   see.
 
 - **Trash**: the folder's name (`.trash` as Obsidian's, if Nextcloud Notes hides it; a visible

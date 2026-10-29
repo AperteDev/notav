@@ -292,6 +292,7 @@ fn tables(view: &sourceview5::View) {
     view.add_controller(keys);
 
     let buffer = view.buffer();
+    take_padding(&buffer);
     // A change that took the cursor off the changed row (Enter) does not move it.
     buffer.connect_end_user_action(|b| {
         let at = b.iter_at_mark(&b.get_insert());
@@ -837,6 +838,58 @@ fn tidy_left(buffer: &sourceview5::Buffer) {
     if let Some(c) = table::apply(&text, at, cursor, Op::Tidy) {
         change(buffer, &c);
     }
+}
+
+/// Text typed in a table's cell takes its padding (`table::padding_taken`), so the pipes stay
+/// in place, if `format_tables`. Done once the text is in, as part of the same step to undo;
+/// not while undoing or redoing, which put back what was there.
+fn take_padding(buffer: &gtk::TextBuffer) {
+    use glib::translate::ToGlibPtr;
+    let undoing = Rc::new(std::cell::Cell::new(false));
+    for signal in ["undo", "redo"] {
+        for after in [false, true] {
+            let undoing = undoing.clone();
+            buffer.connect_local(signal, after, move |_| {
+                undoing.set(!after);
+                None
+            });
+        }
+    }
+    buffer.connect_local("insert-text", true, move |args| {
+        let buffer = args[0].get::<sourceview5::Buffer>().ok()?;
+        let typed = args[2].get::<String>().ok()?;
+        if undoing.get() || typed.contains(['|', '\n']) || !editor_mode(&buffer) || !format_tables()
+        {
+            return None;
+        }
+        // At the end of the typed text, as the default handler leaves it.
+        let end = args[1].get::<gtk::TextIter>().ok()?.offset() as usize;
+        let len = typed.chars().count();
+        let (start, stop) = buffer.bounds();
+        let text = buffer.text(&start, &stop, true);
+        let taken = table::padding_taken(&text, end.checked_sub(len)?, len)?;
+        let (mut from, mut to) = (
+            buffer.iter_at_offset(taken.start as i32),
+            buffer.iter_at_offset(taken.end as i32),
+        );
+        buffer.delete(&mut from, &mut to);
+        let end = if taken.start < end {
+            end - taken.len()
+        } else {
+            end
+        };
+        // The caller's iterator, out of date after the change, put back at the typed text's end
+        // (GTK asks handlers that change the buffer to).
+        let iter = buffer.iter_at_offset(end as i32);
+        // SAFETY: the signal's second argument is the caller's `GtkTextIter`, boxed; it is
+        // written while the emission holds it.
+        unsafe {
+            let ptr = glib::gobject_ffi::g_value_get_boxed(args[1].to_glib_none().0)
+                as *mut gtk::ffi::GtkTextIter;
+            *ptr = *iter.to_glib_none().0;
+        }
+        None
+    });
 }
 
 /// The view's buffer, its text and the cursor's offset.

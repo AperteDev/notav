@@ -48,7 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and under the last row add one
 - Tables from the keyboard in Editor mode: Enter after a header line (`| Name | Size |`) makes
   it a table with an empty row; in a table, Tab and Shift+Tab go from cell to cell and Enter to
-  the next row, past the last one adding a row, and Enter on an empty last row leaves the table
+  the next row, past the last one adding a row, and Enter on an empty last row leaves the table;
+  text typed in a cell takes the place of its padding, so the pipes stay in line
 - An Editor page in Preferences for what Editor mode does by itself: "Format tables", under
   Markdown, turns off the tables' tidying as the cursor leaves a row (Format Table in the menu
   still works)

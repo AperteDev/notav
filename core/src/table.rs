@@ -342,6 +342,40 @@ pub fn start(text: &str, cursor: usize) -> Option<Change> {
     })
 }
 
+/// After `len` characters were typed at character `at` in a table's cell, the padding they take
+/// (characters), so the pipes stay in place: spaces at the cell's end, else at its start (a
+/// column aligned right), one kept by each pipe. None when there is none to take, or out of a
+/// cell between two pipes.
+pub fn padding_taken(text: &str, at: usize, len: usize) -> Option<Range<usize>> {
+    let (from, to) = (byte(text, at)?, byte(text, at + len)?);
+    let line_start = text[..from].rfind('\n').map_or(0, |n| n + 1);
+    let line_end = text[to..].find('\n').map_or(text.len(), |n| to + n);
+    let line = &text[line_start..line_end];
+    if !line.contains('|') || Table::find(text, from).is_none() {
+        return None;
+    }
+    let (from, to) = (from - line_start, to - line_start);
+    let s = cells(line)
+        .into_iter()
+        .map(|c| c.stretch)
+        .find(|s| s.start <= from && to <= s.end)?;
+    let piped = |i: usize| line.as_bytes().get(i) == Some(&b'|');
+    if s.start == 0 || !piped(s.start - 1) || !piped(s.end) {
+        return None;
+    }
+    let cell = &line[s.clone()];
+    // The spaces past what was typed, and before it.
+    let after = s.end - to.max(s.end - (cell.len() - cell.trim_end().len()));
+    let before = from.min(s.start + cell.len() - cell.trim_start().len()) - s.start;
+    let (start, n) = match (after.saturating_sub(1), before.saturating_sub(1)) {
+        (0, 0) => return None,
+        (0, n) => (s.start + 1, n.min(len)),
+        (n, _) => (s.end - n.min(len), n.min(len)),
+    };
+    let start = chars(text, line_start + start);
+    Some(start..start + n)
+}
+
 /// Whether character `at` is in a table's lines.
 pub fn is_at(text: &str, at: usize) -> bool {
     byte(text, at).and_then(|b| Table::find(text, b)).is_some()
@@ -915,6 +949,11 @@ mod tests {
                 assert!(c.edit.start <= c.edit.end && c.edit.end <= n && c.cursor <= len);
                 changed += 1;
             }
+            if at < n
+                && let Some(r) = padding_taken(t, at, 1)
+            {
+                assert!(r.start <= r.end && r.end <= n && (r.end <= at || r.start > at));
+            }
         }
         assert!(changed > 100, "{changed}");
     }
@@ -977,6 +1016,38 @@ mod tests {
             "| a | bb |\n|---|---|\n\n‸\n\nMore"
         );
         assert_eq!(by("Text‸\n", Step::Next), None);
+    }
+
+    #[test]
+    fn typing_takes_the_padding() {
+        // `text` with `[typed]` just typed, after the padding it takes is gone.
+        let typed = |text: &str| {
+            let at = text[..text.find('[').unwrap()].chars().count();
+            let t = text.replace(['[', ']'], "");
+            let len = text[text.find('[').unwrap() + 1..text.find(']').unwrap()]
+                .chars()
+                .count();
+            let mut chars: Vec<char> = t.chars().collect();
+            if let Some(r) = padding_taken(&t, at, len) {
+                chars.drain(r);
+            }
+            chars.into_iter().collect::<String>()
+        };
+        let table = |row: &str| format!("| a     | b |\n| ----- | - |\n{row}");
+        assert_eq!(typed(&table("| x[y]     | 1 |")), table("| xy    | 1 |"));
+        assert_eq!(typed(&table("| [żółw]      | 1 |")), table("| żółw  | 1 |"));
+        // One space kept by the pipe; past that the pipe moves.
+        assert_eq!(typed(&table("| xxxx[yz]   | 1 |")), table("| xxxxyz | 1 |"));
+        assert_eq!(typed(&table("| xxxxx[y] | 1 |")), table("| xxxxxy | 1 |"));
+        // A column aligned right has its padding before the text.
+        let right = |row: &str| format!("| a |     b |\n| - | ----: |\n{row}");
+        assert_eq!(typed(&right("| 1 |     2[3] |")), right("| 1 |    23 |"));
+        // Not out of a table, nor in a cell without its pipes.
+        assert_eq!(typed("a [b]    c |"), "a b    c |");
+        assert_eq!(
+            typed("a | b\n--|--\n1 | 2[3]   "),
+            "a | b\n--|--\n1 | 23   "
+        );
     }
 
     #[test]

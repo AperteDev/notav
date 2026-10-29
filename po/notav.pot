@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notav\n"
 "Report-Msgid-Bugs-To: https://github.com/AperteDev/notav/issues\n"
-"POT-Creation-Date: 2026-10-29 22:08+0100\n"
+"POT-Creation-Date: 2026-10-29 22:28+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -22,11 +22,11 @@ msgstr ""
 msgid "No Nextcloud account in Settings → Online Accounts"
 msgstr ""
 
-#: linux/app/src/editor.rs:493 linux/app/src/editor.rs:872
+#: linux/app/src/editor.rs:493 linux/app/src/editor.rs:927
 msgid "Row"
 msgstr ""
 
-#: linux/app/src/editor.rs:496 linux/app/src/editor.rs:873
+#: linux/app/src/editor.rs:496 linux/app/src/editor.rs:928
 msgid "Column"
 msgstr ""
 
@@ -38,79 +38,79 @@ msgstr ""
 msgid "Add Column"
 msgstr ""
 
-#: linux/app/src/editor.rs:874
+#: linux/app/src/editor.rs:929
 msgid "Format Table"
 msgstr ""
 
-#: linux/app/src/editor.rs:895
+#: linux/app/src/editor.rs:950
 msgid "Insert Above"
 msgstr ""
 
-#: linux/app/src/editor.rs:896
+#: linux/app/src/editor.rs:951
 msgid "Insert Below"
 msgstr ""
 
-#: linux/app/src/editor.rs:902
+#: linux/app/src/editor.rs:957
 msgid "Move Up"
 msgstr ""
 
-#: linux/app/src/editor.rs:903
+#: linux/app/src/editor.rs:958
 msgid "Move Down"
 msgstr ""
 
-#: linux/app/src/editor.rs:909
+#: linux/app/src/editor.rs:964
 msgid "Duplicate Row"
 msgstr ""
 
-#: linux/app/src/editor.rs:910
+#: linux/app/src/editor.rs:965
 msgid "Delete Row"
 msgstr ""
 
-#: linux/app/src/editor.rs:922
+#: linux/app/src/editor.rs:977
 msgid "Insert Left"
 msgstr ""
 
-#: linux/app/src/editor.rs:923
+#: linux/app/src/editor.rs:978
 msgid "Insert Right"
 msgstr ""
 
-#: linux/app/src/editor.rs:929
+#: linux/app/src/editor.rs:984
 msgid "Move Left"
 msgstr ""
 
-#: linux/app/src/editor.rs:930
+#: linux/app/src/editor.rs:985
 msgid "Move Right"
 msgstr ""
 
-#: linux/app/src/editor.rs:936
+#: linux/app/src/editor.rs:991
 msgid "Align Left"
 msgstr ""
 
-#: linux/app/src/editor.rs:937
+#: linux/app/src/editor.rs:992
 msgid "Align Center"
 msgstr ""
 
-#: linux/app/src/editor.rs:938
+#: linux/app/src/editor.rs:993
 msgid "Align Right"
 msgstr ""
 
-#: linux/app/src/editor.rs:944
+#: linux/app/src/editor.rs:999
 msgid "Sort Ascending"
 msgstr ""
 
-#: linux/app/src/editor.rs:945
+#: linux/app/src/editor.rs:1000
 msgid "Sort Descending"
 msgstr ""
 
-#: linux/app/src/editor.rs:951
+#: linux/app/src/editor.rs:1006
 msgid "Duplicate Column"
 msgstr ""
 
-#: linux/app/src/editor.rs:952
+#: linux/app/src/editor.rs:1007
 msgid "Delete Column"
 msgstr ""
 
-#: linux/app/src/editor.rs:961
+#: linux/app/src/editor.rs:1016
 msgid "Insert Table"
 msgstr ""
 
@@ -579,7 +579,9 @@ msgid "Format tables"
 msgstr ""
 
 #: linux/app/ui/settings.blp:133
-msgid "Line up a table’s columns when the cursor leaves a changed row"
+msgid ""
+"Keep a table’s columns lined up as you type and move between its rows and "
+"cells"
 msgstr ""
 
 #: linux/app/ui/settings.blp:141

@@ -52,6 +52,18 @@ jobs:
         run: >-
           gh release create "v$VERSION" dist/*
           --title "v$VERSION" --notes-file "$RUNNER_TEMP/notes.md"
+      # The Fedora RPMs: COPR builds the tag with .copr/Makefile. COPR_CONFIG (an AperteDev
+      # secret) is the API token file from https://copr.fedorainfracloud.org/api/, which expires
+      # after 180 days.
+      - name: Build on COPR
+        env:
+          COPR_CONFIG: ${{ secrets.COPR_CONFIG }}
+        run: |
+          pipx install copr-cli
+          printf '%s\n' "$COPR_CONFIG" > "$RUNNER_TEMP/copr"
+          copr-cli --config "$RUNNER_TEMP/copr" buildscm --nowait \
+            --clone-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git" --commit "v$VERSION" \
+            --spec linux/rpm/notav.spec --method make_srpm selfref/notav
 
   # The AUR packages built from the release (scripts/aur.sh), pushed by the AURomatic account, a
   # co-maintainer of each, as commits by SelfRef. AUR_SSH_KEY is that account's private key,

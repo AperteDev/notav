@@ -59,7 +59,9 @@
 - Don't bump versions by hand: releases are cut by the manual Release workflow
   (`.github/workflows/release.yml`), as in Todav: `scripts/release.py` sets the version in
   `Cargo.toml`, `Cargo.lock`, the metainfo and the RPM spec and moves the `[Unreleased]` changes
-  under it; the metainfo gets them as the release's notes (untranslated). After publishing,
+  under it; the metainfo gets them as the release's notes (untranslated). COPR (`selfref/notav`)
+  builds the tag's RPMs (AperteDev secret `COPR_CONFIG`, shared with Todav, an API token that
+  expires after 180 days; it ends on 2027-04-27). After publishing,
   `scripts/aur.sh` moves the AUR packages `notav` and `notav-bin` to the release, pushed by the
   AURomatic account (a co-maintainer; AperteDev secret `AUR_SSH_KEY`, shared with Todav) as
   commits by SelfRef; a packaging change to them still goes in by hand. The metainfo must

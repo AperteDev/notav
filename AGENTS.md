@@ -59,7 +59,10 @@
 - Don't bump versions by hand: releases are cut by the manual Release workflow
   (`.github/workflows/release.yml`), as in Todav: `scripts/release.py` sets the version in
   `Cargo.toml`, `Cargo.lock`, the metainfo and the RPM spec and moves the `[Unreleased]` changes
-  under it; the metainfo gets them as the release's notes (untranslated). The metainfo must
+  under it; the metainfo gets them as the release's notes (untranslated). After publishing,
+  `scripts/aur.sh` moves the AUR packages `notav` and `notav-bin` to the release, pushed by the
+  AURomatic account (a co-maintainer; AperteDev secret `AUR_SSH_KEY`, shared with Todav) as
+  commits by SelfRef; a packaging change to them still goes in by hand. The metainfo must
   pass `appstreamcli validate` without warnings (Flathub treats them as errors).
 - CI (`.github/workflows/ci.yml`) runs on every push: `cargo fmt --check`, clippy with warnings
   as errors, the unit tests, and the packages (Flatpak, tarball, `.deb`). Run the checks before

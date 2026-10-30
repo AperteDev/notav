@@ -73,16 +73,17 @@
 
 ## Stored data
 
-- What Notav keeps stays readable by every later version. The database (`notav.sqlite` in the
-  data folder) starts from the schema in `core/src/store.rs` `MIGRATIONS`: a released step is
-  never edited; a change is a new step at the end, with a test that opens a database of the
-  step before and checks what the new one made of it. A database from a newer Notav is refused
-  (`store::open`), never written to.
-- The same holds for the other formats: `kv` keys (`setting_…`, `settime_…`, per-account
-  `a<id>_…`) and what their values mean, device-only settings' formats (`expanded_folders`),
-  and `.config/notav/settings.json` on the server, which devices on other versions read and
-  write: keys are added, never renamed or given another meaning; one no longer used is left
-  alone (`merge` keeps keys it does not know).
+- An update carries on with what the previous version kept. The database (`notav.sqlite` in
+  the data folder) may change in any way, as a new step at the end of `core/src/store.rs`
+  `MIGRATIONS` that converts what is there (tables, columns, `kv` keys and values); a released
+  step is never edited. Each new step gets a test that opens a database of the step before and
+  checks what the new one made of it. A database from a newer Notav is refused (`store::open`),
+  never written to.
+- Settings change the same way: a renamed key or another value format is converted by a step
+  (device-only ones such as `expanded_folders` too). Synced settings
+  (`.config/notav/settings.json`) are also read by other devices, which may run an older
+  version until they update: a synced key changed in meaning goes under a new name, so the old
+  versions keep theirs.
 
 ## Accounts
 

@@ -460,11 +460,46 @@ pub fn start_background() {
     });
 }
 
+/// The data could not be opened (left by a newer Notav, say): a window saying so, and nothing
+/// else runs; closing it quits.
+fn open_failed(e: &notav_core::Error) -> glib::ExitCode {
+    eprintln!("open local database: {e}");
+    let description = match e {
+        notav_core::Error::Newer(_) => i18n::gettext(
+            "It was saved by a newer version of Notav. Update Notav to open it; this version leaves it as it is.",
+        ),
+        e => e.to_string(),
+    };
+    let app = adw::Application::new(Some(APP_ID), gio::ApplicationFlags::NON_UNIQUE);
+    app.connect_activate(move |app| {
+        let page = adw::StatusPage::builder()
+            .icon_name("dialog-error-symbolic")
+            .title(i18n::gettext("Notav Cannot Open Its Data"))
+            .description(description.as_str())
+            .build();
+        let view = adw::ToolbarView::new();
+        view.add_top_bar(&adw::HeaderBar::new());
+        view.set_content(Some(&page));
+        adw::ApplicationWindow::builder()
+            .application(app)
+            .title("Notav")
+            .default_width(480)
+            .default_height(360)
+            .content(&view)
+            .build()
+            .present();
+    });
+    app.run_with_args::<&str>(&[])
+}
+
 fn main() -> glib::ExitCode {
     i18n::init();
     gio::resources_register_include!("icons.gresource").expect("register icons");
     let data = glib::user_data_dir().join("notav");
-    let client = Client::open(data.to_string_lossy().into()).expect("open local database");
+    let client = match Client::open(data.to_string_lossy().into()) {
+        Ok(c) => c,
+        Err(e) => return open_failed(&e),
+    };
     client.subscribe(Box::new(Listener));
     let _ = CORE.set(Arc::new(client));
 

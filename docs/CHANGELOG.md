@@ -77,6 +77,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   account settings sync through is offered to other devices signing in to it
 - Settings sync through the account chosen in "Sync settings with" (Preferences → Accounts), or
   stay on this device; Remove Account takes the place of Sign Out
+- An older Notav no longer opens data a newer one left (after a downgrade, say): it shows a
+  window saying to update, and leaves the data as it is
 
 ### Fixed
 

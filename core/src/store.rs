@@ -148,9 +148,8 @@ pub fn open(path: &str) -> Result<Connection> {
     let version: i64 = db.query_row("PRAGMA user_version", [], |r| r.get(0))?;
     // A newer Notav's: its schema may not be what this one reads and writes.
     if version > MIGRATIONS.len() as i64 {
-        return Err(Error::Db(format!(
-            "{path} was made by a newer version of Notav (schema {version}, this one knows up to \
-             {}); update Notav to open it",
+        return Err(Error::Newer(format!(
+            "{path}: schema {version}, this version knows up to {}",
             MIGRATIONS.len()
         )));
     }
@@ -196,6 +195,6 @@ mod tests {
         assert_eq!(version, MIGRATIONS.len() as i64);
         db.pragma_update(None, "user_version", version + 1).unwrap();
         drop(db);
-        assert!(matches!(open(&path), Err(Error::Db(e)) if e.contains("newer version")));
+        assert!(matches!(open(&path), Err(Error::Newer(_))));
     }
 }

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notav\n"
 "Report-Msgid-Bugs-To: https://github.com/AperteDev/notav/issues\n"
-"POT-Creation-Date: 2026-10-30 12:44+0100\n"
+"POT-Creation-Date: 2026-10-30 14:53+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -53,8 +53,8 @@ msgid "Sign in to your Nextcloud; Notav gets an app password of its own"
 msgstr ""
 
 #: linux/app/src/add_account.rs:297 linux/app/src/settings.rs:131
-#: linux/app/src/settings.rs:373 linux/app/src/window.rs:2025
-#: linux/app/src/window.rs:2057
+#: linux/app/src/settings.rs:373 linux/app/src/window.rs:2015
+#: linux/app/src/window.rs:2047
 msgid "Not a folder name"
 msgstr ""
 
@@ -184,8 +184,8 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: linux/app/src/files.rs:193 linux/app/src/window.rs:2162
-#: linux/app/src/window.rs:2170
+#: linux/app/src/files.rs:193 linux/app/src/window.rs:2152
+#: linux/app/src/window.rs:2160
 msgid "Delete"
 msgstr ""
 
@@ -202,45 +202,55 @@ msgstr ""
 msgid "On This Device"
 msgstr ""
 
-#: linux/app/src/main.rs:299
+#: linux/app/src/main.rs:279
 #, rust-format
 msgid "Cannot upload pending changes first: {error}"
 msgstr ""
 
-#: linux/app/src/main.rs:316
+#: linux/app/src/main.rs:296
 msgid "Online Accounts has no password for this account"
 msgstr ""
 
-#: linux/app/src/main.rs:331
+#: linux/app/src/main.rs:311
 msgid "This account is already added"
 msgstr ""
 
-#: linux/app/src/main.rs:339 linux/app/src/main.rs:387
+#: linux/app/src/main.rs:319 linux/app/src/main.rs:367
 #, rust-format
 msgid "Cannot save password: {error}"
 msgstr ""
 
-#: linux/app/src/main.rs:349 linux/app/src/main.rs:384
-#: linux/app/src/main.rs:402
+#: linux/app/src/main.rs:329 linux/app/src/main.rs:364
+#: linux/app/src/main.rs:382
 msgid "Connecting failed"
 msgstr ""
 
-#: linux/app/src/main.rs:367
+#: linux/app/src/main.rs:347
 msgid "Welcome to Notav"
 msgstr ""
 
-#: linux/app/src/main.rs:369
+#: linux/app/src/main.rs:349
 msgid ""
 "Your notes stay on this device. They are written in Markdown: # starts a "
 "heading, - a list, - [ ] a task, and [[Title]] links another note."
 msgstr ""
 
-#: linux/app/src/main.rs:429
+#: linux/app/src/main.rs:409
 msgid "It has changes not uploaded yet: sign in again to upload them"
 msgstr ""
 
-#: linux/app/src/main.rs:439
+#: linux/app/src/main.rs:419
 msgid "Removing the account failed"
+msgstr ""
+
+#: linux/app/src/main.rs:469
+msgid ""
+"It was saved by a newer version of Notav. Update Notav to open it; this "
+"version leaves it as it is."
+msgstr ""
+
+#: linux/app/src/main.rs:477
+msgid "Notav Cannot Open Its Data"
 msgstr ""
 
 #: linux/app/src/settings.rs:150
@@ -532,128 +542,128 @@ msgid "Cannot unlock “{title}”: {error}"
 msgstr ""
 
 #. Translators: the note's text size in the view menu, as "100%".
-#: linux/app/src/window.rs:820
+#: linux/app/src/window.rs:810
 #, rust-format
 msgid "{percent}%"
 msgstr ""
 
-#: linux/app/src/window.rs:1119
+#: linux/app/src/window.rs:1109
 msgid "No Headings"
 msgstr ""
 
-#: linux/app/src/window.rs:1629
+#: linux/app/src/window.rs:1619
 msgid "Favorite"
 msgstr ""
 
-#: linux/app/src/window.rs:1817
+#: linux/app/src/window.rs:1807
 #, rust-format
 msgid "Linked from {count} note"
 msgid_plural "Linked from {count} notes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: linux/app/src/window.rs:1877
+#: linux/app/src/window.rs:1867
 #, rust-format
 msgid "Cannot save the note: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:1928
+#: linux/app/src/window.rs:1918
 msgid "A note with this name exists already"
 msgstr ""
 
-#: linux/app/src/window.rs:1979
+#: linux/app/src/window.rs:1969
 msgid "Untitled"
 msgstr ""
 
-#: linux/app/src/window.rs:2015 linux/app/src/window.rs:2055
+#: linux/app/src/window.rs:2005 linux/app/src/window.rs:2045
 msgid "A folder with this name exists already"
 msgstr ""
 
-#: linux/app/src/window.rs:2036
+#: linux/app/src/window.rs:2026
 msgid "Rename Folder"
 msgstr ""
 
-#: linux/app/src/window.rs:2037
+#: linux/app/src/window.rs:2027
 msgid "Rename"
 msgstr ""
 
-#: linux/app/src/window.rs:2073 linux/app/src/window.rs:2092
+#: linux/app/src/window.rs:2063 linux/app/src/window.rs:2082
 #, rust-format
 msgid "“{title}” deleted"
 msgstr ""
 
-#: linux/app/src/window.rs:2139 linux/app/ui/shortcuts.blp:10
+#: linux/app/src/window.rs:2129 linux/app/ui/shortcuts.blp:10
 msgid "New Note"
 msgstr ""
 
-#: linux/app/src/window.rs:2141 linux/app/ui/new-folder.blp:6
+#: linux/app/src/window.rs:2131 linux/app/ui/new-folder.blp:6
 msgid "New Folder"
 msgstr ""
 
-#: linux/app/src/window.rs:2151
+#: linux/app/src/window.rs:2141
 msgid "Remove from Favorites"
 msgstr ""
 
-#: linux/app/src/window.rs:2153
+#: linux/app/src/window.rs:2143
 msgid "Add to Favorites"
 msgstr ""
 
-#: linux/app/src/window.rs:2160
+#: linux/app/src/window.rs:2150
 msgid "Versions…"
 msgstr ""
 
-#: linux/app/src/window.rs:2169
+#: linux/app/src/window.rs:2159
 msgid "Rename…"
 msgstr ""
 
-#: linux/app/src/window.rs:2321
+#: linux/app/src/window.rs:2311
 msgid "A note with this name exists in that folder already"
 msgstr ""
 
-#: linux/app/src/window.rs:2324
+#: linux/app/src/window.rs:2314
 msgid "A folder with this name exists in that folder already"
 msgstr ""
 
-#: linux/app/src/window.rs:2428
+#: linux/app/src/window.rs:2418
 msgid "Enter the Nextcloud server first"
 msgstr ""
 
-#: linux/app/src/window.rs:2463
+#: linux/app/src/window.rs:2453
 msgid "Cannot start login"
 msgstr ""
 
-#: linux/app/src/window.rs:2464
+#: linux/app/src/window.rs:2454
 #, rust-format
 msgid "Cannot start login: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:2472
+#: linux/app/src/window.rs:2462
 msgid "Login link copied to clipboard"
 msgstr ""
 
-#: linux/app/src/window.rs:2492
+#: linux/app/src/window.rs:2482
 #, rust-format
 msgid "Login failed: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:2494
+#: linux/app/src/window.rs:2484
 msgid "Login failed"
 msgstr ""
 
-#: linux/app/src/window.rs:2497
+#: linux/app/src/window.rs:2487
 msgid "Login timed out"
 msgstr ""
 
-#: linux/app/src/window.rs:2546
+#: linux/app/src/window.rs:2536
 msgid "Wrong login name or password"
 msgstr ""
 
-#: linux/app/src/window.rs:2547
+#: linux/app/src/window.rs:2537
 #, rust-format
 msgid "Sign-in failed: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:2548
+#: linux/app/src/window.rs:2538
 msgid "Sign-in failed"
 msgstr ""
 

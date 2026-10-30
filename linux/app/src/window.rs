@@ -745,24 +745,14 @@ fn build(app: &adw::Application) -> Rc<Ui> {
     ui
 }
 
-/// The open folders and accounts (`folder_key`) from the device-only `expanded_folders`
-/// setting. Notav 0.1's had paths alone: those of its one account (the first).
+/// The open folders and closed accounts (`folder_key`) from the device-only `expanded_folders`
+/// setting.
 fn expanded_folders() -> HashSet<String> {
-    let keyed = |e: &str| {
-        e.split_once(':')
-            .is_some_and(|(id, _)| !id.is_empty() && id.bytes().all(|b| b.is_ascii_digit()))
-    };
     core()
         .setting("expanded_folders".into())
         .unwrap_or_default()
         .lines()
-        .map(|e| {
-            if keyed(e) {
-                e.to_string()
-            } else {
-                folder_key(1, e)
-            }
-        })
+        .map(str::to_string)
         .collect()
 }
 

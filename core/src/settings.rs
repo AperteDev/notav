@@ -22,9 +22,6 @@ pub const DEVICE_ONLY: &[&str] = &[
     "text_zoom",
     "full_width",
     "wrap_lines",
-    // Notav 0.1's browser sign-in, kept while GNOME Online Accounts was used.
-    "manual_url",
-    "manual_user",
     // UI state.
     "last_note",
     "expanded_folders",

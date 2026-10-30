@@ -267,31 +267,11 @@ pub fn connect_saved(a: &Account) -> bool {
 /// Connect every account with its saved password; false when there is none (the welcome page
 /// shows).
 pub fn restore_accounts() -> bool {
-    forget_old_sign_in();
     let all = core().accounts();
     for a in &all {
         connect_saved(a);
     }
     !all.is_empty()
-}
-
-/// Notav 0.1 remembered a browser sign-in while GNOME Online Accounts was used, to go back to
-/// it; its password goes unless an account still uses it.
-fn forget_old_sign_in() {
-    let get = |k: &str| core().setting(k.into()).filter(|v| !v.is_empty());
-    let (Some(url), Some(user)) = (get("manual_url"), get("manual_user")) else {
-        return;
-    };
-    let used = core()
-        .accounts()
-        .iter()
-        .any(|a| a.source.is_empty() && a.url == url && a.user == user);
-    if !used {
-        password_clear(&url, &user);
-    }
-    for k in ["manual_url", "manual_user"] {
-        let _ = core().set_setting(k.into(), String::new());
-    }
 }
 
 /// Why the edits waiting for an account's server could not go up before it changes.

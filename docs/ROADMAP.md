@@ -13,7 +13,20 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
      as they are now.
    - Links between notes: `[[` offers the notes' titles as you type; renaming or moving a note
      updates the links to it (asked first, as Obsidian does); Alt+Left back to the note a
-     link was followed from.
+     link was followed from. A note dragged from the tree into the text is linked there, as in
+     Obsidian.
+   - Paste: a URL pasted over selected text links it (`[text](url)`), as VS Code's Markdown
+     extension and Obsidian's paste plugins do; Ctrl+Shift+V pastes plain text (no link, no
+     table from spreadsheet rows).
+   - `*`, `_`, `` ` ``, `~`, `=` or `[` typed with text selected wraps it (as Typora and
+     Obsidian do), which covers most of Ctrl+B and Ctrl+I without learning them.
+   - Ctrl+Enter ticks or unticks the task on the cursor's line, and makes a list item a task
+     (as Obsidian and Logseq do).
+   - Enter in a quote continues its `> `; Enter after a code fence's opening ` ``` ` adds the
+     closing one (as Typora and Obsidian do), next to the lists' and tables' Enter.
+   - Spell checking with libspelling (as Iotas, Apostrophe and GNOME Text Editor have it):
+     underlined words, suggestions in the right-click menu (see
+     [Open questions](#open-questions-and-risks)).
 2. **Keyboard shortcuts**, later: Tab and Shift+Tab to indent list items; Ctrl+B, Ctrl+I,
    Ctrl+K around the selection; Ctrl+E between Editor and Source mode.
    **Editor toolbar**, later: a row above the note with what Editor mode can insert or apply
@@ -31,6 +44,23 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
 
 ## Planned features
 
+- **On This Device Only**, as in Todav: use Notav without a server, chosen on the welcome page;
+  the notes stay on this computer, synced nowhere. Later, with an account too, notes kept on
+  this device next to the synced ones, as Todav's local lists (see
+  [Open questions](#open-questions-and-risks)).
+- **Favorites**, shared with Nextcloud: a note starred from the tree's menu gets Nextcloud's
+  favorite flag (`oc:favorite` over WebDAV, which Nextcloud Files and, as far as known, the
+  Nextcloud Notes app show too); favorites come first in their folder, as pinned notes in
+  Iotas, Bear and Apple Notes.
+- **Versions** of a note from Nextcloud's file versions (`remote.php/dav/versions/<user>/`):
+  "Versions" in a note's menu lists them, shows one and restores it (moved into `restore`), as
+  Joplin's and Standard Notes' note history; also a way back after a conflict copy.
+- **GNOME Shell search**: notes found from the Activities overview by title and text, as Iotas
+  and Folio have it; Todav's search provider (`linux/app/src/search.rs`, its `.ini`) over the
+  core's search, under the app's own bus name.
+- **View menu**, more: a focus mode keeping the cursor's line in the middle of the view (as iA
+  Writer, Apostrophe and Iotas); the note's word count in the header's subtitle (as Bear's info
+  panel and Obsidian's status bar).
 - **Journal**, more: a calendar of the days with a note (the previous and next day's note from
   one), weekday and month names in the name format (from the locale), `{{time}}` and
   `{{yesterday}}`-style placeholders.
@@ -52,10 +82,15 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
 - **Notes' tree**: sorting by name (now), modified or created time, either way, from a menu
   above the tree (device-only); buttons to fold and unfold every folder.
 - **Search**: filters as Obsidian's (`path:`, `file:`, `tag:`, `"exact phrase"`, `-word`) over
-  today's word-prefix match on FTS5, and the results with the matched line.
-- **Trash**: deleting a note or folder moves it into a folder of its own in the notes folder;
-  a view of it restores or deletes for good, and empties it (see
-  [Open questions](#open-questions-and-risks)).
+  today's word-prefix match on FTS5, and the results with the matched line; a result opens at
+  its first match, highlighted (as Obsidian and Joplin). Ctrl+F finds (and replaces) in the open
+  note, GtkSourceView's search, and Ctrl+Shift+F searches all notes, as Obsidian and VS Code
+  (Iotas searches both ways too).
+- **Trash** through Nextcloud's own trash bin, where deleted notes already go: its WebDAV API
+  (`remote.php/dav/trashbin/<user>/trash`) lists them with where they were and when they were
+  deleted, restores one in place (moved into `restore`), deletes one for good and empties it. A
+  view of the deleted notes in the notes folder restores them; no trash folder of Notav's own.
+  Folio has a trash too.
 - **Templates**: notes in a folder chosen in Preferences (a synced setting); "New Note from
   Template" copies one, filling `{{title}}`, `{{date}}` and `{{time}}` (dates from the locale).
   The Journal's daily notes start from one template note already (`{{title}}`, `{{date}}`;
@@ -105,10 +140,17 @@ Later (v2):
   text view. Tidying changes the file's text, which other devices and apps
   see.
 
-- **Trash**: the folder's name (`.trash` as Obsidian's, if Nextcloud Notes hides it; a visible
-  one shows there as a category), whether it is left out of search and links, and whether it
-  empties itself after some days. Nextcloud's own trash bin already keeps deleted files, but
-  only through the web interface.
+- **On This Device Only**: where the notes live, the local database only (as Todav's local
+  lists) or Markdown files in a folder on disk that other apps (Obsidian) open too; and how a
+  local note moves to an account later.
+- **Trash and versions**: Nextcloud's trash bin keeps files for a time of its own (the
+  server's `trashbin_retention_obligation`), and its versions API documents listing and
+  restoring but not reading an old version's text (a `GET` of the version is to be tried).
+- **Spell checking**: libspelling is a new dependency (as `AGENTS.md` asks, with its reason);
+  whether the GNOME runtime the Flatpak uses ships it, or the manifest builds it.
+- **GNOME Shell search**: the provider is reached through the app's bus name and D-Bus
+  activation; Notav runs no service of its own (see [Ruled out](#ruled-out)), so a search wakes
+  the app the way opening it does.
 - **Created time** for sorting: from the server (`nc:creation_time`, not set by every storage)
   or the time first seen here.
 - **Client Push**: its WebSocket needs a client: a minimal hand-written one over the TLS `ureq`
@@ -128,3 +170,9 @@ Later (v2):
 - **Editor styles** not taken, for now: a monospace font by default (Apostrophe's Fira Mono,
   Iotas's; Preferences can choose one), a font size that grows with the window (Apostrophe), the
   `#` marks hanging in the margin (Iotas).
+- **Export to PDF, ODT or HTML** (Iotas, Typora): Notav leaves out `pulldown-cmark`'s HTML
+  writer, and the notes are Markdown files any app opens already.
+- **Colours in fenced code blocks** by their language (Obsidian, Bear): GtkSourceView
+  highlights one language per buffer, the note's.
+- **Folding headings** (Obsidian, Logseq), for now: it hides text, which the `invisible` tag
+  bug blocks (see [Open questions](#open-questions-and-risks)).

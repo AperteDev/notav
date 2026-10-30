@@ -71,6 +71,19 @@
   The rules are Todav's (see its `AGENTS.md`): named placeholders, plurals with `ngettext`,
   whole sentences, Polish translated for review, dates from the locale.
 
+## Stored data
+
+- What Notav keeps stays readable by every later version. The database (`notav.sqlite` in the
+  data folder) starts from the schema in `core/src/store.rs` `MIGRATIONS`: a released step is
+  never edited; a change is a new step at the end, with a test that opens a database of the
+  step before and checks what the new one made of it. A database from a newer Notav is refused
+  (`store::open`), never written to.
+- The same holds for the other formats: `kv` keys (`setting_…`, `settime_…`, per-account
+  `a<id>_…`) and what their values mean, device-only settings' formats (`expanded_folders`),
+  and `.config/notav/settings.json` on the server, which devices on other versions read and
+  write: keys are added, never renamed or given another meaning; one no longer used is left
+  alone (`merge` keeps keys it does not know).
+
 ## Accounts
 
 - Notes, folders and folder moves belong to accounts (`accounts` table, as in Todav): Nextcloud

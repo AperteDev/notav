@@ -52,7 +52,8 @@ pub fn now() -> i64 {
 impl Client {
     pub fn open(data_dir: String) -> Result<Client> {
         std::fs::create_dir_all(&data_dir).map_err(|e| Error::Db(e.to_string()))?;
-        let db = store::open(&format!("{data_dir}/core.sqlite"))?;
+        // Not `core.sqlite`, Notav 0.1's, whose schema versions this one's would be taken for.
+        let db = store::open(&format!("{data_dir}/notav.sqlite"))?;
         Ok(Client {
             db: Mutex::new(db),
             dav: Mutex::default(),

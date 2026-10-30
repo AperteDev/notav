@@ -51,7 +51,9 @@
 ## Releases
 
 - Add user-visible changes to `docs/CHANGELOG.md` under `## [Unreleased]`, in the same commit as the
-  change. It follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/): `Added`,
+  change. Keep `docs/FEATURES.md` (what Notav does, one short line each, and what is planned)
+  in step in the same commit: a new feature goes under "Now" and leaves "Planned"; a new plan
+  in `docs/ROADMAP.md` gets its line under "Planned". It follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/): `Added`,
   `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`.
 - Don't bump versions by hand: releases are cut by the manual Release workflow
   (`.github/workflows/release.yml`), as in Todav: `scripts/release.py` sets the version in

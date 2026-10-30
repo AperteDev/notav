@@ -363,6 +363,15 @@ Adw.ApplicationWindow window {
                 }
               }
 
+              // Without Wrap Lines, the note's text scrolls sideways by itself (only it, not the
+              // title): its scrollbar, shown while a line is longer than the view
+              // (`show_side_scroll`).
+              [bottom]
+              Gtk.Scrollbar side_scroll {
+                orientation: horizontal;
+                visible: false;
+              }
+
               // The open note's headings at its right; a click goes to one (src/window.rs
               // `refresh_outline`).
               content: Adw.OverlaySplitView outline_split {
@@ -523,8 +532,8 @@ menu view_menu {
   }
 
   section {
-    item (_("Full Width"), "win.full-width")
     item (_("Wrap Lines"), "win.wrap-lines")
+    item (_("Full Width"), "win.full-width")
   }
 }
 

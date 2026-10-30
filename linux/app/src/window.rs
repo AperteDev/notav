@@ -112,6 +112,7 @@ struct Ui {
     note_stack: gtk::Stack,
     title: gtk::Entry,
     note_scroll: gtk::ScrolledWindow,
+    side_scroll: gtk::Scrollbar,
     note_clamp: adw::Clamp,
     note_mode: adw::ToggleGroup,
     backlinks_box: gtk::Box,
@@ -588,6 +589,7 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         note_stack: get(&b, "note_stack"),
         title: get(&b, "title"),
         note_scroll: get(&b, "note_scroll"),
+        side_scroll: get(&b, "side_scroll"),
         note_clamp: get(&b, "note_clamp"),
         note_mode: get(&b, "note_mode"),
         backlinks_box: get(&b, "backlinks_box"),
@@ -685,6 +687,7 @@ fn apply_text_look(ui: &Ui) {
     } else {
         gtk::WrapMode::None
     });
+    show_side_scroll(ui);
 }
 
 /// A CSS rule giving `selector` `font` (`family` without one, else the inherited one) at its
@@ -772,8 +775,7 @@ fn refresh_outline(ui: &Ui) {
     *ui.outline_at.borrow_mut() = headings.iter().map(|h| h.at).collect();
 }
 
-/// Scroll the note to its cursor (its line at the top with `top`; sideways as far as it needs),
-/// once the text is laid out:
+/// Scroll the note to its cursor (its line at the top with `top`), once the text is laid out:
 /// what scrolls is the box with the title and the text, so the text view cannot do it itself.
 fn follow_cursor(ui: &Rc<Ui>, top: bool) {
     let weak = Rc::downgrade(ui);
@@ -805,14 +807,9 @@ fn scroll_to_cursor(ui: &Ui, top: bool) -> bool {
     if bottom > adj.upper() {
         return false;
     }
-    // Sideways too, when lines do not wrap.
-    let side = ui.note_scroll.hadjustment();
-    let x = p.x() as f64;
-    if x - margin < side.value() {
-        side.set_value(x - margin);
-    } else if x + margin > side.value() + side.page_size() {
-        side.set_value(x + margin - side.page_size());
-    }
+    // Sideways, when lines do not wrap, the text view scrolls itself (only that way: it is as
+    // tall as its text).
+    view.scroll_mark_onscreen(&ui.buffer.get_insert());
     // On the first line, the title above it too.
     if cursor.line() == 0 {
         adj.set_value(0.0);
@@ -1107,6 +1104,33 @@ fn connect(ui: &Rc<Ui>) {
         glib::Propagation::Stop
     });
     ui.editor.add_controller(keys);
+
+    // The text's own sideways scrolling (without Wrap Lines): its scrollbar, and a touchpad's or
+    // a wheel's sideways moves over it (the note's scrolled window has nothing to scroll that
+    // way).
+    if let Some(side) = ui.editor.hadjustment() {
+        ui.side_scroll.set_adjustment(Some(&side));
+        let weak = Rc::downgrade(ui);
+        side.connect_changed(move |_| {
+            if let Some(ui) = weak.upgrade() {
+                show_side_scroll(&ui);
+            }
+        });
+        let scroll = gtk::EventControllerScroll::new(gtk::EventControllerScrollFlags::HORIZONTAL);
+        scroll.connect_scroll(move |c, dx, _| {
+            if dx == 0.0 || side.upper() <= side.page_size() {
+                return glib::Propagation::Proceed;
+            }
+            // A wheel's step as GTK's scrolled windows take it.
+            let step = match c.unit() {
+                gtk::gdk::ScrollUnit::Wheel => side.page_size().powf(2.0 / 3.0),
+                _ => 1.0,
+            };
+            side.set_value(side.value() + dx * step);
+            glib::Propagation::Stop
+        });
+        ui.editor.add_controller(scroll);
+    }
 
     // Once a note is laid out, the scroll to its cursor that waited for it; after the layout, as
     // a scroll made in it is not shown.
@@ -1444,6 +1468,18 @@ fn show_page(ui: &Ui) {
         _ if ui.current.borrow().is_some() => "note",
         _ => "none",
     });
+    show_side_scroll(ui);
+}
+
+/// The note's sideways scrollbar, while its text is shown, does not wrap and has a line longer
+/// than the view.
+fn show_side_scroll(ui: &Ui) {
+    let adj = ui.side_scroll.adjustment();
+    ui.side_scroll.set_visible(
+        !wrap_lines()
+            && ui.note_stack.visible_child_name().as_deref() == Some("note")
+            && adj.upper() > adj.page_size() + 1.0,
+    );
 }
 
 /// "Folder · date" under a note's title (the date in the locale's format).

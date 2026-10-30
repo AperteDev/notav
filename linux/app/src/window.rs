@@ -641,6 +641,12 @@ fn full_width() -> bool {
     core().setting("full_width".into()).as_deref() == Some("true")
 }
 
+/// The device-only `wrap_lines` setting (on unless "false"): long lines wrap, else the note
+/// scrolls sideways.
+fn wrap_lines() -> bool {
+    core().setting("wrap_lines".into()).as_deref() != Some("false")
+}
+
 /// The note's text again after a setting of its look changed (Preferences).
 pub fn text_look_changed() {
     if let Some(ui) = ui() {
@@ -650,7 +656,7 @@ pub fn text_look_changed() {
 
 /// The note's text in its mode's font from Preferences (the device-only `editor_font`, the
 /// interface's without one; `source_font`, the system's monospace one), at 12 pt or the font's
-/// size scaled by `text_zoom`, as wide as `full_width` says.
+/// size scaled by `text_zoom`, as wide as `full_width` says, wrapped as `wrap_lines` does.
 fn apply_text_look(ui: &Ui) {
     let zoom = text_zoom();
     let css = [
@@ -674,6 +680,11 @@ fn apply_text_look(ui: &Ui) {
         .set_maximum_size(if full { 100_000 } else { 720 });
     ui.note_clamp
         .set_tightening_threshold(if full { 100_000 } else { 600 });
+    ui.editor.set_wrap_mode(if wrap_lines() {
+        gtk::WrapMode::WordChar
+    } else {
+        gtk::WrapMode::None
+    });
 }
 
 /// A CSS rule giving `selector` `font` (`family` without one, else the inherited one) at its
@@ -761,7 +772,8 @@ fn refresh_outline(ui: &Ui) {
     *ui.outline_at.borrow_mut() = headings.iter().map(|h| h.at).collect();
 }
 
-/// Scroll the note to its cursor (its line at the top with `top`), once the text is laid out:
+/// Scroll the note to its cursor (its line at the top with `top`; sideways as far as it needs),
+/// once the text is laid out:
 /// what scrolls is the box with the title and the text, so the text view cannot do it itself.
 fn follow_cursor(ui: &Rc<Ui>, top: bool) {
     let weak = Rc::downgrade(ui);
@@ -779,11 +791,6 @@ fn follow_cursor(ui: &Rc<Ui>, top: bool) {
 fn scroll_to_cursor(ui: &Ui, top: bool) -> bool {
     let (view, adj) = (&ui.editor, ui.note_scroll.vadjustment());
     let cursor = ui.buffer.iter_at_mark(&ui.buffer.get_insert());
-    // On the first line, the title above it too.
-    if cursor.line() == 0 {
-        adj.set_value(0.0);
-        return true;
-    }
     let at = view.iter_location(&cursor);
     let (x, y) = view.buffer_to_window_coords(gtk::TextWindowType::Widget, at.x(), at.y());
     // Where it is in what scrolls, as that is not moved until it is laid out again.
@@ -798,7 +805,18 @@ fn scroll_to_cursor(ui: &Ui, top: bool) -> bool {
     if bottom > adj.upper() {
         return false;
     }
-    if top || line - margin < adj.value() {
+    // Sideways too, when lines do not wrap.
+    let side = ui.note_scroll.hadjustment();
+    let x = p.x() as f64;
+    if x - margin < side.value() {
+        side.set_value(x - margin);
+    } else if x + margin > side.value() + side.page_size() {
+        side.set_value(x + margin - side.page_size());
+    }
+    // On the first line, the title above it too.
+    if cursor.line() == 0 {
+        adj.set_value(0.0);
+    } else if top || line - margin < adj.value() {
         adj.set_value(line - margin);
     } else if bottom + margin > adj.value() + adj.page_size() {
         adj.set_value(bottom + margin - adj.page_size());
@@ -907,17 +925,23 @@ fn connect(ui: &Rc<Ui>) {
         });
         ui.window.add_action(&a);
     }
-    let full = gio::SimpleAction::new_stateful("full-width", None, &full_width().to_variant());
-    let weak = Rc::downgrade(ui);
-    full.connect_change_state(move |a, state| {
-        let (Some(ui), Some(on)) = (weak.upgrade(), state.and_then(|s| s.get::<bool>())) else {
-            return;
-        };
-        a.set_state(&on.to_variant());
-        let _ = core().set_setting("full_width".into(), on.to_string());
-        apply_text_look(&ui);
-    });
-    ui.window.add_action(&full);
+    // The view menu's switches, each a device-only setting.
+    for (name, key, on) in [
+        ("full-width", "full_width", full_width()),
+        ("wrap-lines", "wrap_lines", wrap_lines()),
+    ] {
+        let a = gio::SimpleAction::new_stateful(name, None, &on.to_variant());
+        let weak = Rc::downgrade(ui);
+        a.connect_change_state(move |a, state| {
+            let (Some(ui), Some(on)) = (weak.upgrade(), state.and_then(|s| s.get::<bool>())) else {
+                return;
+            };
+            a.set_state(&on.to_variant());
+            let _ = core().set_setting(key.into(), on.to_string());
+            apply_text_look(&ui);
+        });
+        ui.window.add_action(&a);
+    }
     // The outline: shown as last time; a click puts the heading at the top, the cursor on it.
     let none = gtk::Label::new(Some(&gettext("No Headings")));
     none.set_margin_top(12);

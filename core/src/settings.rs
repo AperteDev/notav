@@ -19,6 +19,7 @@ pub const DEVICE_ONLY: &[&str] = &[
     "source_font",
     "text_zoom",
     "full_width",
+    "wrap_lines",
     "goa_account",
     "manual_url",
     "manual_user",

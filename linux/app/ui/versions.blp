@@ -1,0 +1,120 @@
+using Gtk 4.0;
+using Adw 1;
+
+// The versions of a note Nextcloud keeps (src/files.rs `versions`), one to look at and restore;
+// there only when the server keeps versions.
+Adw.Dialog dialog {
+  content-width: 640;
+  content-height: 640;
+
+  // Over the dialog: the window's own would be under it.
+  child: Adw.ToastOverlay toasts {
+    child: Adw.NavigationView nav {
+      Adw.NavigationPage {
+        tag: "list";
+        title: _("Versions");
+
+        child: Adw.ToolbarView {
+          [top]
+          Adw.HeaderBar {}
+
+          content: Gtk.Stack stack {
+            Gtk.StackPage {
+              name: "loading";
+
+              child: Adw.Spinner {
+                halign: center;
+                valign: center;
+                width-request: 32;
+                height-request: 32;
+              };
+            }
+
+            Gtk.StackPage {
+              name: "list";
+
+              child: Gtk.ScrolledWindow {
+                hscrollbar-policy: never;
+
+                Adw.Clamp {
+                  maximum-size: 600;
+
+                  Gtk.Box {
+                    orientation: vertical;
+                    spacing: 12;
+                    margin-top: 12;
+                    margin-bottom: 24;
+                    margin-start: 12;
+                    margin-end: 12;
+
+                    Gtk.Label {
+                      label: _("Your Nextcloud keeps earlier versions as its administrator set it: by default, fewer the older they are.");
+                      wrap: true;
+                      xalign: 0;
+                      styles ["dim-label"]
+                    }
+
+                    Gtk.ListBox list {
+                      selection-mode: none;
+                      valign: start;
+                      styles ["boxed-list"]
+                    }
+                  }
+                }
+              };
+            }
+
+            Gtk.StackPage {
+              name: "empty";
+
+              child: Adw.StatusPage {
+                icon-name: "document-open-recent-symbolic";
+                title: _("No Versions Yet");
+                description: _("Versions are kept once the note is on your Nextcloud and changes there");
+              };
+            }
+
+            Gtk.StackPage {
+              name: "error";
+
+              child: Adw.StatusPage error {
+                icon-name: "network-offline-symbolic";
+                title: _("Cannot Load the Versions");
+              };
+            }
+          };
+        };
+      }
+
+      // One version's text; Restore makes it the note's (an edit, undone with Ctrl+Z).
+      Adw.NavigationPage preview {
+        tag: "preview";
+
+        child: Adw.ToolbarView {
+          [top]
+          Adw.HeaderBar {
+            [end]
+            Gtk.Button restore {
+              label: _("Restore");
+              styles ["suggested-action"]
+            }
+          }
+
+          content: Gtk.ScrolledWindow {
+            Gtk.TextView text {
+              editable: false;
+              cursor-visible: false;
+              monospace: true;
+              wrap-mode: word_char;
+              top-margin: 12;
+              bottom-margin: 12;
+              left-margin: 12;
+              right-margin: 12;
+              styles ["view"]
+            }
+          };
+        };
+      }
+    };
+  };
+}

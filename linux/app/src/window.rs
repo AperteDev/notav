@@ -336,6 +336,41 @@ pub fn toast(msg: &str) {
     }
 }
 
+/// Show `dialog` over the main window.
+pub fn present_dialog(dialog: &impl IsA<adw::Dialog>) {
+    if let Some(ui) = ui() {
+        dialog.present(Some(&ui.window));
+    }
+}
+
+/// Make `text` note `id`'s (a version restored): in the editor if it is open, as one step Ctrl+Z
+/// undoes; the sync takes it to the server.
+pub fn put_text(id: i64, text: &str) {
+    let Some(ui) = ui() else { return };
+    if ui.current.borrow().as_ref().map(|n| n.id) == Some(id) {
+        ui.buffer.begin_user_action();
+        let (mut start, mut end) = ui.buffer.bounds();
+        ui.buffer.delete(&mut start, &mut end);
+        ui.buffer.insert(&mut start, text);
+        ui.buffer.end_user_action();
+        save_now(&ui);
+    } else if let Err(e) = core().set_text(id, text.into()) {
+        return toast(&e.to_string());
+    }
+    request_sync();
+}
+
+/// The Trash in the main menu, where the server keeps deleted notes.
+fn enable_trash(ui: &Ui) {
+    if let Some(a) = ui
+        .window
+        .lookup_action("trash")
+        .and_downcast::<gio::SimpleAction>()
+    {
+        a.set_enabled(crate::ready() && core().features().trash);
+    }
+}
+
 /// Tell what was done, with a button undoing just that (the latest change).
 fn undo_toast(ui: &Ui, title: &str) {
     let t = note(title);
@@ -380,6 +415,8 @@ pub fn on_event(ev: &Event) {
         Event::SyncState(s) => {
             ui.sync_state
                 .set_visible_child_name(if s == "syncing" { "syncing" } else { "idle" });
+            // The sync learns what the server offers.
+            enable_trash(&ui);
             if let Some(err) = s.strip_prefix("error:") {
                 if *ui.last_error.borrow() != err {
                     eprintln!("Sync failed: {err}");
@@ -905,6 +942,18 @@ fn connect(ui: &Rc<Ui>) {
         }
     });
     ui.window.add_action(&favorite);
+    // Nextcloud's trash and a note's versions (src/files.rs), where the server keeps them.
+    let versions = gio::SimpleAction::new("note-versions", Some(glib::VariantTy::INT64));
+    versions.connect_activate(|_, id| {
+        if let Some(id) = id.and_then(|i| i.get::<i64>()) {
+            crate::files::versions(id);
+        }
+    });
+    ui.window.add_action(&versions);
+    let trash = gio::SimpleAction::new("trash", None);
+    trash.connect_activate(|_, _| crate::files::trash());
+    ui.window.add_action(&trash);
+    enable_trash(ui);
     // From the tree's menus, with the folder ("": the top level).
     for (name, f) in [
         ("new-note-in", new_note_in as fn(&Rc<Ui>, String)),
@@ -1939,6 +1988,11 @@ fn context_menu(ui: &Rc<Ui>) {
                     }),
                     Some(&favorite),
                 );
+                if core().features().versions {
+                    let versions =
+                        gio::Action::print_detailed_name("win.note-versions", id.as_ref());
+                    note.append(Some(&gettext("Versions…")), Some(&versions));
+                }
                 note.append(Some(&gettext("Delete")), Some(&delete));
                 m.append_section(None, &note);
             }

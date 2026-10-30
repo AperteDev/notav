@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notav\n"
 "Report-Msgid-Bugs-To: https://github.com/AperteDev/notav/issues\n"
-"POT-Creation-Date: 2026-10-30 10:01+0100\n"
+"POT-Creation-Date: 2026-10-30 10:04+0100\n"
 "PO-Revision-Date: 2026-10-24 20:03+0200\n"
 "Last-Translator: SelfRef\n"
 "Language-Team: Polish\n"
@@ -18,7 +18,7 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 "
 "|| n%100>=20) ? 1 : 2);\n"
 
-#: linux/app/src/connection.rs:39 linux/app/src/window.rs:2198
+#: linux/app/src/connection.rs:39 linux/app/src/window.rs:2252
 msgid "No Nextcloud account in Settings → Online Accounts"
 msgstr "Brak konta Nextcloud w Ustawienia → Konta online"
 
@@ -114,31 +114,79 @@ msgstr "Usuń kolumnę"
 msgid "Insert Table"
 msgstr "Wstaw tabelę"
 
-#: linux/app/src/main.rs:245
+#: linux/app/src/files.rs:76
+#, rust-format
+msgid "Deleted {date}"
+msgstr "Usunięto {date}"
+
+#: linux/app/src/files.rs:99 linux/app/ui/versions.blp:98
+msgid "Restore"
+msgstr "Przywróć"
+
+#: linux/app/src/files.rs:120
+#, rust-format
+msgid "“{title}” restored"
+msgstr "Przywrócono „{title}”"
+
+#: linux/app/src/files.rs:132
+msgid "Delete Permanently"
+msgstr "Usuń na zawsze"
+
+#: linux/app/src/files.rs:170
+msgid "Delete Permanently?"
+msgstr "Usunąć na zawsze?"
+
+#: linux/app/src/files.rs:171
+#, rust-format
+msgid "“{title}” cannot be restored afterwards"
+msgstr "Nie będzie można potem przywrócić „{title}”"
+
+#: linux/app/src/files.rs:174 linux/app/src/settings.rs:334
+#: linux/app/src/window.rs:503 linux/app/ui/new-folder.blp:11
+#: linux/app/ui/password-login.blp:19 linux/app/ui/settings.blp:196
+#: linux/app/ui/window.blp:118
+msgid "Cancel"
+msgstr "Anuluj"
+
+#: linux/app/src/files.rs:175 linux/app/src/window.rs:1996
+#: linux/app/src/window.rs:2004
+msgid "Delete"
+msgstr "Usuń"
+
+#: linux/app/src/files.rs:207
+#, rust-format
+msgid "Restored the version of {date}"
+msgstr "Przywrócono wersję z {date}"
+
+#: linux/app/src/files.rs:240
+msgid "Current version"
+msgstr "Bieżąca wersja"
+
+#: linux/app/src/main.rs:246
 #, rust-format
 msgid "Cannot upload pending changes first: {error}"
 msgstr "Nie można najpierw wysłać oczekujących zmian: {error}"
 
-#: linux/app/src/main.rs:263
+#: linux/app/src/main.rs:264
 msgid "Disconnecting failed"
 msgstr "Nie udało się rozłączyć"
 
-#: linux/app/src/main.rs:282
+#: linux/app/src/main.rs:283
 msgid "Online Accounts has no password for this account"
 msgstr "Konta online nie mają hasła do tego konta"
 
-#: linux/app/src/main.rs:300
+#: linux/app/src/main.rs:301
 #, rust-format
 msgid "Cannot save password: {error}"
 msgstr "Nie można zapisać hasła: {error}"
 
-#: linux/app/src/main.rs:314
+#: linux/app/src/main.rs:315
 msgid "Connecting failed"
 msgstr "Nie udało się połączyć"
 
 #: linux/app/src/settings.rs:122 linux/app/src/settings.rs:360
-#: linux/app/src/window.rs:1820 linux/app/src/window.rs:1852
-#: linux/app/src/window.rs:2402
+#: linux/app/src/window.rs:1869 linux/app/src/window.rs:1901
+#: linux/app/src/window.rs:2456
 msgid "Not a folder name"
 msgstr "To nie jest poprawna nazwa folderu"
 
@@ -159,12 +207,6 @@ msgid ""
 msgstr ""
 "Przenieść notatki z „{old}” do „{new}”, czy zostawić je tam i pokazać "
 "notatki z „{new}”?"
-
-#: linux/app/src/settings.rs:334 linux/app/src/window.rs:466
-#: linux/app/ui/new-folder.blp:11 linux/app/ui/password-login.blp:19
-#: linux/app/ui/settings.blp:196 linux/app/ui/window.blp:118
-msgid "Cancel"
-msgstr "Anuluj"
 
 #: linux/app/src/settings.rs:335
 msgid "Leave Them"
@@ -193,7 +235,7 @@ msgstr "Nie zmieniono folderu notatek"
 msgid "Connected as {name}"
 msgstr "Połączono jako {name}"
 
-#: linux/app/src/settings.rs:399 linux/app/src/window.rs:2213
+#: linux/app/src/settings.rs:399 linux/app/src/window.rs:2267
 #: linux/app/ui/window.blp:43
 msgid "GNOME Online Accounts"
 msgstr "Konta online GNOME"
@@ -212,11 +254,11 @@ msgstr "Nie zalogowano"
 msgid "Disconnected"
 msgstr "Rozłączono"
 
-#: linux/app/src/settings.rs:499 linux/app/src/window.rs:2330
+#: linux/app/src/settings.rs:499 linux/app/src/window.rs:2384
 msgid "Waiting for Sign-In…"
 msgstr "Oczekiwanie na zalogowanie…"
 
-#: linux/app/src/settings.rs:501 linux/app/src/window.rs:2332
+#: linux/app/src/settings.rs:501 linux/app/src/window.rs:2386
 msgid "Waiting for Browser…"
 msgstr "Oczekiwanie na przeglądarkę…"
 
@@ -250,16 +292,16 @@ msgstr "_Wsparcie"
 msgid "Support"
 msgstr "Wsparcie"
 
-#: linux/app/src/window.rs:343 linux/app/ui/shortcuts.blp:59
+#: linux/app/src/window.rs:378 linux/app/ui/shortcuts.blp:59
 msgid "Undo"
 msgstr "Cofnij"
 
-#: linux/app/src/window.rs:387
+#: linux/app/src/window.rs:424
 #, rust-format
 msgid "Sync failed: {error}"
 msgstr "Synchronizacja nie powiodła się: {error}"
 
-#: linux/app/src/window.rs:404
+#: linux/app/src/window.rs:441
 #, rust-format
 msgid ""
 "“{title}” was changed elsewhere too: your version is kept next to it as a "
@@ -268,7 +310,7 @@ msgstr ""
 "Notatka „{title}” została zmieniona także gdzie indziej: twoja wersja "
 "została zachowana obok jako kopia"
 
-#: linux/app/src/window.rs:408
+#: linux/app/src/window.rs:445
 #, rust-format
 msgid ""
 "{n} note was changed elsewhere too: your version is kept next to it as a copy"
@@ -285,36 +327,36 @@ msgstr[2] ""
 "{n} notatek zostało zmienionych także gdzie indziej: twoje wersje zostały "
 "zachowane obok jako kopie"
 
-#: linux/app/src/window.rs:434
+#: linux/app/src/window.rs:471
 #, rust-format
 msgid "Something in “{title}” is locked on the server"
 msgstr "Coś w folderze „{title}” jest zablokowane na serwerze"
 
-#: linux/app/src/window.rs:436
+#: linux/app/src/window.rs:473
 #, rust-format
 msgid "“{title}” is locked on the server by {owner} since {time}"
 msgstr "Notatka „{title}” jest zablokowana na serwerze przez {owner} od {time}"
 
-#: linux/app/src/window.rs:438
+#: linux/app/src/window.rs:475
 #, rust-format
 msgid "“{title}” is locked on the server by {owner}"
 msgstr "Notatka „{title}” jest zablokowana na serwerze przez {owner}"
 
-#: linux/app/src/window.rs:439
+#: linux/app/src/window.rs:476
 #, rust-format
 msgid "“{title}” is locked on the server"
 msgstr "Notatka „{title}” jest zablokowana na serwerze"
 
-#: linux/app/src/window.rs:447
+#: linux/app/src/window.rs:484
 msgid "Unlock…"
 msgstr "Odblokuj…"
 
-#: linux/app/src/window.rs:460
+#: linux/app/src/window.rs:497
 #, rust-format
 msgid "Unlock “{title}”?"
 msgstr "Odblokować „{title}”?"
 
-#: linux/app/src/window.rs:462
+#: linux/app/src/window.rs:499
 msgid ""
 "Your change to it waits for the lock. If it is still open in an editor, what "
 "is saved there afterwards may be lost: unlock it only if nobody is editing "
@@ -324,30 +366,30 @@ msgstr ""
 "edytorze, to, co zostanie tam potem zapisane, może przepaść: odblokuj ją "
 "tylko wtedy, gdy nikt jej nie edytuje."
 
-#: linux/app/src/window.rs:467
+#: linux/app/src/window.rs:504
 msgid "Unlock"
 msgstr "Odblokuj"
 
-#: linux/app/src/window.rs:481
+#: linux/app/src/window.rs:518
 #, rust-format
 msgid "Cannot unlock “{title}”: {error}"
 msgstr "Nie można odblokować „{title}”: {error}"
 
 #. Translators: the note's text size in the view menu, as "100%".
-#: linux/app/src/window.rs:693
+#: linux/app/src/window.rs:730
 #, rust-format
 msgid "{percent}%"
 msgstr "{percent}%"
 
-#: linux/app/src/window.rs:980
+#: linux/app/src/window.rs:1029
 msgid "No Headings"
 msgstr "Brak nagłówków"
 
-#: linux/app/src/window.rs:1440
+#: linux/app/src/window.rs:1489
 msgid "Favorite"
 msgstr "Ulubiona"
 
-#: linux/app/src/window.rs:1620
+#: linux/app/src/window.rs:1669
 #, rust-format
 msgid "Linked from {count} note"
 msgid_plural "Linked from {count} notes"
@@ -355,126 +397,126 @@ msgstr[0] "{count} notatka linkuje tutaj"
 msgstr[1] "{count} notatki linkują tutaj"
 msgstr[2] "{count} notatek linkuje tutaj"
 
-#: linux/app/src/window.rs:1680
+#: linux/app/src/window.rs:1729
 #, rust-format
 msgid "Cannot save the note: {error}"
 msgstr "Nie można zapisać notatki: {error}"
 
-#: linux/app/src/window.rs:1731
+#: linux/app/src/window.rs:1780
 msgid "A note with this name exists already"
 msgstr "Notatka o tej nazwie już istnieje"
 
-#: linux/app/src/window.rs:1774
+#: linux/app/src/window.rs:1823
 msgid "Untitled"
 msgstr "Bez tytułu"
 
-#: linux/app/src/window.rs:1810 linux/app/src/window.rs:1850
+#: linux/app/src/window.rs:1859 linux/app/src/window.rs:1899
 msgid "A folder with this name exists already"
 msgstr "Folder o tej nazwie już istnieje"
 
-#: linux/app/src/window.rs:1831
+#: linux/app/src/window.rs:1880
 msgid "Rename Folder"
 msgstr "Zmień nazwę folderu"
 
-#: linux/app/src/window.rs:1832
+#: linux/app/src/window.rs:1881
 msgid "Rename"
 msgstr "Zmień nazwę"
 
-#: linux/app/src/window.rs:1868 linux/app/src/window.rs:1887
+#: linux/app/src/window.rs:1917 linux/app/src/window.rs:1936
 #, rust-format
 msgid "“{title}” deleted"
 msgstr "Usunięto „{title}”"
 
-#: linux/app/src/window.rs:1924 linux/app/ui/shortcuts.blp:10
+#: linux/app/src/window.rs:1973 linux/app/ui/shortcuts.blp:10
 msgid "New Note"
 msgstr "Nowa notatka"
 
-#: linux/app/src/window.rs:1926 linux/app/ui/new-folder.blp:6
+#: linux/app/src/window.rs:1975 linux/app/ui/new-folder.blp:6
 msgid "New Folder"
 msgstr "Nowy folder"
 
-#: linux/app/src/window.rs:1936
+#: linux/app/src/window.rs:1985
 msgid "Remove from Favorites"
 msgstr "Usuń z ulubionych"
 
-#: linux/app/src/window.rs:1938
+#: linux/app/src/window.rs:1987
 msgid "Add to Favorites"
 msgstr "Dodaj do ulubionych"
 
-#: linux/app/src/window.rs:1942 linux/app/src/window.rs:1950
-msgid "Delete"
-msgstr "Usuń"
+#: linux/app/src/window.rs:1994
+msgid "Versions…"
+msgstr "Wersje…"
 
-#: linux/app/src/window.rs:1949
+#: linux/app/src/window.rs:2003
 msgid "Rename…"
 msgstr "Zmień nazwę…"
 
-#: linux/app/src/window.rs:2100
+#: linux/app/src/window.rs:2154
 msgid "A note with this name exists in that folder already"
 msgstr "Notatka o tej nazwie już istnieje w tym folderze"
 
-#: linux/app/src/window.rs:2103
+#: linux/app/src/window.rs:2157
 msgid "A folder with this name exists in that folder already"
 msgstr "Folder o tej nazwie już istnieje w tym folderze"
 
-#: linux/app/src/window.rs:2216
+#: linux/app/src/window.rs:2270
 msgid "Connect with a Nextcloud account from GNOME Settings"
 msgstr "Połącz się z kontem Nextcloud z Ustawień GNOME"
 
-#: linux/app/src/window.rs:2219 linux/app/ui/window.blp:58
+#: linux/app/src/window.rs:2273 linux/app/ui/window.blp:58
 msgid "Nextcloud Server"
 msgstr "Serwer Nextcloud"
 
-#: linux/app/src/window.rs:2222
+#: linux/app/src/window.rs:2276
 msgid "Sign in to your Nextcloud; Notav gets an app password of its own"
 msgstr ""
 "Zaloguj się do swojego Nextcloud; Notav dostanie własne hasło aplikacji"
 
-#: linux/app/src/window.rs:2303
+#: linux/app/src/window.rs:2357
 msgid "Enter the Nextcloud server first"
 msgstr "Najpierw podaj serwer Nextcloud"
 
-#: linux/app/src/window.rs:2419 linux/app/ui/settings.blp:213
+#: linux/app/src/window.rs:2473 linux/app/ui/settings.blp:213
 #: linux/app/ui/window.blp:110
 msgid "Sign In with Browser"
 msgstr "Zaloguj się w przeglądarce"
 
-#: linux/app/src/window.rs:2433
+#: linux/app/src/window.rs:2487
 msgid "Cannot start login"
 msgstr "Nie można rozpocząć logowania"
 
-#: linux/app/src/window.rs:2434
+#: linux/app/src/window.rs:2488
 #, rust-format
 msgid "Cannot start login: {error}"
 msgstr "Nie można rozpocząć logowania: {error}"
 
-#: linux/app/src/window.rs:2442
+#: linux/app/src/window.rs:2496
 msgid "Login link copied to clipboard"
 msgstr "Skopiowano odnośnik logowania do schowka"
 
-#: linux/app/src/window.rs:2462
+#: linux/app/src/window.rs:2516
 #, rust-format
 msgid "Login failed: {error}"
 msgstr "Logowanie nie powiodło się: {error}"
 
-#: linux/app/src/window.rs:2464
+#: linux/app/src/window.rs:2518
 msgid "Login failed"
 msgstr "Logowanie nie powiodło się"
 
-#: linux/app/src/window.rs:2467
+#: linux/app/src/window.rs:2521
 msgid "Login timed out"
 msgstr "Upłynął czas na zalogowanie"
 
-#: linux/app/src/window.rs:2516
+#: linux/app/src/window.rs:2570
 msgid "Wrong login name or password"
 msgstr "Błędna nazwa użytkownika lub hasło"
 
-#: linux/app/src/window.rs:2517
+#: linux/app/src/window.rs:2571
 #, rust-format
 msgid "Sign-in failed: {error}"
 msgstr "Logowanie nie powiodło się: {error}"
 
-#: linux/app/src/window.rs:2518
+#: linux/app/src/window.rs:2572
 msgid "Sign-in failed"
 msgstr "Logowanie nie powiodło się"
 
@@ -699,12 +741,12 @@ msgid "The Nextcloud server always stays on this device"
 msgstr "Serwer Nextcloud zawsze pozostaje tylko na tym urządzeniu"
 
 #: linux/app/ui/settings.blp:245 linux/app/ui/settings.blp:250
-#: linux/app/ui/window.blp:556
+#: linux/app/ui/window.blp:563
 msgid "Copy Login Link"
 msgstr "Skopiuj odnośnik logowania"
 
 #: linux/app/ui/settings.blp:246 linux/app/ui/settings.blp:251
-#: linux/app/ui/window.blp:557
+#: linux/app/ui/window.blp:564
 msgid "Sign In with Password…"
 msgstr "Zaloguj się hasłem…"
 
@@ -720,11 +762,11 @@ msgstr "Wyszukaj"
 msgid "Undo Delete or Move"
 msgstr "Cofnij usunięcie lub przeniesienie"
 
-#: linux/app/ui/shortcuts.blp:35 linux/app/ui/window.blp:549
+#: linux/app/ui/shortcuts.blp:35 linux/app/ui/window.blp:556
 msgid "Preferences"
 msgstr "Preferencje"
 
-#: linux/app/ui/shortcuts.blp:40 linux/app/ui/window.blp:550
+#: linux/app/ui/shortcuts.blp:40 linux/app/ui/window.blp:557
 msgid "Keyboard Shortcuts"
 msgstr "Skróty klawiszowe"
 
@@ -732,7 +774,7 @@ msgstr "Skróty klawiszowe"
 msgid "Close Window"
 msgstr "Zamknij okno"
 
-#: linux/app/ui/shortcuts.blp:50 linux/app/ui/window.blp:552
+#: linux/app/ui/shortcuts.blp:50 linux/app/ui/window.blp:559
 msgid "Quit"
 msgstr "Zakończ"
 
@@ -767,6 +809,56 @@ msgstr "Mniejszy tekst"
 #: linux/app/ui/shortcuts.blp:99
 msgid "Reset Text Size"
 msgstr "Domyślny rozmiar tekstu"
+
+#: linux/app/ui/trash.blp:7 linux/app/ui/window.blp:551
+msgid "Trash"
+msgstr "Kosz"
+
+#: linux/app/ui/trash.blp:47
+msgid ""
+"Your Nextcloud keeps deleted notes for a while, as its administrator set it, "
+"then deletes them for good."
+msgstr ""
+"Twój Nextcloud przechowuje usunięte notatki przez jakiś czas, jak ustawił to "
+"jego administrator, a potem usuwa je na zawsze."
+
+#: linux/app/ui/trash.blp:68
+msgid "Trash Is Empty"
+msgstr "Kosz jest pusty"
+
+#: linux/app/ui/trash.blp:69
+msgid "Deleted notes are kept here for a while"
+msgstr "Usunięte notatki są tu przechowywane przez jakiś czas"
+
+#: linux/app/ui/trash.blp:78
+msgid "Cannot Open the Trash"
+msgstr "Nie można otworzyć kosza"
+
+#: linux/app/ui/versions.blp:15
+msgid "Versions"
+msgstr "Wersje"
+
+#: linux/app/ui/versions.blp:51
+msgid ""
+"Your Nextcloud keeps earlier versions as its administrator set it: by "
+"default, fewer the older they are."
+msgstr ""
+"Twój Nextcloud przechowuje wcześniejsze wersje tak, jak ustawił to jego "
+"administrator: domyślnie tym mniej, im są starsze."
+
+#: linux/app/ui/versions.blp:72
+msgid "No Versions Yet"
+msgstr "Brak wersji"
+
+#: linux/app/ui/versions.blp:73
+msgid "Versions are kept once the note is on your Nextcloud and changes there"
+msgstr ""
+"Wersje są przechowywane, gdy notatka jest już w Twoim Nextcloudzie i się tam "
+"zmienia"
+
+#: linux/app/ui/versions.blp:82
+msgid "Cannot Load the Versions"
+msgstr "Nie można wczytać wersji"
 
 #: linux/app/ui/window.blp:32
 msgid "Notes and a journal kept as Markdown files in your Nextcloud"
@@ -893,7 +985,7 @@ msgstr "Zawijanie wierszy"
 msgid "Full Width"
 msgstr "Pełna szerokość"
 
-#: linux/app/ui/window.blp:551
+#: linux/app/ui/window.blp:558
 msgid "About Notav"
 msgstr "O programie Notav"
 
@@ -966,9 +1058,6 @@ msgstr "Łączy się przez Konta online GNOME lub logowanie w przeglądarce"
 #~ msgstr[2] ""
 #~ "Folder „{name}” i {count} notatek w nim zostaną usunięte na wszystkich "
 #~ "urządzeniach."
-
-#~ msgid "Delete Note?"
-#~ msgstr "Usunąć notatkę?"
 
 #~ msgid "SelfRef"
 #~ msgstr "SelfRef"

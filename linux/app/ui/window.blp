@@ -546,6 +546,13 @@ menu view_menu {
 }
 
 menu main_menu {
+  // Only where the server keeps deleted notes (src/window.rs `enable_trash`).
+  item {
+    label: _("Trash");
+    action: "win.trash";
+    hidden-when: "action-disabled";
+  }
+
   item (_("Preferences"), "win.preferences")
   item (_("Keyboard Shortcuts"), "app.shortcuts")
   item (_("About Notav"), "app.about")

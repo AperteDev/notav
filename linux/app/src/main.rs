@@ -3,6 +3,7 @@
 
 mod connection;
 mod editor;
+mod files;
 mod goa;
 mod i18n;
 mod settings;

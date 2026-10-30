@@ -48,9 +48,6 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
   the notes stay on this computer, synced nowhere. Later, with an account too, notes kept on
   this device next to the synced ones, as Todav's local lists (see
   [Open questions](#open-questions-and-risks)).
-- **Versions** of a note from Nextcloud's file versions (`remote.php/dav/versions/<user>/`):
-  "Versions" in a note's menu lists them, shows one and restores it (moved into `restore`), as
-  Joplin's and Standard Notes' note history; also a way back after a conflict copy.
 - **GNOME Shell search**: notes found from the Activities overview by title and text, as Iotas
   and Folio have it; Todav's search provider (`linux/app/src/search.rs`, its `.ini`) over the
   core's search, under the app's own bus name.
@@ -82,11 +79,9 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
   its first match, highlighted (as Obsidian and Joplin). Ctrl+F finds (and replaces) in the open
   note, GtkSourceView's search, and Ctrl+Shift+F searches all notes, as Obsidian and VS Code
   (Iotas searches both ways too).
-- **Trash** through Nextcloud's own trash bin, where deleted notes already go: its WebDAV API
-  (`remote.php/dav/trashbin/<user>/trash`) lists them with where they were and when they were
-  deleted, restores one in place (moved into `restore`), deletes one for good and empties it. A
-  view of the deleted notes in the notes folder restores them; no trash folder of Notav's own.
-  Folio has a trash too.
+- **Trash and versions**, more: "Delete All" in the Trash (each note, not the whole trash bin,
+  which holds other files too); a version's changes against the note's text rather than the
+  whole text.
 - **Templates**: notes in a folder chosen in Preferences (a synced setting); "New Note from
   Template" copies one, filling `{{title}}`, `{{date}}` and `{{time}}` (dates from the locale).
   The Journal's daily notes start from one template note already (`{{title}}`, `{{date}}`;
@@ -139,9 +134,6 @@ Later (v2):
 - **On This Device Only**: where the notes live, the local database only (as Todav's local
   lists) or Markdown files in a folder on disk that other apps (Obsidian) open too; and how a
   local note moves to an account later.
-- **Trash and versions**: Nextcloud's trash bin keeps files for a time of its own (the
-  server's `trashbin_retention_obligation`), and its versions API documents listing and
-  restoring but not reading an old version's text (a `GET` of the version is to be tried).
 - **Spell checking**: libspelling is a new dependency (as `AGENTS.md` asks, with its reason);
   whether the GNOME runtime the Flatpak uses ships it, or the manifest builds it.
 - **GNOME Shell search**: the provider is reached through the app's bus name and D-Bus

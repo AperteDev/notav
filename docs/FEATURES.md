@@ -24,6 +24,8 @@ What Notav can do, in short. The details of each release are in the
 - New notes and folders, renaming folders and deleting both from the tree's menu; a note is
   renamed through its title.
 - Undo deleting, moving and renaming (the toast's Undo, or Ctrl+Z).
+- Trash: restore deleted notes from Nextcloud's trash bin, or delete them for good.
+- Versions of a note, from Nextcloud's file versions, to look at and restore.
 - Search through titles and text, ignoring case and accents.
 - Journal: Today's Note (Ctrl+T), made from a template note, in a folder and name format of your
   choice.
@@ -60,9 +62,8 @@ What Notav can do, in short. The details of each release are in the
 ## Planned
 
 - Use Notav without a server: notes on this device only.
-- Trash: restore deleted notes from Nextcloud's trash bin.
-- Versions of a note, from Nextcloud's file versions.
 - Notes in GNOME Shell's search.
+- Emptying the Trash of notes at once; a version's changes shown against the note.
 - Spell checking.
 - Find and replace in a note (Ctrl+F); search filters, results opening at the match.
 - `[[` suggesting notes as you type; links updated when a note is renamed or moved.

@@ -1,0 +1,84 @@
+using Gtk 4.0;
+using Adw 1;
+
+// The notes and folders deleted from the notes folder that Nextcloud's trash bin keeps
+// (src/files.rs `trash`); there only when the server has a trash bin.
+Adw.Dialog dialog {
+  title: _("Trash");
+  content-width: 480;
+  content-height: 600;
+
+  // Over the dialog: the window's own would be under it.
+  child: Adw.ToastOverlay toasts {
+    child: Adw.ToolbarView {
+      [top]
+      Adw.HeaderBar {}
+
+      content: Gtk.Stack stack {
+        Gtk.StackPage {
+          name: "loading";
+
+          child: Adw.Spinner {
+            halign: center;
+            valign: center;
+            width-request: 32;
+            height-request: 32;
+          };
+        }
+
+        Gtk.StackPage {
+          name: "list";
+
+          child: Gtk.ScrolledWindow {
+            hscrollbar-policy: never;
+
+            Adw.Clamp {
+              maximum-size: 600;
+
+              Gtk.Box {
+                orientation: vertical;
+                spacing: 12;
+                margin-top: 12;
+                margin-bottom: 24;
+                margin-start: 12;
+                margin-end: 12;
+
+                Gtk.Label {
+                  label: _("Your Nextcloud keeps deleted notes for a while, as its administrator set it, then deletes them for good.");
+                  wrap: true;
+                  xalign: 0;
+                  styles ["dim-label"]
+                }
+
+                Gtk.ListBox list {
+                  selection-mode: none;
+                  valign: start;
+                  styles ["boxed-list"]
+                }
+              }
+            }
+          };
+        }
+
+        Gtk.StackPage {
+          name: "empty";
+
+          child: Adw.StatusPage {
+            icon-name: "user-trash-symbolic";
+            title: _("Trash Is Empty");
+            description: _("Deleted notes are kept here for a while");
+          };
+        }
+
+        Gtk.StackPage {
+          name: "error";
+
+          child: Adw.StatusPage error {
+            icon-name: "network-offline-symbolic";
+            title: _("Cannot Open the Trash");
+          };
+        }
+      };
+    };
+  };
+}

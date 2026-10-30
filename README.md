@@ -16,8 +16,8 @@ stay in your own Nextcloud as plain Markdown files, so the Nextcloud Notes app a
 and syncs while it runs. It is the sibling of [Todav](https://github.com/AperteDev/todav), the
 tasks and calendar app.
 
-Notav is at an early stage: notes, folders, search, sync, the journal and links between notes
-work; tags, favorites, the trash and links to Todav's tasks are next (see the
+Notav is at an early stage: notes, folders, search, sync, the journal, links between notes,
+favorites, the trash and versions work; tags and links to Todav's tasks are next (see the
 [roadmap](docs/ROADMAP.md)).
 
 Notav is developed in my free time. If it keeps your notes in order, you can support its

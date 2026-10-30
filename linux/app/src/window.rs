@@ -573,6 +573,11 @@ fn build(app: &adw::Application) -> Rc<Ui> {
     let b = view!("window");
     let window: adw::ApplicationWindow = get(&b, "window");
     window.set_application(Some(app));
+    // A development build (debug: `cargo run`, `make sandbox`; packages are release builds) has
+    // GNOME's striped header bars, so it is not taken for the installed app.
+    if cfg!(debug_assertions) {
+        window.add_css_class("devel");
+    }
     if crate::sandbox() {
         window.set_title(Some("Notav (sandbox)"));
     }

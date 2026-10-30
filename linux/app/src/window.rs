@@ -24,6 +24,9 @@ const CSS: &str = "
 .navigation-sidebar > row.drop-target { background-color: alpha(var(--accent-bg-color), 0.2); }
 .navigation-sidebar.drop-target { background-color: alpha(var(--accent-bg-color), 0.12); }
 .navigation-sidebar > row.dragged { opacity: 0.5; }
+row.dragged { opacity: 0.4; }
+row.drop-above { box-shadow: inset 0 2px 0 0 var(--accent-bg-color); }
+row.drop-below { box-shadow: inset 0 -2px 0 0 var(--accent-bg-color); }
 .navigation-sidebar.dense > row { min-height: 28px; margin-bottom: 0; border-radius: 6px; }
 .drag-card { padding: 6px 12px; border-radius: 6px; background-color: var(--popover-bg-color);
   box-shadow: 0 1px 4px alpha(black, 0.3); }
@@ -45,14 +48,34 @@ const INDENT: i32 = 16;
 #[derive(Debug, Clone, PartialEq)]
 enum Dragged {
     Note(Note),
-    Folder(String),
+    /// A folder of an account.
+    Folder(i64, String),
 }
 
-/// A row of the sidebar's tree.
+/// A row of the sidebar's tree. Accounts have rows while more than one is shown.
 #[derive(Debug, Clone, PartialEq)]
 enum Item {
-    Folder(String),
+    Account(i64),
+    Folder(i64, String),
     Note(Note),
+}
+
+impl Item {
+    /// The account and the folder this row's new notes go to: its own for an account and a
+    /// folder (the top level for an account), a note's folder.
+    fn place(&self) -> (i64, String) {
+        match self {
+            Item::Account(a) => (*a, String::new()),
+            Item::Folder(a, f) => (*a, f.clone()),
+            Item::Note(n) => (n.account, n.folder.clone()),
+        }
+    }
+}
+
+/// A folder's key among the open ones (`expanded_folders`): the account's id, ":", its path.
+/// An account's is its id and ":", there while it is closed: accounts start open.
+fn folder_key(account: i64, folder: &str) -> String {
+    format!("{account}:{folder}")
 }
 
 /// How long typing pauses before the text is saved (and the sync asked for).
@@ -79,14 +102,9 @@ struct Ui {
     toasts: adw::ToastOverlay,
     stack: gtk::Stack,
     split: adw::NavigationSplitView,
-    /// Welcome page: how to connect, the GOA account or a server, then the notes folder.
-    welcome: adw::NavigationView,
-    conn: Rc<crate::connection::Connection>,
-    connect_goa: gtk::Button,
-    login: adw::SplitButton,
-    cancel_login: gtk::Button,
-    folder: adw::EntryRow,
-    folder_done: gtk::Button,
+    /// Welcome page: the steps adding the first account (`add_account`).
+    welcome: adw::Bin,
+    add_account: RefCell<Option<Rc<crate::add_account::AddAccount>>>,
     sync_state: gtk::Stack,
     search_button: gtk::ToggleButton,
     search: gtk::SearchEntry,
@@ -104,10 +122,12 @@ struct Ui {
 
     /// The items of `tree`'s rows, in order.
     items: RefCell<Vec<Item>>,
-    /// Folders shown open in the tree (the device-only `expanded_folders` setting).
+    /// Folders and accounts shown open in the tree, by `folder_key` (the device-only
+    /// `expanded_folders` setting).
     expanded: RefCell<HashSet<String>>,
-    /// Where a new note goes: the folder last opened in the tree, or the open note's.
-    target_folder: RefCell<String>,
+    /// Where a new note goes: the account and folder last opened in the tree, or the open
+    /// note's.
+    target_folder: RefCell<(i64, String)>,
     note_title: adw::WindowTitle,
     /// Offers to restart into a newer version (`update_banner`).
     update_banner: adw::Banner,
@@ -294,33 +314,73 @@ pub fn present(app: &adw::Application) {
     if crate::ready() {
         ui.stack.set_visible_child_name("main");
         refresh(&ui);
-    } else {
-        ui.stack.set_visible_child_name("welcome");
-        // Connected before, the folder not chosen yet (the app quit on that step).
-        if crate::connected() && ui.welcome.visible_page_tag().as_deref() != Some("folder") {
-            show_folder_step(&ui);
-        }
+    } else if ui.add_account.borrow().is_none() {
+        welcome(&ui);
     }
     ui.window.present();
 }
 
-/// Disconnected: back to the welcome page, at its first step.
+/// The welcome page, made anew (GNOME Online Accounts may have changed); the window shows the
+/// main page once the first account is added. Added before without its notes folder (the app
+/// quit on that step): that step.
+fn welcome(ui: &Rc<Ui>) {
+    let weak = Rc::downgrade(ui);
+    let add = crate::add_account::new(true, move |id| {
+        let Some(ui) = weak.upgrade() else { return };
+        ui.add_account.take();
+        ui.welcome.set_child(gtk::Widget::NONE);
+        open_account(&ui, id);
+        ui.stack.set_visible_child_name("main");
+        refresh(&ui);
+    });
+    if let Some(a) = core().accounts().first() {
+        add.ask_folder(a.id);
+    }
+    ui.welcome.set_child(Some(&add.root));
+    *ui.add_account.borrow_mut() = Some(add);
+    ui.stack.set_visible_child_name("welcome");
+}
+
+/// No account left: back to the welcome page.
 pub fn show_welcome() {
     if let Some(ui) = ui() {
         close_note(&ui);
-        ui.welcome.pop_to_tag("choose");
-        ui.stack.set_visible_child_name("welcome");
         refresh(&ui); // empties the tree
+        welcome(&ui);
     }
 }
 
-/// The account was replaced (from Preferences): show its notes once they arrive.
+/// Accounts came, went, were switched on or off or renamed (in Preferences): the tree shows
+/// them as they are now; one added is shown open.
 pub fn account_changed() {
     if let Some(ui) = ui() {
-        close_note(&ui);
-        ui.stack.set_visible_child_name("main");
+        if ui
+            .current
+            .borrow()
+            .as_ref()
+            .is_some_and(|n| core().note(n.id).is_none())
+        {
+            close_note(&ui);
+        }
+        if crate::ready() {
+            ui.stack.set_visible_child_name("main");
+        }
         refresh(&ui);
+        enable_trash(&ui);
     }
+}
+
+/// Account `id` is new: its notes go there.
+fn open_account(ui: &Ui, id: i64) {
+    *ui.target_folder.borrow_mut() = (id, String::new());
+}
+
+/// Account `id` was added in Preferences.
+pub fn account_added(id: i64) {
+    if let Some(ui) = ui() {
+        open_account(&ui, id);
+    }
+    account_changed();
 }
 
 /// Save what the editor holds now (before the notes folder changes, say).
@@ -367,8 +427,26 @@ fn enable_trash(ui: &Ui) {
         .lookup_action("trash")
         .and_downcast::<gio::SimpleAction>()
     {
-        a.set_enabled(crate::ready() && core().features().trash);
+        a.set_enabled(!trash_accounts().is_empty());
     }
+}
+
+/// The accounts shown and syncing whose server keeps deleted notes.
+pub fn trash_accounts() -> Vec<notav_core::Account> {
+    core()
+        .accounts()
+        .into_iter()
+        .filter(|a| core().syncing(a.id) && core().features(a.id).trash)
+        .collect()
+}
+
+/// The accounts whose notes the tree shows: those switched on.
+fn shown_accounts() -> Vec<notav_core::Account> {
+    core()
+        .accounts()
+        .into_iter()
+        .filter(|a| a.enabled)
+        .collect()
 }
 
 /// Tell what was done, with a button undoing just that (the latest change).
@@ -482,15 +560,15 @@ fn locked_toast(ui: &Rc<Ui>, l: &notav_core::Locked) {
     t.set_timeout(0);
     if let Some(file) = l.file.clone() {
         t.set_button_label(Some(&gettext("Unlock…")));
-        let (ui, title) = (ui.clone(), title_of(&l.path));
-        t.connect_button_clicked(move |_| unlock(&ui, file.clone(), title.clone()));
+        let (ui, title, account) = (ui.clone(), title_of(&l.path), l.account);
+        t.connect_button_clicked(move |_| unlock(&ui, account, file.clone(), title.clone()));
     }
     ui.toasts.add_toast(t);
 }
 
-/// Remove a lock on the server, after asking: an editor that still has the note open may lose
-/// what it saves afterwards.
-fn unlock(ui: &Rc<Ui>, file: String, title: String) {
+/// Remove a lock on account `account`'s server, after asking: an editor that still has the note
+/// open may lose what it saves afterwards.
+fn unlock(ui: &Rc<Ui>, account: i64, file: String, title: String) {
     let ui = ui.clone();
     glib::spawn_future_local(async move {
         let alert = adw::AlertDialog::new(
@@ -509,7 +587,7 @@ fn unlock(ui: &Rc<Ui>, file: String, title: String) {
         if alert.choose_future(Some(&ui.window)).await != "unlock" {
             return;
         }
-        match gio::spawn_blocking(move || core().unlock(file)).await {
+        match gio::spawn_blocking(move || core().unlock(account, file)).await {
             Ok(Ok(())) => {
                 ui.last_locked.borrow_mut().clear();
                 crate::sync_now();
@@ -608,12 +686,7 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         stack: get(&b, "stack"),
         split: get(&b, "split"),
         welcome: get(&b, "welcome"),
-        conn: crate::connection::Connection::new(true, None),
-        connect_goa: get(&b, "connect_goa"),
-        login: get(&b, "login"),
-        cancel_login: get(&b, "cancel_login"),
-        folder: get(&b, "folder"),
-        folder_done: get(&b, "folder_done"),
+        add_account: RefCell::new(None),
         sync_state: get(&b, "sync_state"),
         search_button: get(&b, "search_button"),
         search: get(&b, "search"),
@@ -626,15 +699,8 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         rows: RefCell::new(Vec::new()),
         dragging: RefCell::new(None),
         items: RefCell::new(Vec::new()),
-        expanded: RefCell::new(
-            core()
-                .setting("expanded_folders".into())
-                .unwrap_or_default()
-                .lines()
-                .map(str::to_string)
-                .collect(),
-        ),
-        target_folder: RefCell::new(String::new()),
+        expanded: RefCell::new(expanded_folders()),
+        target_folder: RefCell::new((0, String::new())),
         note_title: get(&b, "note_title"),
         update_banner: get(&b, "update_banner"),
         note_stack: get(&b, "note_stack"),
@@ -662,7 +728,6 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         last_error: RefCell::new(String::new()),
         last_locked: RefCell::new(Vec::new()),
     });
-    ui.conn.attach(&get(&b, "login_group"));
     let zoom: gtk::Box = get(&b, "zoom_box");
     if zoom.parent().is_none() {
         get::<gtk::PopoverMenu>(&b, "view_popover").add_child(&zoom, "zoom");
@@ -676,9 +741,29 @@ fn build(app: &adw::Application) -> Rc<Ui> {
     apply_text_look(&ui);
     close_note(&ui);
     connect(&ui);
-    connect_welcome(&ui, &b);
     ui.update_banner.set_revealed(crate::update::updated());
     ui
+}
+
+/// The open folders and accounts (`folder_key`) from the device-only `expanded_folders`
+/// setting. Notav 0.1's had paths alone: those of its one account (the first).
+fn expanded_folders() -> HashSet<String> {
+    let keyed = |e: &str| {
+        e.split_once(':')
+            .is_some_and(|(id, _)| !id.is_empty() && id.bytes().all(|b| b.is_ascii_digit()))
+    };
+    core()
+        .setting("expanded_folders".into())
+        .unwrap_or_default()
+        .lines()
+        .map(|e| {
+            if keyed(e) {
+                e.to_string()
+            } else {
+                folder_key(1, e)
+            }
+        })
+        .collect()
 }
 
 /// Offer to restart once a newer version is installed.
@@ -959,18 +1044,18 @@ fn connect(ui: &Rc<Ui>) {
     trash.connect_activate(|_, _| crate::files::trash());
     ui.window.add_action(&trash);
     enable_trash(ui);
-    // From the tree's menus, with the folder ("": the top level).
+    // From the tree's menus, with the account and folder ("": the top level).
     for (name, f) in [
-        ("new-note-in", new_note_in as fn(&Rc<Ui>, String)),
+        ("new-note-in", new_note_in as fn(&Rc<Ui>, (i64, String))),
         ("new-folder-in", new_folder),
         ("rename-folder", rename_folder),
         ("delete-folder", delete_folder),
     ] {
-        let a = gio::SimpleAction::new(name, Some(glib::VariantTy::STRING));
+        let a = gio::SimpleAction::new(name, glib::VariantTy::new("(xs)").ok());
         let weak = Rc::downgrade(ui);
-        a.connect_activate(move |_, folder| {
-            if let (Some(ui), Some(folder)) = (weak.upgrade(), folder.and_then(|f| f.str())) {
-                f(&ui, folder.to_string());
+        a.connect_activate(move |_, place| {
+            if let (Some(ui), Some(place)) = (weak.upgrade(), place.and_then(|p| p.get())) {
+                f(&ui, place);
             }
         });
         ui.window.add_action(&a);
@@ -1100,19 +1185,17 @@ fn connect(ui: &Rc<Ui>) {
     ui.tree.connect_row_activated(move |_, row| {
         let Some(ui) = weak.upgrade() else { return };
         let item = ui.items.borrow().get(row.index() as usize).cloned();
-        glib::idle_add_local_once(move || match item {
-            // Folder rows are not activatable: they have their own keys and clicks.
-            Some(Item::Folder(_)) => {}
-            Some(Item::Note(n)) => {
+        // Account and folder rows are not activatable: they have their own keys and clicks.
+        glib::idle_add_local_once(move || {
+            if let Some(Item::Note(n)) = item {
                 ui.search_button.set_active(false);
                 open_note(&ui, &n);
                 ui.split.set_show_content(true);
             }
-            None => {}
         });
     });
 
-    // Enter or Space on a folder opens or closes it.
+    // Enter or Space on an account or folder opens or closes it.
     let keys = gtk::EventControllerKey::new();
     let weak = Rc::downgrade(ui);
     keys.connect_key_pressed(move |_, key, _, _| {
@@ -1125,10 +1208,10 @@ fn connect(ui: &Rc<Ui>) {
         }
         let row = ui.tree.focus_child().and_downcast::<gtk::ListBoxRow>();
         let item = row.and_then(|r| ui.items.borrow().get(r.index() as usize).cloned());
-        let Some(Item::Folder(f)) = item else {
+        let Some(item) = item.filter(|i| !matches!(i, Item::Note(_))) else {
             return glib::Propagation::Proceed;
         };
-        glib::idle_add_local_once(move || toggle_folder(&ui, f));
+        glib::idle_add_local_once(move || toggle_folder(&ui, &item));
         glib::Propagation::Stop
     });
     ui.tree.add_controller(keys);
@@ -1314,12 +1397,19 @@ fn refresh(ui: &Rc<Ui>) {
 
 /// Rebuild the sidebar's tree, the open note's row selected.
 fn refresh_tree(ui: &Rc<Ui>) {
-    let (folders, notes) = if crate::ready() {
-        (core().folders(), core().notes())
+    let (accounts, notes): (Vec<(i64, Vec<String>)>, Vec<Note>) = if crate::ready() {
+        let accounts = shown_accounts();
+        (
+            accounts
+                .iter()
+                .map(|a| (a.id, core().folders(a.id)))
+                .collect(),
+            core().notes(),
+        )
     } else {
         Default::default()
     };
-    let items = tree(&folders, &notes, &ui.expanded.borrow());
+    let items = tree(&accounts, &notes, &ui.expanded.borrow());
     ui.tree.remove_all();
     ui.rows.borrow_mut().clear();
     let current = ui.current.borrow().as_ref().map(|n| n.id);
@@ -1330,14 +1420,23 @@ fn refresh_tree(ui: &Rc<Ui>) {
     }
     let icons = tree_icons();
     for (depth, item) in &items {
-        let open = matches!(item, Item::Folder(f) if ui.expanded.borrow().contains(f));
-        let count = match item {
-            Item::Folder(f) => notes_in(&notes, f),
-            Item::Note(_) => 0,
+        let (open, count) = {
+            let expanded = ui.expanded.borrow();
+            match item {
+                Item::Account(a) => (
+                    !expanded.contains(&folder_key(*a, "")),
+                    notes.iter().filter(|n| n.account == *a).count(),
+                ),
+                Item::Folder(a, f) => (
+                    expanded.contains(&folder_key(*a, f)),
+                    notes_in(&notes, *a, f),
+                ),
+                Item::Note(_) => (false, 0),
+            }
         };
         let row = tree_row(*depth, item, open, icons, count);
         match item {
-            Item::Folder(f) => {
+            Item::Account(_) | Item::Folder(..) => {
                 // Every click opens or closes it: the list's own activation skips the second
                 // and third press of a double or triple click.
                 let click = gtk::GestureClick::new();
@@ -1345,17 +1444,19 @@ fn refresh_tree(ui: &Rc<Ui>) {
                 // click); not activatable, so the list does not toggle it too.
                 click.set_button(gtk::gdk::BUTTON_PRIMARY);
                 row.set_activatable(false);
-                let (weak, path) = (Rc::downgrade(ui), f.clone());
+                let (weak, it) = (Rc::downgrade(ui), item.clone());
                 click.connect_released(move |_, _, _, _| {
                     if let Some(ui) = weak.upgrade() {
-                        let path = path.clone();
+                        let it = it.clone();
                         // After the click, as that rebuilds the tree.
-                        glib::idle_add_local_once(move || toggle_folder(&ui, path));
+                        glib::idle_add_local_once(move || toggle_folder(&ui, &it));
                     }
                 });
                 row.add_controller(click);
-                let name = f.rsplit('/').next().unwrap_or(f.as_str());
-                connect_drag(ui, &row, Dragged::Folder(f.clone()), name);
+                if let Item::Folder(a, f) = item {
+                    let name = f.rsplit('/').next().unwrap_or(f.as_str());
+                    connect_drag(ui, &row, Dragged::Folder(*a, f.clone()), name);
+                }
             }
             Item::Note(n) => connect_drag(ui, &row, Dragged::Note(n.clone()), &n.title),
         }
@@ -1370,11 +1471,17 @@ fn refresh_tree(ui: &Rc<Ui>) {
     *ui.items.borrow_mut() = items.into_iter().map(|(_, i)| i).collect();
 }
 
-/// The tree's rows: each folder's folders, then its notes (favorites first), by name; what is in
-/// a folder only while it is open. With each row its depth.
-fn tree(folders: &[String], notes: &[Note], expanded: &HashSet<String>) -> Vec<(usize, Item)> {
+/// The tree's rows: with more than one account, each account's (open unless closed), then
+/// what is in it. In a folder its folders, then its notes (favorites first), by name; what is
+/// in a folder only while it is open. With each row its depth.
+fn tree(
+    accounts: &[(i64, Vec<String>)],
+    notes: &[Note],
+    expanded: &HashSet<String>,
+) -> Vec<(usize, Item)> {
     fn add(
         out: &mut Vec<(usize, Item)>,
+        account: i64,
         folder: &str,
         depth: usize,
         folders: &[String],
@@ -1385,12 +1492,15 @@ fn tree(folders: &[String], notes: &[Note], expanded: &HashSet<String>) -> Vec<(
         let mut subs: Vec<&String> = folders.iter().filter(|f| parent(f) == folder).collect();
         subs.sort_by(|a, b| by_name(a.rsplit('/').next().unwrap(), b.rsplit('/').next().unwrap()));
         for f in subs {
-            out.push((depth, Item::Folder(f.clone())));
-            if expanded.contains(f) {
-                add(out, f, depth + 1, folders, notes, expanded);
+            out.push((depth, Item::Folder(account, f.clone())));
+            if expanded.contains(&folder_key(account, f)) {
+                add(out, account, f, depth + 1, folders, notes, expanded);
             }
         }
-        let mut here: Vec<&Note> = notes.iter().filter(|n| n.folder == folder).collect();
+        let mut here: Vec<&Note> = notes
+            .iter()
+            .filter(|n| n.account == account && n.folder == folder)
+            .collect();
         // Favorites first.
         here.sort_by(|a, b| {
             (b.favorite.cmp(&a.favorite)).then_with(|| by_name(&a.title, &b.title))
@@ -1398,18 +1508,29 @@ fn tree(folders: &[String], notes: &[Note], expanded: &HashSet<String>) -> Vec<(
         out.extend(here.into_iter().map(|n| (depth, Item::Note(n.clone()))));
     }
     let mut out = Vec::new();
-    add(&mut out, "", 0, folders, notes, expanded);
+    match accounts {
+        [(account, folders)] => add(&mut out, *account, "", 0, folders, notes, expanded),
+        _ => {
+            for (account, folders) in accounts {
+                out.push((0, Item::Account(*account)));
+                if !expanded.contains(&folder_key(*account, "")) {
+                    add(&mut out, *account, "", 1, folders, notes, expanded);
+                }
+            }
+        }
+    }
     out
 }
 
-/// How many notes are in `folder` and its folders.
-fn notes_in(notes: &[Note], folder: &str) -> usize {
+/// How many notes are in `folder` of `account` and its folders.
+fn notes_in(notes: &[Note], account: i64, folder: &str) -> usize {
     notes
         .iter()
         .filter(|n| {
-            n.folder
-                .strip_prefix(folder)
-                .is_some_and(|rest| rest.is_empty() || rest.starts_with('/'))
+            n.account == account
+                && n.folder
+                    .strip_prefix(folder)
+                    .is_some_and(|rest| rest.is_empty() || rest.starts_with('/'))
         })
         .count()
 }
@@ -1441,8 +1562,9 @@ pub fn apply_tree_look() {
     }
 }
 
-/// A folder (its arrow showing whether it is open) or a note, indented by its depth, with its
-/// icon if `icons` (folders, notes) says so; a folder with its `count` of notes, dimmed.
+/// An account or a folder (its arrow showing whether it is open) or a note, indented by its
+/// depth, with its icon if `icons` (folders, notes) says so (an account's always); an account
+/// or folder with its `count` of notes, dimmed.
 fn tree_row(
     depth: usize,
     item: &Item,
@@ -1452,8 +1574,14 @@ fn tree_row(
 ) -> gtk::ListBoxRow {
     let line = gtk::Box::new(gtk::Orientation::Horizontal, 4);
     line.set_margin_start(INDENT * depth as i32);
+    let account = match item {
+        Item::Account(a) => core().account(*a),
+        _ => None,
+    };
+    let account_name = account.as_ref().map(crate::account_name);
     let (name, folder) = match item {
-        Item::Folder(f) => (f.rsplit('/').next().unwrap_or(f), true),
+        Item::Account(_) => (account_name.as_deref().unwrap_or_default(), true),
+        Item::Folder(_, f) => (f.rsplit('/').next().unwrap_or(f), true),
         Item::Note(n) => (n.title.as_str(), false),
     };
     let arrow = gtk::Image::new();
@@ -1466,7 +1594,11 @@ fn tree_row(
         }));
     }
     line.append(&arrow);
-    if (folder && icons.0) || (!folder && icons.1) {
+    if let Some(a) = &account {
+        let icon = gtk::Image::from_icon_name(crate::settings::account_icon(a));
+        icon.set_pixel_size(16);
+        line.append(&icon);
+    } else if (folder && icons.0) || (!folder && icons.1) {
         let icon = gtk::Image::from_icon_name(if folder {
             "folder-symbolic"
         } else {
@@ -1476,6 +1608,9 @@ fn tree_row(
         line.append(&icon);
     }
     let label = gtk::Label::new(Some(name));
+    if account.is_some() {
+        label.add_css_class("heading");
+    }
     label.set_xalign(0.0);
     label.set_ellipsize(gtk::pango::EllipsizeMode::End);
     label.set_hexpand(true);
@@ -1499,19 +1634,21 @@ fn tree_row(
     row.set_selectable(!folder);
     // For screen readers and UI tests: a note's row has no tooltip to be named after.
     row.update_property(&[gtk::accessible::Property::Label(name)]);
-    if let Item::Folder(f) = item {
+    if let Item::Folder(_, f) = item {
         row.set_tooltip_text(Some(f));
     }
     row
 }
 
-/// Open or close a folder in the tree; new notes go there.
-fn toggle_folder(ui: &Rc<Ui>, f: String) {
-    if !ui.expanded.borrow_mut().remove(&f) {
-        ui.expanded.borrow_mut().insert(f.clone());
+/// Open or close an account or folder in the tree; new notes go there.
+fn toggle_folder(ui: &Rc<Ui>, item: &Item) {
+    let (account, folder) = item.place();
+    let key = folder_key(account, &folder);
+    if !ui.expanded.borrow_mut().remove(&key) {
+        ui.expanded.borrow_mut().insert(key);
     }
     save_expanded(ui);
-    *ui.target_folder.borrow_mut() = f;
+    *ui.target_folder.borrow_mut() = (account, folder);
     refresh_tree(ui);
 }
 
@@ -1522,12 +1659,12 @@ fn save_expanded(ui: &Ui) {
     let _ = core().set_setting("expanded_folders".into(), open.join("\n"));
 }
 
-/// Open the folders above `folder`, so a note in it shows in the tree.
-fn reveal(ui: &Ui, folder: &str) {
+/// Open account `account` and its folders above `folder`, so a note in it shows in the tree.
+fn reveal(ui: &Ui, account: i64, folder: &str) {
     let mut f = folder;
-    let mut changed = false;
+    let mut changed = ui.expanded.borrow_mut().remove(&folder_key(account, ""));
     while !f.is_empty() {
-        changed |= ui.expanded.borrow_mut().insert(f.to_string());
+        changed |= ui.expanded.borrow_mut().insert(folder_key(account, f));
         f = f.rsplit_once('/').map_or("", |(p, _)| p);
     }
     if changed {
@@ -1589,11 +1726,17 @@ fn subtitle(n: &Note) -> String {
         .and_then(|d| d.format("%x"))
         .map(|d| d.to_string())
         .unwrap_or_default();
-    if n.folder.is_empty() {
-        date
-    } else {
-        format!("{} · {date}", n.folder)
-    }
+    // With more than one account shown, which one it is in.
+    let account = core()
+        .account(n.account)
+        .filter(|_| shown_accounts().len() > 1)
+        .map(|a| crate::account_name(&a));
+    account
+        .into_iter()
+        .chain(Some(n.folder.clone()).filter(|f| !f.is_empty()))
+        .chain([date])
+        .collect::<Vec<_>>()
+        .join(" · ")
 }
 
 /// Open the note a link in the open note names (`markdown::Link::Note`), made if there is none,
@@ -1630,8 +1773,8 @@ fn open_note(ui: &Rc<Ui>, n: &Note) {
     show_heading(ui, n);
     show_page(ui);
     show_backlinks(ui);
-    *ui.target_folder.borrow_mut() = n.folder.clone();
-    reveal(ui, &n.folder);
+    *ui.target_folder.borrow_mut() = (n.account, n.folder.clone());
+    reveal(ui, n.account, &n.folder);
     refresh_tree(ui);
     let _ = core().set_setting("last_note".into(), n.path.clone());
 }
@@ -1792,13 +1935,20 @@ fn rename(ui: &Rc<Ui>) {
     }
 }
 
-/// A new note in the folder last opened in the tree or the open note's (at the top if that
-/// is gone), its title selected for typing over.
+/// A new note in the folder last opened in the tree or the open note's (at the top of its
+/// account if that is gone, of the first account if that is), its title selected for typing
+/// over.
 fn new_note(ui: &Rc<Ui>) {
-    let folder = Some(ui.target_folder.borrow().clone())
-        .filter(|f| core().folders().contains(f))
-        .unwrap_or_default();
-    new_note_in(ui, folder);
+    let (account, folder) = ui.target_folder.borrow().clone();
+    let place = match shown_accounts().iter().find(|a| a.id == account) {
+        Some(_) if core().folders(account).contains(&folder) => (account, folder),
+        Some(_) => (account, String::new()),
+        None => match shown_accounts().first() {
+            Some(a) => (a.id, String::new()),
+            None => return,
+        },
+    };
+    new_note_in(ui, place);
 }
 
 /// Today's note in the journal (`notav_core::journal`), opened; made if there is none.
@@ -1822,10 +1972,11 @@ pub fn today() -> (i32, u32, u32) {
     (now.year(), now.month() as u32, now.day_of_month() as u32)
 }
 
-/// A new note in `folder` ("": the top level), its title selected for typing over.
-fn new_note_in(ui: &Rc<Ui>, folder: String) {
+/// A new note in `folder` ("": the top level) of `account`, its title selected for typing
+/// over.
+fn new_note_in(ui: &Rc<Ui>, (account, folder): (i64, String)) {
     save_now(ui);
-    match core().add_note(folder, gettext("Untitled"), String::new()) {
+    match core().add_note(account, folder, gettext("Untitled"), String::new()) {
         Ok(n) => {
             ui.search_button.set_active(false);
             open_note(ui, &n);
@@ -1842,8 +1993,8 @@ fn new_note_in(ui: &Rc<Ui>, folder: String) {
     }
 }
 
-/// A new folder in `parent` ("": the top level), its name asked for; shown open.
-fn new_folder(ui: &Rc<Ui>, parent: String) {
+/// A new folder in `parent` ("": the top level) of `account`, its name asked for; shown open.
+fn new_folder(ui: &Rc<Ui>, (account, parent): (i64, String)) {
     let b = view!("new-folder");
     let dialog: adw::AlertDialog = get(&b, "dialog");
     let name: adw::EntryRow = get(&b, "name");
@@ -1860,14 +2011,14 @@ fn new_folder(ui: &Rc<Ui>, parent: String) {
         } else {
             format!("{parent}/{name}")
         };
-        if core().folders().contains(&path) {
+        if core().folders(account).contains(&path) {
             toast(&gettext("A folder with this name exists already"));
             return;
         }
-        match core().add_folder(path.clone()) {
+        match core().add_folder(account, path.clone()) {
             Ok(()) => {
-                reveal(&ui, &path);
-                *ui.target_folder.borrow_mut() = path;
+                reveal(&ui, account, &path);
+                *ui.target_folder.borrow_mut() = (account, path);
                 refresh_tree(&ui);
                 request_sync();
             }
@@ -1877,8 +2028,8 @@ fn new_folder(ui: &Rc<Ui>, parent: String) {
     });
 }
 
-/// Rename folder `folder`, its new name asked for in the New Folder dialog.
-fn rename_folder(ui: &Rc<Ui>, folder: String) {
+/// Rename folder `folder` of `account`, its new name asked for in the New Folder dialog.
+fn rename_folder(ui: &Rc<Ui>, (account, folder): (i64, String)) {
     let b = view!("new-folder");
     let dialog: adw::AlertDialog = get(&b, "dialog");
     let name: adw::EntryRow = get(&b, "name");
@@ -1893,9 +2044,9 @@ fn rename_folder(ui: &Rc<Ui>, folder: String) {
             return;
         }
         save_now(&ui);
-        match core().rename_folder(folder.clone(), name.text().to_string()) {
+        match core().rename_folder(account, folder.clone(), name.text().to_string()) {
             Ok(to) => {
-                follow_folder(&ui, &folder, &to);
+                follow_folder(&ui, account, &folder, &to);
                 refresh(&ui);
                 reload_current(&ui);
                 request_sync();
@@ -1909,11 +2060,11 @@ fn rename_folder(ui: &Rc<Ui>, folder: String) {
     });
 }
 
-/// Delete folder `folder` with everything in it; the toast can undo it.
-fn delete_folder(ui: &Rc<Ui>, folder: String) {
+/// Delete folder `folder` of `account` with everything in it; the toast can undo it.
+fn delete_folder(ui: &Rc<Ui>, (account, folder): (i64, String)) {
     // What is typed in a note in it comes back with an undo.
     save_now(ui);
-    match core().delete_folder(folder.clone()) {
+    match core().delete_folder(account, folder.clone()) {
         Ok(()) => {
             refresh(ui);
             reload_current(ui);
@@ -1945,9 +2096,21 @@ fn delete_note(ui: &Rc<Ui>, id: i64) {
     }
 }
 
-/// The tree's menu, on a right click or a long press: on a folder, new notes and folders go
-/// inside it; on a note, next to it (in its folder), and it can be deleted; elsewhere, to the
-/// top level.
+/// The top level of the account new notes went to last (the first account's if that is not
+/// shown).
+fn top_place(ui: &Ui) -> Option<(i64, String)> {
+    let target = ui.target_folder.borrow().0;
+    let accounts = shown_accounts();
+    let a = accounts
+        .iter()
+        .find(|a| a.id == target)
+        .or(accounts.first())?;
+    Some((a.id, String::new()))
+}
+
+/// The tree's menu, on a right click or a long press: on an account or folder, new notes and
+/// folders go inside it; on a note, next to it (in its folder), and it can be deleted;
+/// elsewhere, to the top level.
 fn context_menu(ui: &Rc<Ui>) {
     let weak = Rc::downgrade(ui);
     let show = Rc::new(move |x: f64, y: f64| {
@@ -1966,14 +2129,12 @@ fn context_menu(ui: &Rc<Ui>) {
         let item = row
             .as_ref()
             .and_then(|r| ui.items.borrow().get(r.index() as usize).cloned());
-        let folder = match &item {
-            Some(Item::Folder(f)) => f.clone(),
-            Some(Item::Note(n)) => n.folder.clone(),
-            None => String::new(),
+        let Some(place) = item.as_ref().map(Item::place).or_else(|| top_place(&ui)) else {
+            return false;
         };
         let m = gio::Menu::new();
         let add = gio::Menu::new();
-        let target = Some(folder.to_variant());
+        let target = Some(place.to_variant());
         let new_note = gio::Action::print_detailed_name("win.new-note-in", target.as_ref());
         add.append(Some(&gettext("New Note")), Some(&new_note));
         let new_folder = gio::Action::print_detailed_name("win.new-folder-in", target.as_ref());
@@ -1993,7 +2154,7 @@ fn context_menu(ui: &Rc<Ui>) {
                     }),
                     Some(&favorite),
                 );
-                if core().features().versions {
+                if core().syncing(n.account) && core().features(n.account).versions {
                     let versions =
                         gio::Action::print_detailed_name("win.note-versions", id.as_ref());
                     note.append(Some(&gettext("Versions…")), Some(&versions));
@@ -2001,7 +2162,7 @@ fn context_menu(ui: &Rc<Ui>) {
                 note.append(Some(&gettext("Delete")), Some(&delete));
                 m.append_section(None, &note);
             }
-            Some(Item::Folder(_)) => {
+            Some(Item::Folder(..)) => {
                 let rename = gio::Action::print_detailed_name("win.rename-folder", target.as_ref());
                 let delete = gio::Action::print_detailed_name("win.delete-folder", target.as_ref());
                 let f = gio::Menu::new();
@@ -2009,7 +2170,7 @@ fn context_menu(ui: &Rc<Ui>) {
                 f.append(Some(&gettext("Delete")), Some(&delete));
                 m.append_section(None, &f);
             }
-            None => {}
+            Some(Item::Account(_)) | None => {}
         }
         // Gone once closed.
         let menu = gtk::PopoverMenu::from_model(Some(&m));
@@ -2062,7 +2223,7 @@ fn connect_drag(ui: &Rc<Ui>, row: &gtk::ListBoxRow, what: Dragged, name: &str) {
     drag.set_actions(gtk::gdk::DragAction::MOVE);
     let id = match &what {
         Dragged::Note(n) => format!("note:{}", n.id),
-        Dragged::Folder(f) => format!("folder:{f}"),
+        Dragged::Folder(a, f) => format!("folder:{a}:{f}"),
     };
     drag.connect_prepare(move |_, _, _| Some(gtk::gdk::ContentProvider::for_value(&id.to_value())));
     let (weak, r, name) = (Rc::downgrade(ui), row.clone(), name.to_string());
@@ -2089,8 +2250,9 @@ fn connect_drag(ui: &Rc<Ui>, row: &gtk::ListBoxRow, what: Dragged, name: &str) {
 }
 
 /// Notes and folders dropped on the tree move: onto a folder, into it; onto a note, into its
-/// folder; below the last row, to the top level. Where it would go is tinted (`mark_drop`);
-/// where it is already, or a folder into itself, nothing happens. One target for the whole tree, finding the row itself: GTK gives a
+/// folder; onto an account or below the last row, to the top level; within their account
+/// only. Where it would go is tinted (`mark_drop`); where it is already, or a folder into
+/// itself, nothing happens. One target for the whole tree, finding the row itself: GTK gives a
 /// drag's motion to every drop target under the pointer, so targets on the rows and one for the
 /// top level behind them would all take it.
 fn connect_drop(ui: &Rc<Ui>) {
@@ -2107,7 +2269,7 @@ fn connect_drop(ui: &Rc<Ui>) {
                 return gtk::gdk::DragAction::empty();
             };
             let to = drop_folder(&ui, x, y);
-            mark_drop(&ui, to.as_deref());
+            mark_drop(&ui, to.as_ref().map(|(a, f)| (*a, f.as_str())));
             if to.is_some() {
                 gtk::gdk::DragAction::MOVE
             } else {
@@ -2130,7 +2292,7 @@ fn connect_drop(ui: &Rc<Ui>) {
             return false;
         };
         mark_drop(&ui, None);
-        let Some(folder) = drop_folder(&ui, x, y) else {
+        let Some((account, folder)) = drop_folder(&ui, x, y) else {
             return false;
         };
         let Some(what) = ui.dragging.take() else {
@@ -2143,13 +2305,13 @@ fn connect_drop(ui: &Rc<Ui>) {
                 Dragged::Note(n) => core()
                     .move_note(n.id, folder.clone(), n.title.clone())
                     .map(|_| ()),
-                Dragged::Folder(f) => core()
-                    .move_folder(f.clone(), folder.clone())
-                    .map(|to| follow_folder(&ui, f, &to)),
+                Dragged::Folder(a, f) => core()
+                    .move_folder(*a, f.clone(), folder.clone())
+                    .map(|to| follow_folder(&ui, *a, f, &to)),
             };
             match moved {
                 Ok(()) => {
-                    reveal(&ui, &folder);
+                    reveal(&ui, account, &folder);
                     refresh(&ui);
                     reload_current(&ui);
                     request_sync();
@@ -2158,7 +2320,7 @@ fn connect_drop(ui: &Rc<Ui>) {
                     Dragged::Note(_) => {
                         gettext("A note with this name exists in that folder already")
                     }
-                    Dragged::Folder(_) => {
+                    Dragged::Folder(..) => {
                         gettext("A folder with this name exists in that folder already")
                     }
                 }),
@@ -2170,64 +2332,78 @@ fn connect_drop(ui: &Rc<Ui>) {
     ui.tree_scroll.add_controller(drop);
 }
 
-/// The folder the dragged note or folder would go to with the pointer at (`x`, `y`) on the
-/// tree's scrolled window ("": the top level); None when nothing would move.
-fn drop_folder(ui: &Ui, x: f64, y: f64) -> Option<String> {
+/// The account and folder the dragged note or folder would go to with the pointer at (`x`,
+/// `y`) on the tree's scrolled window ("": the top level; below the rows, of its own account);
+/// None when nothing would move.
+fn drop_folder(ui: &Ui, x: f64, y: f64) -> Option<(i64, String)> {
     let at = ui
         .tree_scroll
         .compute_point(&ui.tree, &gtk::graphene::Point::new(x as f32, y as f32))?;
-    let folder = match ui.tree.row_at_y(at.y() as i32) {
-        Some(row) => match ui.items.borrow().get(row.index() as usize)? {
-            Item::Folder(f) => f.clone(),
-            Item::Note(n) => n.folder.clone(),
+    let dragging = ui.dragging.borrow();
+    let what = dragging.as_ref()?;
+    let (account, folder) = match ui.tree.row_at_y(at.y() as i32) {
+        Some(row) => ui.items.borrow().get(row.index() as usize)?.place(),
+        None => match what {
+            Dragged::Note(n) => (n.account, String::new()),
+            Dragged::Folder(a, _) => (*a, String::new()),
         },
-        None => String::new(),
     };
-    moves(ui.dragging.borrow().as_ref()?, &folder).then_some(folder)
+    moves(what, account, &folder).then_some((account, folder))
 }
 
-/// Whether dropping `what` into `folder` moves it: not where it is, not a folder into itself.
-fn moves(what: &Dragged, folder: &str) -> bool {
+/// Whether dropping `what` into `folder` of `account` moves it: within its account, not where
+/// it is, not a folder into itself.
+fn moves(what: &Dragged, account: i64, folder: &str) -> bool {
     match what {
-        Dragged::Note(n) => n.folder != folder,
-        Dragged::Folder(f) => {
+        Dragged::Note(n) => n.account == account && n.folder != folder,
+        Dragged::Folder(a, f) => {
             let parent = f.rsplit_once('/').map_or("", |(p, _)| p);
-            parent != folder && folder != f && !folder.starts_with(&format!("{f}/"))
+            *a == account
+                && parent != folder
+                && folder != f
+                && !folder.starts_with(&format!("{f}/"))
         }
     }
 }
 
-/// A folder moved from `from` to `to`: the tree keeps its folders open, new notes still go
-/// where they went.
-fn follow_folder(ui: &Ui, from: &str, to: &str) {
+/// A folder of `account` moved from `from` to `to`: the tree keeps its folders open, new notes
+/// still go where they went.
+fn follow_folder(ui: &Ui, account: i64, from: &str, to: &str) {
     let renamed = |p: &str| {
         (p == from || p.starts_with(&format!("{from}/")))
             .then(|| format!("{to}{}", &p[from.len()..]))
     };
+    let prefix = folder_key(account, "");
     let open: HashSet<String> = ui
         .expanded
         .borrow()
         .iter()
-        .map(|p| renamed(p).unwrap_or_else(|| p.clone()))
+        .map(|k| {
+            k.strip_prefix(&prefix)
+                .filter(|p| !p.is_empty())
+                .and_then(renamed)
+                .map_or_else(|| k.clone(), |p| folder_key(account, &p))
+        })
         .collect();
     *ui.expanded.borrow_mut() = open;
     save_expanded(ui);
-    let target = renamed(&ui.target_folder.borrow());
-    if let Some(t) = target {
-        *ui.target_folder.borrow_mut() = t;
+    let target = ui.target_folder.borrow().clone();
+    if let Some(t) = renamed(&target.1).filter(|_| target.0 == account) {
+        *ui.target_folder.borrow_mut() = (account, t);
     }
 }
 
-/// Tint where a dragged note would go: a folder's row with what shows of it below, or the
-/// whole tree for the top level ("").
-fn mark_drop(ui: &Ui, folder: Option<&str>) {
-    if folder == Some("") {
+/// Tint where a dragged note would go: an account's or folder's row with what shows of it
+/// below, or the whole tree for the top level of the only account shown.
+fn mark_drop(ui: &Ui, to: Option<(i64, &str)>) {
+    let whole = to.is_some_and(|(_, f)| f.is_empty()) && shown_accounts().len() <= 1;
+    if whole {
         ui.tree.add_css_class("drop-target");
     } else {
         ui.tree.remove_css_class("drop-target");
     }
     for (row, item) in ui.rows.borrow().iter().zip(ui.items.borrow().iter()) {
-        if folder.is_some_and(|f| !f.is_empty() && within(item, f)) {
+        if to.is_some_and(|(a, f)| !whole && within(item, a, f)) {
             row.add_css_class("drop-target");
         } else {
             row.remove_css_class("drop-target");
@@ -2235,127 +2411,17 @@ fn mark_drop(ui: &Ui, folder: Option<&str>) {
     }
 }
 
-/// `item` is the folder `folder` or inside it.
-fn within(item: &Item, folder: &str) -> bool {
-    let inside = |p: &str| p == folder || p.starts_with(&format!("{folder}/"));
+/// `item` is the folder `folder` of `account` (its top level for "") or inside it.
+fn within(item: &Item, account: i64, folder: &str) -> bool {
+    let inside = |p: &str| folder.is_empty() || p == folder || p.starts_with(&format!("{folder}/"));
     match item {
-        Item::Folder(f) => inside(f),
-        Item::Note(n) => inside(&n.folder),
+        Item::Account(a) => *a == account && folder.is_empty(),
+        Item::Folder(a, f) => *a == account && inside(f),
+        Item::Note(n) => n.account == account && inside(&n.folder),
     }
 }
 
-// --- welcome -----------------------------------------------------------------
-
-fn connect_welcome(ui: &Rc<Ui>, b: &gtk::Builder) {
-    let page: adw::NavigationPage = get(b, "connect_page");
-    let status: adw::StatusPage = get(b, "connect_status");
-    let use_goa: adw::ActionRow = get(b, "use_goa");
-    // The switch is the choice made on the first step.
-    ui.conn.goa.set_visible(false);
-    match ui.conn.account_names().as_slice() {
-        [] => use_goa.set_subtitle(&gettext(
-            "No Nextcloud account in Settings → Online Accounts",
-        )),
-        names => use_goa.set_subtitle(&names.join(", ")),
-    }
-    use_goa.set_sensitive(ui.conn.has_accounts());
-
-    let open = {
-        let ui = ui.clone();
-        move |goa: bool| {
-            ui.conn.goa.set_active(goa);
-            // Shown even for one account, as what Connect connects to.
-            ui.conn.account.set_visible(goa);
-            ui.connect_goa.set_visible(goa);
-            ui.login.set_visible(!goa);
-            if goa {
-                page.set_title(&gettext("GNOME Online Accounts"));
-                status.set_icon_name(Some("goa-panel-symbolic"));
-                status.set_description(Some(&gettext(
-                    "Connect with a Nextcloud account from GNOME Settings",
-                )));
-            } else {
-                page.set_title(&gettext("Nextcloud Server"));
-                status.set_icon_name(Some("network-server-symbolic"));
-                status.set_description(Some(&gettext(
-                    "Sign in to your Nextcloud; Notav gets an app password of its own",
-                )));
-            }
-            ui.welcome.push_by_tag("connect");
-        }
-    };
-    let o = open.clone();
-    use_goa.connect_activated(move |_| o(true));
-    get::<adw::ActionRow>(b, "use_server").connect_activated(move |_| open(false));
-
-    let weak = Rc::downgrade(ui);
-    ui.login.connect_clicked(move |_| {
-        if let Some(ui) = weak.upgrade() {
-            start_login(&ui, false);
-        }
-    });
-    let weak = Rc::downgrade(ui);
-    ui.connect_goa.connect_clicked(move |_| {
-        if let Some(ui) = weak.upgrade() {
-            connect_goa(&ui);
-        }
-    });
-    let weak = Rc::downgrade(ui);
-    let copy = gio::SimpleAction::new("copy-login", None);
-    copy.connect_activate(move |_, _| {
-        if let Some(ui) = weak.upgrade() {
-            start_login(&ui, true);
-        }
-    });
-    ui.window.add_action(&copy);
-    let weak = Rc::downgrade(ui);
-    let password = gio::SimpleAction::new("password-login", None);
-    password.connect_activate(move |_, _| {
-        let Some(ui) = weak.upgrade() else { return };
-        let server = url_text(&ui.conn.server);
-        if server.is_empty() {
-            toast(&no_server());
-            return;
-        }
-        let u = ui.clone();
-        password_login(&ui.window, server, move |c| {
-            let ui = u.clone();
-            glib::spawn_future_local(async move {
-                connect_with(&ui, crate::Target::Manual(c)).await;
-            });
-        });
-    });
-    ui.window.add_action(&password);
-    let weak = Rc::downgrade(ui);
-    ui.cancel_login.connect_clicked(move |_| {
-        cancel_login(); // the running sign-in sees it is stale and stops
-        if let Some(ui) = weak.upgrade() {
-            reset_login(&ui);
-        }
-    });
-
-    // Back to the first step: a sign-in waiting for the browser stops.
-    let weak = Rc::downgrade(ui);
-    ui.welcome.connect_popped(move |_, _| {
-        cancel_login();
-        if let Some(ui) = weak.upgrade() {
-            reset_login(&ui);
-        }
-    });
-
-    let weak = Rc::downgrade(ui);
-    ui.folder_done.connect_clicked(move |_| {
-        if let Some(ui) = weak.upgrade() {
-            choose_folder(&ui);
-        }
-    });
-    let weak = Rc::downgrade(ui);
-    ui.folder.connect_entry_activated(move |_| {
-        if let Some(ui) = weak.upgrade() {
-            choose_folder(&ui);
-        }
-    });
-}
+// --- signing in --------------------------------------------------------------
 
 /// What every way of signing in says when the server field is empty.
 pub fn no_server() -> String {
@@ -2376,107 +2442,12 @@ pub fn url_text((scheme, row): &(gtk::DropDown, adw::EntryRow)) -> String {
     format!("{scheme}://{host}")
 }
 
-/// Sign in from the welcome page with the browser (Login Flow v2); `copy` puts the login link on
-/// the clipboard instead of opening the browser.
-fn start_login(ui: &Rc<Ui>, copy: bool) {
-    let server = url_text(&ui.conn.server);
-    if server.is_empty() {
-        toast(&no_server());
-        return;
-    }
-    ui.login.set_sensitive(false);
-    ui.login.set_label(&if copy {
-        gettext("Waiting for Sign-In…")
-    } else {
-        gettext("Waiting for Browser…")
-    });
-    ui.cancel_login.set_visible(true);
-    let ui = ui.clone();
-    glib::spawn_future_local(async move {
-        match browser_login(server, copy).await {
-            Ok(Some(c)) => connect_with(&ui, crate::Target::Manual(c)).await,
-            // Cancelled: Cancel already reset the page, which may be waiting for a new sign-in.
-            Ok(None) => return,
-            Err(e) => ui.toasts.add_toast(note(&e)),
-        }
-        reset_login(&ui);
-    });
-}
-
-/// Connect from the welcome page with the chosen GNOME Online Accounts account.
-fn connect_goa(ui: &Rc<Ui>) {
-    let Some(account) = ui.conn.chosen() else {
-        return;
-    };
-    ui.connect_goa.set_sensitive(false);
-    let ui = ui.clone();
-    glib::spawn_future_local(async move {
-        connect_with(&ui, crate::Target::Goa(account)).await;
-        ui.connect_goa.set_sensitive(true);
-    });
-}
-
-/// Connected: the notes folder is next.
-async fn connect_with(ui: &Rc<Ui>, target: crate::Target) {
-    match crate::switch_account(target).await {
-        Ok(()) => show_folder_step(ui),
-        Err(e) => ui.toasts.add_toast(note(&e)),
-    }
-}
-
-/// The welcome page's last step, its folder suggested by the server: the one other devices
-/// use, else Nextcloud Notes' own.
-fn show_folder_step(ui: &Rc<Ui>) {
-    ui.welcome.push_by_tag("folder");
-    ui.folder.set_text("");
-    ui.folder.set_sensitive(false);
-    ui.folder_done.set_sensitive(false);
-    let ui = ui.clone();
-    glib::spawn_future_local(async move {
-        let folder = gio::spawn_blocking(|| core().suggested_notes_folder())
-            .await
-            .unwrap_or_else(|_| notav_core::DEFAULT_FOLDER.into());
-        ui.folder.set_text(&folder);
-        ui.folder.set_sensitive(true);
-        ui.folder_done.set_sensitive(true);
-    });
-}
-
-fn choose_folder(ui: &Rc<Ui>) {
-    let folder = ui.folder.text().trim().to_string();
-    if folder.is_empty() || !ui.folder_done.is_sensitive() {
-        return;
-    }
-    ui.folder_done.set_sensitive(false);
-    let ui = ui.clone();
-    glib::spawn_future_local(async move {
-        let r = gio::spawn_blocking(move || core().set_notes_folder(folder, false)).await;
-        ui.folder_done.set_sensitive(true);
-        match r {
-            Ok(Ok(())) => {
-                crate::start_background();
-                ui.stack.set_visible_child_name("main");
-                refresh(&ui);
-            }
-            Ok(Err(notav_core::Error::Invalid(_))) => toast(&gettext("Not a folder name")),
-            Ok(Err(e)) => toast(&e.to_string()),
-            Err(_) => {}
-        }
-    });
-}
-
 /// Bumped on every sign-in and on cancel; a sign-in only goes on while its number is current.
 static LOGIN_ATTEMPT: AtomicU64 = AtomicU64::new(0);
 
 /// Stop a running `browser_login`; it then returns `Ok(None)`.
 pub fn cancel_login() {
     LOGIN_ATTEMPT.fetch_add(1, Ordering::SeqCst);
-}
-
-fn reset_login(ui: &Ui) {
-    ui.login.set_sensitive(true);
-    ui.login.set_label(&gettext("Sign In with Browser"));
-    ui.cancel_login.set_visible(false);
 }
 
 /// Login Flow v2: open the browser (or copy the link) and wait until the user approves.
@@ -2526,11 +2497,12 @@ pub async fn browser_login(
     Err(gettext("Login timed out"))
 }
 
-/// Ask for a login name and (app) password for `server` and check them there; `done` gets the
-/// credentials once they work.
+/// Ask for a login name (`login`, when signing in again) and (app) password for `server` and
+/// check them there; `done` gets the credentials once they work.
 pub fn password_login(
     parent: &impl IsA<gtk::Widget>,
     server: String,
+    login: Option<String>,
     done: impl Fn(notav_core::Credentials) + 'static,
 ) {
     let b = view!("password-login");
@@ -2539,9 +2511,8 @@ pub fn password_login(
     let password: adw::PasswordEntryRow = get(&b, "password");
     let sign_in: gtk::Button = get(&b, "sign_in");
     let error: adw::Banner = get(&b, "error");
-    // Signing in again usually keeps the login name.
-    if let Some(a) = core().account().filter(|a| a.url == server) {
-        user.set_text(&a.user);
+    if let Some(login) = login {
+        user.set_text(&login);
     }
     let filled = {
         let (user, password, sign_in) = (user.clone(), password.clone(), sign_in.clone());
@@ -2588,10 +2559,16 @@ pub fn password_login(
 mod tests {
     use super::*;
 
+    /// A note of account 1.
     fn note(path: &str) -> Note {
+        note_of(1, path)
+    }
+
+    fn note_of(account: i64, path: &str) -> Note {
         let (folder, file) = path.rsplit_once('/').unwrap_or(("", path));
         Note {
             id: 0,
+            account,
             path: path.into(),
             title: file.trim_end_matches(".md").into(),
             folder: folder.into(),
@@ -2603,23 +2580,56 @@ mod tests {
 
     #[test]
     fn drops_that_move_nothing_or_into_itself_are_refused() {
-        let folder = |f: &str| Dragged::Folder(f.into());
-        assert!(moves(&Dragged::Note(note("Work/Plan.md")), ""));
-        assert!(!moves(&Dragged::Note(note("Work/Plan.md")), "Work"));
-        assert!(moves(&folder("Work/Old"), ""));
-        assert!(moves(&folder("Work"), "Archive"));
-        assert!(!moves(&folder("Work/Old"), "Work"), "already there");
-        assert!(!moves(&folder("Work"), "Work"));
-        assert!(!moves(&folder("Work"), "Work/Old"), "into itself");
-        assert!(moves(&folder("Work"), "Workshop"));
+        let folder = |f: &str| Dragged::Folder(1, f.into());
+        assert!(moves(&Dragged::Note(note("Work/Plan.md")), 1, ""));
+        assert!(!moves(&Dragged::Note(note("Work/Plan.md")), 1, "Work"));
+        assert!(moves(&folder("Work/Old"), 1, ""));
+        assert!(moves(&folder("Work"), 1, "Archive"));
+        assert!(!moves(&folder("Work/Old"), 1, "Work"), "already there");
+        assert!(!moves(&folder("Work"), 1, "Work"));
+        assert!(!moves(&folder("Work"), 1, "Work/Old"), "into itself");
+        assert!(moves(&folder("Work"), 1, "Workshop"));
+        // Never into another account.
+        assert!(!moves(&Dragged::Note(note("Work/Plan.md")), 2, ""));
+        assert!(!moves(&folder("Work"), 2, "Archive"));
     }
 
     #[test]
     fn a_folder_holds_its_notes_and_folders_at_any_depth() {
-        let folder = |f: &str| Item::Folder(f.into());
-        assert!(within(&folder("Work"), "Work") && within(&folder("Work/Old"), "Work"));
-        assert!(within(&Item::Note(note("Work/Old/x.md")), "Work"));
-        assert!(!within(&folder("Workshop"), "Work") && !within(&Item::Note(note("x.md")), "Work"));
+        let folder = |f: &str| Item::Folder(1, f.into());
+        assert!(within(&folder("Work"), 1, "Work") && within(&folder("Work/Old"), 1, "Work"));
+        assert!(within(&Item::Note(note("Work/Old/x.md")), 1, "Work"));
+        assert!(
+            !within(&folder("Workshop"), 1, "Work")
+                && !within(&Item::Note(note("x.md")), 1, "Work")
+        );
+        // An account's top level holds all of it, and only it.
+        assert!(within(&Item::Account(1), 1, "") && within(&folder("Work/Old"), 1, ""));
+        assert!(!within(&folder("Work"), 2, "Work") && !within(&Item::Account(2), 1, ""));
+    }
+
+    #[test]
+    fn accounts_have_rows_when_more_than_one_shows() {
+        let notes = [note("a.md"), note_of(2, "b.md")];
+        let rows = |accounts: &[(i64, Vec<String>)], closed: &[&str]| -> Vec<(usize, String)> {
+            let closed = closed.iter().map(|s| s.to_string()).collect();
+            tree(accounts, &notes, &closed)
+                .into_iter()
+                .map(|(d, i)| match i {
+                    Item::Account(a) => (d, format!("#{a}")),
+                    Item::Folder(_, f) => (d, format!("{f}/")),
+                    Item::Note(n) => (d, n.title),
+                })
+                .collect()
+        };
+        let s = |d: usize, n: &str| (d, n.to_string());
+        assert_eq!(rows(&[(1, vec![])], &[]), [s(0, "a")]);
+        let both = [(1, vec![]), (2, vec!["Work".to_string()])];
+        assert_eq!(
+            rows(&both, &[]),
+            [s(0, "#1"), s(1, "a"), s(0, "#2"), s(1, "Work/"), s(1, "b")]
+        );
+        assert_eq!(rows(&both, &["2:"]), [s(0, "#1"), s(1, "a"), s(0, "#2")]);
     }
 
     #[test]
@@ -2634,12 +2644,13 @@ mod tests {
         ]
         .map(note);
         let names = |open: &[&str]| -> Vec<(usize, String)> {
-            let open = open.iter().map(|s| s.to_string()).collect();
-            tree(&folders, &notes, &open)
+            let open = open.iter().map(|s| folder_key(1, s)).collect();
+            tree(&[(1, folders.clone())], &notes, &open)
                 .into_iter()
                 .map(|(d, i)| match i {
-                    Item::Folder(f) => (d, format!("{f}/")),
+                    Item::Folder(_, f) => (d, format!("{f}/")),
                     Item::Note(n) => (d, n.title),
+                    Item::Account(_) => unreachable!("one account: no row"),
                 })
                 .collect()
         };
@@ -2667,11 +2678,11 @@ mod tests {
     fn favorites_come_first_in_their_folder() {
         let mut notes = ["a.md", "b.md", "c.md"].map(note);
         notes[2].favorite = true;
-        let titles: Vec<String> = tree(&[], &notes, &HashSet::new())
+        let titles: Vec<String> = tree(&[(1, vec![])], &notes, &HashSet::new())
             .into_iter()
             .filter_map(|(_, i)| match i {
                 Item::Note(n) => Some(n.title),
-                Item::Folder(_) => None,
+                _ => None,
             })
             .collect();
         assert_eq!(titles, ["c", "a", "b"]);
@@ -2679,9 +2690,13 @@ mod tests {
 
     #[test]
     fn folders_count_their_notes_and_their_folders_notes() {
-        let notes = ["a.md", "Work/Plan.md", "Work/Old/x.md", "Workshop/y.md"].map(note);
-        assert_eq!(notes_in(&notes, "Work"), 2);
-        assert_eq!(notes_in(&notes, "Work/Old"), 1);
-        assert_eq!(notes_in(&notes, "Workshop"), 1);
+        let mut notes = ["a.md", "Work/Plan.md", "Work/Old/x.md", "Workshop/y.md"]
+            .map(note)
+            .to_vec();
+        notes.push(note_of(2, "Work/Other.md"));
+        assert_eq!(notes_in(&notes, 1, "Work"), 2);
+        assert_eq!(notes_in(&notes, 1, "Work/Old"), 1);
+        assert_eq!(notes_in(&notes, 1, "Workshop"), 1);
+        assert_eq!(notes_in(&notes, 2, "Work"), 1);
     }
 }

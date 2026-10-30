@@ -15,7 +15,8 @@
       <li>Works offline; changes sync when the server is reachable</li>
       <li>Notes edited on two devices at once are both kept</li>
       <li>Folders, search, and a Markdown editor</li>
-      <li>Connects through GNOME Online Accounts or a browser sign-in</li>
+      <li>Connects through GNOME Online Accounts or a browser sign-in, to more than one account</li>
+      <li>Or keeps your notes on this device only, without a server</li>
     </ul>
   </description>
   <developer id="dev.aperte">

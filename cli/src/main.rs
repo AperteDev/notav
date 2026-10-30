@@ -1,7 +1,7 @@
 //! notav — debugging/scripting front-end for notav-core.
 //! Account comes from NOTAV_URL / NOTAV_USER / NOTAV_PASS (or a .env file in the cwd).
 
-use notav_core::{Client, Note};
+use notav_core::{AccountKind, Client, Note};
 use std::io::Read;
 use std::process::exit;
 
@@ -53,13 +53,27 @@ fn run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     });
     let client = Client::open(data)?;
     let env = |k: &str| std::env::var(k).map_err(|_| format!("{k} not set"));
-    client.set_account(env("NOTAV_URL")?, env("NOTAV_USER")?, env("NOTAV_PASS")?)?;
+    let (url, user) = (env("NOTAV_URL")?, env("NOTAV_USER")?);
+    // The account of these credentials, added the first time; its notes folder Nextcloud
+    // Notes' or the default until set.
+    let id = match client
+        .accounts()
+        .into_iter()
+        .find(|a| a.url == url.trim_end_matches('/') && a.user == user)
+    {
+        Some(a) => a.id,
+        None => client.add_account(AccountKind::Nextcloud, url, user, String::new())?,
+    };
+    client.connect(id, env("NOTAV_PASS")?)?;
+    if client.chosen_notes_folder(id).is_none() {
+        client.set_notes_folder(id, client.suggested_notes_folder(id), false)?;
+    }
 
     match args.first().map(String::as_str) {
         Some("whoami") => {
-            let a = client.account().ok_or("no account")?;
+            let a = client.account(id).ok_or("no account")?;
             println!("{} at {}", a.user, a.url);
-            println!("{}", client.files_home()?);
+            println!("{}", client.files_home(id)?);
         }
         Some("ls") => {
             for n in client.notes() {
@@ -74,7 +88,7 @@ fn run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
                 Some(t) => t.to_string(),
                 None => String::new(),
             };
-            println!("{}", client.add_note(folder, title, body)?.path);
+            println!("{}", client.add_note(id, folder, title, body)?.path);
             println!("{:?}", client.sync()?);
         }
         Some("put") => {
@@ -97,15 +111,15 @@ fn run(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             println!("{:?}", client.sync()?);
         }
         Some("mkdir") => {
-            client.add_folder(arg(1)?)?;
+            client.add_folder(id, arg(1)?)?;
             println!("{:?}", client.sync()?);
         }
         Some("folder") => match args.get(1) {
             Some(f) => {
-                client.set_notes_folder(f.clone(), args.iter().any(|a| a == "--move"))?;
+                client.set_notes_folder(id, f.clone(), args.iter().any(|a| a == "--move"))?;
                 println!("{:?}", client.sync()?);
             }
-            None => println!("{}", client.notes_folder()),
+            None => println!("{}", client.notes_folder(id)),
         },
         Some("sync") => println!("{:?}", client.sync()?),
         _ => return Err(USAGE.into()),

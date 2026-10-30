@@ -2,7 +2,7 @@
 //! (`journal_folder`, `journal_format`), made from a template note (`journal_template`).
 
 use crate::notes::{file_title, folder_path, join, split};
-use crate::{Client, Note, Result};
+use crate::{Client, Error, Note, Result};
 
 pub const DEFAULT_FOLDER: &str = "Journal";
 pub const DEFAULT_FORMAT: &str = "YYYY-MM-DD";
@@ -61,15 +61,31 @@ impl Client {
         )
     }
 
+    /// The account the journal is kept in: the first switched on.
+    // ponytail: the first account; a choice in Preferences when someone keeps it elsewhere.
+    pub fn journal_account(&self) -> Option<i64> {
+        self.accounts()
+            .into_iter()
+            .find(|a| a.enabled)
+            .map(|a| a.id)
+    }
+
     /// The daily note of a day: the one there is, or a new one from the template note (its
-    /// `{{date}}` and `{{title}}` filled in), its folders made if need be.
+    /// `{{date}}` and `{{title}}` filled in), its folders made if need be; in the journal's
+    /// account.
     pub fn daily_note(&self, year: i32, month: u32, day: u32) -> Result<Note> {
+        let account = self.journal_account().ok_or(Error::NoAccount)?;
         let path = self.daily_path(year, month, day);
         let (folder, title) = split(&path);
         let (folder, title) = (folder_path(folder)?, file_title(title)?);
         let file = format!("{}.md", join(&folder, &title));
-        if let Some(n) = self.notes().into_iter().find(|n| n.path == file) {
-            return Ok(n);
+        let notes: Vec<Note> = self
+            .notes()
+            .into_iter()
+            .filter(|n| n.account == account)
+            .collect();
+        if let Some(n) = notes.iter().find(|n| n.path == file) {
+            return Ok(n.clone());
         }
         let template = self
             .setting("journal_template".into())
@@ -81,14 +97,14 @@ impl Client {
                 } else {
                     format!("{t}.md")
                 };
-                self.notes().into_iter().find(|n| n.path == with_md)
+                notes.iter().find(|n| n.path == with_md)
             })
             .and_then(|n| self.note_text(n.id))
             .unwrap_or_default();
         let text = template
             .replace("{{date}}", &format!("{year:04}-{month:02}-{day:02}"))
             .replace("{{title}}", &title);
-        self.add_note(folder, title, text)
+        self.add_note(account, folder, title, text)
     }
 }
 
@@ -110,7 +126,12 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("notav-test-journal-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let c = Client::open(dir.to_string_lossy().into()).unwrap();
+        let local = crate::AccountKind::Local;
+        let a = c
+            .add_account(local, "".into(), "".into(), "".into())
+            .unwrap();
         c.add_note(
+            a,
             "Templates".into(),
             "Day".into(),
             "# {{title}}\n\nOn {{date}}.".into(),
@@ -128,9 +149,9 @@ mod tests {
             .unwrap();
         assert_eq!(c.daily_path(2026, 3, 8), "Days/2026/03-08");
         // A folder made deep down shows with the folders above it.
-        c.add_folder("New/Deep".into()).unwrap();
+        c.add_folder(a, "New/Deep".into()).unwrap();
         assert!(
-            c.folders()
+            c.folders(a)
                 .starts_with(&["Journal".into(), "Journal/2026".into(), "New".into()])
         );
     }

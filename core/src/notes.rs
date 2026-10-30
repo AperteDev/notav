@@ -11,6 +11,8 @@ use rusqlite::{Connection, params};
 #[derive(Debug, Clone, PartialEq)]
 pub struct Note {
     pub id: i64,
+    /// The account it belongs to.
+    pub account: i64,
     /// Relative to the notes folder: "Folder/Title.md".
     pub path: String,
     /// The file name without its extension.
@@ -30,6 +32,7 @@ impl From<&Row> for Note {
         let (folder, title) = split(&r.path);
         Note {
             id: r.id,
+            account: r.account,
             path: r.path.clone(),
             title: stem(title).to_string(),
             folder: folder.to_string(),
@@ -179,23 +182,32 @@ pub(crate) fn under(col: &str) -> String {
     format!("(substr({col}, 1, length(?1) + 1) = ?1 || '/')")
 }
 
-/// Folder `folder` is on the server: pulled from there (not made here), or a note in it is.
-fn on_server(db: &Connection, folder: &str) -> Result<bool> {
+/// Folder `folder` of account `?2` is on the server: pulled from there (not made here), or a
+/// note in it is.
+fn on_server(db: &Connection, account: i64, folder: &str) -> Result<bool> {
     Ok(db.query_row(
         &format!(
-            "SELECT (EXISTS (SELECT 1 FROM folders WHERE path = ?1 AND dirty = 0)
-               OR EXISTS (SELECT 1 FROM notes WHERE fileid IS NOT NULL
+            "SELECT (EXISTS (SELECT 1 FROM folders WHERE account = ?2 AND path = ?1 AND dirty = 0)
+               OR EXISTS (SELECT 1 FROM notes WHERE account = ?2 AND fileid IS NOT NULL
                  AND {} AND server_path IS NULL))
-               AND NOT EXISTS (SELECT 1 FROM folders WHERE path = ?1 AND dirty = 1)",
+               AND NOT EXISTS (SELECT 1 FROM folders
+                 WHERE account = ?2 AND path = ?1 AND dirty = 1)",
             under("path")
         ),
-        [folder],
+        params![folder, account],
         |r| r.get(0),
     )?)
 }
 
-/// `folder/title.ext`, or with " 2", " 3"... added to the title until no note has that path.
-pub(crate) fn free_path(db: &Connection, folder: &str, title: &str, ext: &str) -> Result<String> {
+/// `folder/title.ext`, or with " 2", " 3"... added to the title until no note of the account
+/// has that path.
+pub(crate) fn free_path(
+    db: &Connection,
+    account: i64,
+    folder: &str,
+    title: &str,
+    ext: &str,
+) -> Result<String> {
     for n in 1.. {
         let t = if n == 1 {
             title.to_string()
@@ -203,18 +215,30 @@ pub(crate) fn free_path(db: &Connection, folder: &str, title: &str, ext: &str) -
             format!("{title} {n}")
         };
         let path = join(folder, &format!("{t}.{ext}"));
-        if store::by_path(db, &path)?.is_none() {
+        if store::by_path(db, account, &path)?.is_none() {
             return Ok(path);
         }
     }
     unreachable!()
 }
 
+/// SQL: the note is in a switched-on account.
+const SHOWN: &str = "account IN (SELECT id FROM accounts WHERE enabled)";
+
 impl Client {
-    /// Every note, by path.
+    /// Every note of the accounts switched on, by path.
     pub fn notes(&self) -> Vec<Note> {
         let db = self.db.lock().unwrap();
-        let rows = store::rows(&db, "dirty != ?", [DELETED]).unwrap_or_default();
+        let rows =
+            store::rows(&db, &format!("dirty != ? AND {SHOWN}"), [DELETED]).unwrap_or_default();
+        rows.iter().map(Note::from).collect()
+    }
+
+    /// The notes of account `account` (switched off too), by path.
+    fn account_notes(&self, account: i64) -> Vec<Note> {
+        let db = self.db.lock().unwrap();
+        let filter = "dirty != ? AND account = ?";
+        let rows = store::rows(&db, filter, params![DELETED, account]).unwrap_or_default();
         rows.iter().map(Note::from).collect()
     }
 
@@ -243,20 +267,24 @@ impl Client {
             return self.notes();
         }
         let db = self.db.lock().unwrap();
-        let filter = "dirty != ? AND id IN (SELECT rowid FROM notes_fts WHERE notes_fts MATCH ?)";
-        let rows = store::rows(&db, filter, params![DELETED, fts.join(" ")]).unwrap_or_default();
+        let filter = format!(
+            "dirty != ? AND {SHOWN}
+               AND id IN (SELECT rowid FROM notes_fts WHERE notes_fts MATCH ?)"
+        );
+        let rows = store::rows(&db, &filter, params![DELETED, fts.join(" ")]).unwrap_or_default();
         rows.iter().map(Note::from).collect()
     }
 
-    /// Folders, relative to the notes folder, by path; empty ones too.
-    pub fn folders(&self) -> Vec<String> {
+    /// The folders of account `account`, relative to its notes folder, by path; empty ones too.
+    pub fn folders(&self, account: i64) -> Vec<String> {
         let db = self.db.lock().unwrap();
         let mut out: Vec<String> = db
-            .prepare("SELECT path FROM folders WHERE path != '' AND dirty != 2")
-            .and_then(|mut st| st.query_map([], |r| r.get(0))?.collect())
+            .prepare("SELECT path FROM folders WHERE account = ? AND path != '' AND dirty != 2")
+            .and_then(|mut st| st.query_map([account], |r| r.get(0))?.collect())
             .unwrap_or_default();
         // And the folders of notes made here, and above folders made here, not pulled yet.
-        let notes = store::rows(&db, "dirty != ?", [DELETED]).unwrap_or_default();
+        let notes =
+            store::rows(&db, "dirty != ? AND account = ?", [DELETED, account]).unwrap_or_default();
         let mut paths: Vec<String> = notes.iter().map(|n| split(&n.path).0.to_string()).collect();
         paths.extend(out.iter().map(|f| split(f).0.to_string()));
         for p in paths {
@@ -271,8 +299,8 @@ impl Client {
         out
     }
 
-    /// The note a link in note `from` names (`markdown::Link::Note`'s target and kind), made
-    /// where the link puts it when there is none, as Obsidian does.
+    /// The note a link in note `from` names (`markdown::Link::Note`'s target and kind), in its
+    /// account; made where the link puts it when there is none, as Obsidian does.
     pub fn follow_link(&self, from: i64, target: String, wiki: bool) -> Result<Note> {
         let from = self
             .note(from)
@@ -280,18 +308,26 @@ impl Client {
         if target.is_empty() && !wiki {
             return Ok(from);
         }
-        match resolve(&self.notes(), &from.folder, &target, wiki) {
+        match resolve(
+            &self.account_notes(from.account),
+            &from.folder,
+            &target,
+            wiki,
+        ) {
             Ok(n) => Ok(n.clone()),
-            Err((folder, title)) => self.add_note(folder, title, String::new()),
+            Err((folder, title)) => self.add_note(from.account, folder, title, String::new()),
         }
     }
 
-    /// The notes with a link to note `id`, by path.
+    /// The notes of its account with a link to note `id`, by path.
     // ponytail: parses every note each time; an index of links when vaults get large.
     pub fn backlinks(&self, id: i64) -> Vec<Note> {
+        let Some(account) = self.note(id).map(|n| n.account) else {
+            return Vec::new();
+        };
         let rows = {
             let db = self.db.lock().unwrap();
-            store::rows(&db, "dirty != ?", [DELETED]).unwrap_or_default()
+            store::rows(&db, "dirty != ? AND account = ?", [DELETED, account]).unwrap_or_default()
         };
         let notes: Vec<Note> = rows.iter().map(Note::from).collect();
         let links_here = |n: &Note, text: &str| {
@@ -309,16 +345,26 @@ impl Client {
             .collect()
     }
 
-    /// A new note in `folder` ("" at the top); a number is added to the title if one exists.
-    pub fn add_note(&self, folder: String, title: String, text: String) -> Result<Note> {
+    /// A new note of account `account` in `folder` ("" at the top); a number is added to the
+    /// title if one exists.
+    pub fn add_note(
+        &self,
+        account: i64,
+        folder: String,
+        title: String,
+        text: String,
+    ) -> Result<Note> {
         let folder = folder_path(&folder)?;
         let title = file_title(&title)?;
+        if self.account(account).is_none() {
+            return Err(Error::NoAccount);
+        }
         let row = {
             let db = self.db.lock().unwrap();
-            let path = free_path(&db, &folder, &title, "md")?;
+            let path = free_path(&db, account, &folder, &title, "md")?;
             db.execute(
-                "INSERT INTO notes (path, text, modified, dirty) VALUES (?, ?, ?, ?)",
-                params![path, text, now(), MODIFIED],
+                "INSERT INTO notes (account, path, text, modified, dirty) VALUES (?, ?, ?, ?, ?)",
+                params![account, path, text, now(), MODIFIED],
             )?;
             store::by_id(&db, db.last_insert_rowid())?.unwrap()
         };
@@ -361,7 +407,7 @@ impl Client {
             if path == r.path {
                 return Ok(Note::from(&r));
             }
-            if store::by_path(&db, &path)?.is_some() {
+            if store::by_path(&db, r.account, &path)?.is_some() {
                 return Err(Error::Exists(path));
             }
             place(&db, &r, &path)?;
@@ -369,6 +415,7 @@ impl Client {
         };
         self.remember(vec![Before::Note {
             id,
+            account: row.account,
             path: old.clone(),
             text: None,
         }]);
@@ -377,7 +424,7 @@ impl Client {
     }
 
     pub fn delete_note(&self, id: i64) -> Result<()> {
-        let (path, text) = {
+        let (account, path, text) = {
             let db = self.db.lock().unwrap();
             let r = store::by_id(&db, id)?
                 .filter(|r| r.dirty != DELETED)
@@ -390,10 +437,11 @@ impl Client {
             } else {
                 db.execute("DELETE FROM notes WHERE id = ?", [id])?;
             }
-            (r.path, r.text)
+            (r.account, r.path, r.text)
         };
         self.remember(vec![Before::Note {
             id,
+            account,
             path: path.clone(),
             text: Some(text),
         }]);
@@ -404,11 +452,12 @@ impl Client {
     /// Move folder `folder` ("a/b"), with everything in it, into `parent` ("" for the top level):
     /// its new path. `Error::Exists` when a folder has that name there, `Invalid` for a move
     /// into itself. The server's copy moves with the next push, in one `MOVE`.
-    pub fn move_folder(&self, folder: String, parent: String) -> Result<String> {
+    pub fn move_folder(&self, account: i64, folder: String, parent: String) -> Result<String> {
         let folder = folder_path(&folder)?;
         let dst = join(&folder_path(&parent)?, split(&folder).1);
-        let to = self.relocate_folder(folder.clone(), dst)?;
+        let to = self.relocate_folder(account, folder.clone(), dst)?;
         self.remember(vec![Before::FolderMoved {
+            account,
             from: folder,
             to: to.clone(),
         }]);
@@ -416,11 +465,12 @@ impl Client {
     }
 
     /// Rename folder `folder` ("a/b") to `name`, as `move_folder` moves it: its new path.
-    pub fn rename_folder(&self, folder: String, name: String) -> Result<String> {
+    pub fn rename_folder(&self, account: i64, folder: String, name: String) -> Result<String> {
         let folder = folder_path(&folder)?;
         let dst = join(split(&folder).0, &file_title(&name)?);
-        let to = self.relocate_folder(folder.clone(), dst)?;
+        let to = self.relocate_folder(account, folder.clone(), dst)?;
         self.remember(vec![Before::FolderMoved {
+            account,
             from: folder,
             to: to.clone(),
         }]);
@@ -430,50 +480,54 @@ impl Client {
     /// Delete folder `folder` ("a/b") with everything in it. Its notes go as `delete_note`'s do
     /// (one changed on the server since stays, and its folder with it); the folder goes with the
     /// next push, in one `DELETE`.
-    pub fn delete_folder(&self, folder: String) -> Result<()> {
+    pub fn delete_folder(&self, account: i64, folder: String) -> Result<()> {
         let folder = folder_path(&folder)?;
         if folder.is_empty() {
             return Err(Error::Invalid(folder));
         }
         let inside = |p: &str| p == folder || p.starts_with(&format!("{folder}/"));
         let mut before: Vec<Before> = self
-            .folders()
+            .folders(account)
             .into_iter()
             .filter(|f| inside(f))
-            .map(Before::Folder)
+            .map(|f| Before::Folder(account, f))
             .collect();
         let changed = {
             let db = self.db.lock().unwrap();
             let tx = db.unchecked_transaction()?;
-            let on_server = on_server(&tx, &folder)?;
-            let in_it = under("path");
+            let on_server = on_server(&tx, account, &folder)?;
+            let in_it = format!("account = ?3 AND {}", under("path"));
             let notes = store::rows(
                 &tx,
                 &format!("dirty != ?2 AND {in_it}"),
-                params![folder, DELETED],
+                params![folder, DELETED, account],
             )?;
             before.extend(notes.iter().map(|r| Before::Note {
                 id: r.id,
+                account,
                 path: r.path.clone(),
                 text: Some(r.text.clone()),
             }));
             let changed: Vec<String> = notes.into_iter().map(|r| r.path).collect();
             tx.execute(
                 &format!("DELETE FROM notes WHERE fileid IS NULL AND {in_it}"),
-                [&folder],
+                params![folder, DELETED, account],
             )?;
             tx.execute(
                 &format!("UPDATE notes SET dirty = ?2 WHERE {in_it}"),
-                params![folder, DELETED],
+                params![folder, DELETED, account],
             )?;
             tx.execute(
-                &format!("DELETE FROM folders WHERE path = ?1 OR {in_it}"),
-                [&folder],
+                &format!(
+                    "DELETE FROM folders WHERE account = ?2 AND (path = ?1 OR {})",
+                    under("path")
+                ),
+                params![folder, account],
             )?;
             if on_server {
                 tx.execute(
-                    "INSERT INTO folders (path, dirty) VALUES (?, ?)",
-                    params![folder, FOLDER_DELETED],
+                    "INSERT INTO folders (account, path, dirty) VALUES (?, ?, ?)",
+                    params![account, folder, FOLDER_DELETED],
                 )?;
             }
             tx.commit()?;
@@ -498,19 +552,27 @@ impl Client {
         };
         for b in before.into_iter().rev() {
             match b {
-                Before::Note { id, path, text } => self.restore(id, &path, text)?,
-                Before::Folder(path) => self.add_folder(path)?,
-                Before::FolderMoved { from, to } => {
-                    self.relocate_folder(to, from)?;
+                Before::Note {
+                    id,
+                    account,
+                    path,
+                    text,
+                } => self.restore(id, account, &path, text)?,
+                Before::Folder(account, path) => self.add_folder(account, path)?,
+                Before::FolderMoved { account, from, to } => {
+                    self.relocate_folder(account, to, from)?;
                 }
             }
         }
         Ok(true)
     }
 
-    /// Note `id` back at `path`; `text`: deleted, back with that text. A note deleted since
-    /// stays deleted when only its move is undone.
-    fn restore(&self, id: i64, path: &str, text: Option<String>) -> Result<()> {
+    /// Note `id` of `account` back at `path`; `text`: deleted, back with that text. A note
+    /// deleted since stays deleted when only its move is undone.
+    fn restore(&self, id: i64, account: i64, path: &str, text: Option<String>) -> Result<()> {
+        if self.account(account).is_none() {
+            return Ok(()); // removed meanwhile
+        }
         let changed = {
             let db = self.db.lock().unwrap();
             let (folder, name) = split(path);
@@ -518,10 +580,11 @@ impl Client {
             let Some(r) = store::by_id(&db, id)? else {
                 // Gone from here too: a new note, with its old id.
                 let Some(text) = text else { return Ok(()) };
-                let to = free_path(&db, folder, stem, ext)?;
+                let to = free_path(&db, account, folder, stem, ext)?;
                 db.execute(
-                    "INSERT INTO notes (id, path, text, modified, dirty) VALUES (?, ?, ?, ?, ?)",
-                    params![id, to, text, now(), MODIFIED],
+                    "INSERT INTO notes (id, account, path, text, modified, dirty)
+                     VALUES (?, ?, ?, ?, ?, ?)",
+                    params![id, account, to, text, now(), MODIFIED],
                 )?;
                 drop(db);
                 self.emit(vec![to]);
@@ -539,7 +602,7 @@ impl Client {
             if r.path == path {
                 vec![r.path]
             } else {
-                let to = free_path(&db, folder, stem, ext)?;
+                let to = free_path(&db, account, folder, stem, ext)?;
                 place(&db, &r, &to)?;
                 vec![r.path, to]
             }
@@ -553,7 +616,7 @@ impl Client {
     }
 
     /// Move folder `folder` to path `dst`, see `move_folder`.
-    fn relocate_folder(&self, folder: String, dst: String) -> Result<String> {
+    fn relocate_folder(&self, account: i64, folder: String, dst: String) -> Result<String> {
         let inside = |p: &str, f: &str| p == f || p.starts_with(&format!("{f}/"));
         if folder.is_empty() || dst != folder && inside(&dst, &folder) {
             return Err(Error::Invalid(folder));
@@ -561,52 +624,59 @@ impl Client {
         if dst == folder {
             return Ok(dst);
         }
-        if self.folders().contains(&dst) {
+        if self.folders(account).contains(&dst) {
             return Err(Error::Exists(dst));
         }
         let changed = {
             let db = self.db.lock().unwrap();
             let tx = db.unchecked_transaction()?;
-            let on_server = on_server(&tx, &folder)?;
+            let on_server = on_server(&tx, account, &folder)?;
             let changed: Vec<String> = {
-                let mut st =
-                    tx.prepare(&format!("SELECT path FROM notes WHERE {}", under("path")))?;
-                st.query_map([&folder], |r| r.get(0))?
+                let mut st = tx.prepare(&format!(
+                    "SELECT path FROM notes WHERE account = ?2 AND {}",
+                    under("path")
+                ))?;
+                st.query_map(params![folder, account], |r| r.get(0))?
                     .collect::<rusqlite::Result<_>>()?
             };
+            // From here ?1 is the folder, ?2 where it goes, ?3 the account.
             let to = |c: &str| format!("{c} = ?2 || substr({c}, length(?1) + 1)");
             tx.execute(
-                &format!("UPDATE notes SET {} WHERE {}", to("path"), under("path")),
-                params![folder, dst],
+                &format!(
+                    "UPDATE notes SET {} WHERE account = ?3 AND {}",
+                    to("path"),
+                    under("path")
+                ),
+                params![folder, dst, account],
             )?;
             // One deleted there and not yet on the server: the push finds the name taken and
             // moves the notes one by one.
             tx.execute(
-                "DELETE FROM folders WHERE path = ? AND dirty = ?",
-                params![dst, FOLDER_DELETED],
+                "DELETE FROM folders WHERE account = ? AND path = ? AND dirty = ?",
+                params![account, dst, FOLDER_DELETED],
             )?;
             if on_server {
                 // The server's copies of what is in it move with it.
                 tx.execute(
                     &format!(
-                        "UPDATE notes SET {} WHERE {}",
+                        "UPDATE notes SET {} WHERE account = ?3 AND {}",
                         to("server_path"),
                         under("server_path")
                     ),
-                    params![folder, dst],
+                    params![folder, dst, account],
                 )?;
                 tx.execute(
-                    "INSERT INTO moves (src, dst) VALUES (?, ?)",
-                    params![folder, dst],
+                    "INSERT INTO moves (account, src, dst) VALUES (?, ?, ?)",
+                    params![account, folder, dst],
                 )?;
             }
             tx.execute(
                 &format!(
-                    "UPDATE folders SET {} WHERE path = ?1 OR {}",
+                    "UPDATE folders SET {} WHERE account = ?3 AND (path = ?1 OR {})",
                     to("path"),
                     under("path")
                 ),
-                params![folder, dst],
+                params![folder, dst, account],
             )?;
             tx.commit()?;
             changed
@@ -619,30 +689,38 @@ impl Client {
         Ok(dst)
     }
 
-    /// A new, empty folder ("a/b"), created on the server with the next push.
-    pub fn add_folder(&self, folder: String) -> Result<()> {
+    /// A new, empty folder ("a/b") of account `account`, created on the server with the next
+    /// push.
+    pub fn add_folder(&self, account: i64, folder: String) -> Result<()> {
         let folder = folder_path(&folder)?;
         if folder.is_empty() {
             return Err(Error::Invalid(folder));
         }
+        if self.account(account).is_none() {
+            return Err(Error::NoAccount);
+        }
         let db = self.db.lock().unwrap();
         // One deleted here and not yet on the server stays there.
         db.execute(
-            "INSERT INTO folders (path, dirty) VALUES (?1, 1)
-             ON CONFLICT (path) DO UPDATE SET dirty = 1 WHERE dirty = ?2",
-            params![folder, FOLDER_DELETED],
+            "INSERT INTO folders (account, path, dirty) VALUES (?3, ?1, 1)
+             ON CONFLICT (account, path) DO UPDATE SET dirty = 1 WHERE dirty = ?2",
+            params![folder, FOLDER_DELETED, account],
         )?;
         Ok(())
     }
 
-    /// Something waits for the server.
-    pub fn pending(&self) -> bool {
+    /// Something waits for the server: of account `account` (switched off too), or of any
+    /// switched on. Local accounts have nothing to wait for.
+    pub fn pending(&self, account: Option<i64>) -> bool {
         let db = self.db.lock().unwrap();
         db.query_row(
-            "SELECT EXISTS (SELECT 1 FROM notes WHERE dirty != 0 OR favorite_dirty = 1)
-               OR EXISTS (SELECT 1 FROM folders WHERE dirty != 0)
-               OR EXISTS (SELECT 1 FROM moves)",
-            [],
+            "WITH synced AS (SELECT id FROM accounts
+               WHERE kind = 'nextcloud' AND (id = ?1 OR ?1 IS NULL AND enabled))
+             SELECT EXISTS (SELECT 1 FROM notes WHERE (dirty != 0 OR favorite_dirty = 1)
+                 AND account IN synced)
+               OR EXISTS (SELECT 1 FROM folders WHERE dirty != 0 AND account IN synced)
+               OR EXISTS (SELECT 1 FROM moves WHERE account IN synced)",
+            [account],
             |r| r.get(0),
         )
         .unwrap_or(false)
@@ -662,10 +740,21 @@ impl Client {
 mod tests {
     use super::*;
 
-    fn client(name: &str) -> Client {
+    /// A client with a Nextcloud account (never connected), and the account.
+    fn client(name: &str) -> (Client, i64) {
         let dir = std::env::temp_dir().join(format!("notav-test-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
-        Client::open(dir.to_string_lossy().into()).unwrap()
+        let c = Client::open(dir.to_string_lossy().into()).unwrap();
+        let kind = crate::AccountKind::Nextcloud;
+        let a = c
+            .add_account(
+                kind,
+                "https://cloud.example".into(),
+                "kris".into(),
+                "".into(),
+            )
+            .unwrap();
+        (c, a)
     }
 
     #[test]
@@ -692,6 +781,7 @@ mod tests {
             let (folder, name) = split(p);
             Note {
                 id: i as i64,
+                account: 1,
                 path: p.to_string(),
                 title: stem(name).to_string(),
                 folder: folder.to_string(),
@@ -725,12 +815,24 @@ mod tests {
 
     #[test]
     fn following_and_backlinks() {
-        let c = client("links");
+        let (c, x) = client("links");
         let a = c
-            .add_note("".into(), "A".into(), "See [[B]] and [c](Sub/C.md).".into())
+            .add_note(
+                x,
+                "".into(),
+                "A".into(),
+                "See [[B]] and [c](Sub/C.md).".into(),
+            )
             .unwrap();
         let b = c
-            .add_note("".into(), "B".into(), "Back to [A](A.md)".into())
+            .add_note(x, "".into(), "B".into(), "Back to [A](A.md)".into())
+            .unwrap();
+        // Another account's notes are not linked to.
+        let local = crate::AccountKind::Local;
+        let y = c
+            .add_account(local, "".into(), "".into(), "".into())
+            .unwrap();
+        c.add_note(y, "".into(), "B".into(), "Not [A](A.md)".into())
             .unwrap();
         assert_eq!(c.follow_link(a.id, "B".into(), true).unwrap().id, b.id);
         assert_eq!(c.follow_link(a.id, "".into(), false).unwrap().id, a.id);
@@ -749,11 +851,13 @@ mod tests {
 
     #[test]
     fn add_rename_delete() {
-        let c = client("notes");
+        let (c, x) = client("notes");
         let a = c
-            .add_note("Work".into(), "Plan".into(), "# Plan".into())
+            .add_note(x, "Work".into(), "Plan".into(), "# Plan".into())
             .unwrap();
-        let b = c.add_note("Work".into(), "Plan".into(), "".into()).unwrap();
+        let b = c
+            .add_note(x, "Work".into(), "Plan".into(), "".into())
+            .unwrap();
         assert_eq!(
             (a.path.as_str(), b.path.as_str()),
             ("Work/Plan.md", "Work/Plan 2.md")
@@ -767,7 +871,7 @@ mod tests {
         assert_eq!(b.path, "Later.md");
         c.set_text(b.id, "text".into()).unwrap();
         assert_eq!(c.note_text(b.id).as_deref(), Some("text"));
-        assert_eq!(c.folders(), ["Work"]);
+        assert_eq!(c.folders(x), ["Work"]);
         let found =
             |q: &str| -> Vec<String> { c.search(q.into()).into_iter().map(|n| n.path).collect() };
         c.set_text(a.id, "Zażółć gęślą jaźń, \"quoted\" * NEAR".into())
@@ -779,49 +883,51 @@ mod tests {
         assert_eq!(found(" ").len(), 2);
         // A folder moves with what is in it; never on the server, nothing waits to move it.
         assert_eq!(
-            c.move_folder("Work".into(), "Old".into()).unwrap(),
+            c.move_folder(x, "Work".into(), "Old".into()).unwrap(),
             "Old/Work"
         );
         assert_eq!(c.note(a.id).unwrap().path, "Old/Work/Plan.md");
         assert!(matches!(
-            c.move_folder("Old".into(), "Old/Work".into()),
+            c.move_folder(x, "Old".into(), "Old/Work".into()),
             Err(Error::Invalid(_))
         ));
-        c.add_folder("Work".into()).unwrap();
+        c.add_folder(x, "Work".into()).unwrap();
         assert!(matches!(
-            c.move_folder("Work".into(), "Old".into()),
+            c.move_folder(x, "Work".into(), "Old".into()),
             Err(Error::Exists(_))
         ));
-        assert_eq!(c.folders(), ["Old", "Old/Work", "Work"]);
+        assert_eq!(c.folders(x), ["Old", "Old/Work", "Work"]);
         assert_eq!(
-            c.rename_folder("Old/Work".into(), " Done/ ".into())
+            c.rename_folder(x, "Old/Work".into(), " Done/ ".into())
                 .unwrap(),
             "Old/Done-"
         );
         assert!(matches!(
-            c.rename_folder("Old".into(), "Work".into()),
+            c.rename_folder(x, "Old".into(), "Work".into()),
             Err(Error::Exists(_))
         ));
         assert_eq!(c.note(a.id).unwrap().path, "Old/Done-/Plan.md");
         // Never uploaded: gone at once.
         c.delete_note(b.id).unwrap();
         assert_eq!(c.notes().len(), 1);
-        assert!(c.pending());
-        c.delete_folder("Old".into()).unwrap();
+        assert!(c.pending(None));
+        c.delete_folder(x, "Old".into()).unwrap();
         assert!(c.notes().is_empty());
-        assert_eq!(c.folders(), ["Work"]);
-        c.delete_folder("Work".into()).unwrap();
-        assert!(!c.pending());
+        assert_eq!(c.folders(x), ["Work"]);
+        c.delete_folder(x, "Work".into()).unwrap();
+        assert!(!c.pending(None));
     }
 
     #[test]
     fn undo_puts_back_deletes_and_moves() {
-        let c = client("undo");
+        let (c, x) = client("undo");
         let a = c
-            .add_note("Work".into(), "Plan".into(), "p".into())
+            .add_note(x, "Work".into(), "Plan".into(), "p".into())
             .unwrap();
-        let b = c.add_note("".into(), "Later".into(), "l".into()).unwrap();
-        c.add_folder("Work/Empty".into()).unwrap();
+        let b = c
+            .add_note(x, "".into(), "Later".into(), "l".into())
+            .unwrap();
+        c.add_folder(x, "Work/Empty".into()).unwrap();
         let paths = || -> Vec<String> { c.notes().into_iter().map(|n| n.path).collect() };
 
         c.move_note(b.id, "Work".into(), "Later".into()).unwrap();
@@ -833,18 +939,19 @@ mod tests {
         assert_eq!(c.note_text(a.id).as_deref(), Some("p"));
 
         // An older step, by its id; its name taken since: a number is added.
-        c.add_note("".into(), "Later".into(), "new".into()).unwrap();
+        c.add_note(x, "".into(), "Later".into(), "new".into())
+            .unwrap();
         assert!(c.undo(moved).unwrap());
         assert_eq!(c.note(b.id).unwrap().path, "Later 2.md");
         assert!(!c.undo(moved).unwrap(), "a step is undone once");
 
-        c.delete_folder("Work".into()).unwrap();
+        c.delete_folder(x, "Work".into()).unwrap();
         assert_eq!(paths(), ["Later 2.md", "Later.md"]);
         assert!(c.undo(None).unwrap());
         assert_eq!(paths(), ["Later 2.md", "Later.md", "Work/Plan.md"]);
-        assert_eq!(c.folders(), ["Work", "Work/Empty"]);
+        assert_eq!(c.folders(x), ["Work", "Work/Empty"]);
 
-        c.rename_folder("Work".into(), "Done".into()).unwrap();
+        c.rename_folder(x, "Work".into(), "Done".into()).unwrap();
         assert!(c.undo(None).unwrap());
         assert_eq!(c.note(a.id).unwrap().path, "Work/Plan.md");
         assert!(!c.undo(None).unwrap());

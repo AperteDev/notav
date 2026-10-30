@@ -16,9 +16,9 @@ stay in your own Nextcloud as plain Markdown files, so the Nextcloud Notes app a
 and syncs while it runs. It is the sibling of [Todav](https://github.com/AperteDev/todav), the
 tasks and calendar app.
 
-Notav is at an early stage: notes, folders, search, sync, the journal, links between notes,
-favorites, the trash and versions work; tags and links to Todav's tasks are next (see the
-[roadmap](docs/ROADMAP.md)).
+Notav is at an early stage: notes, folders, search, sync, more than one account, notes on this
+device only, the journal, links between notes, favorites, the trash and versions work; tags
+and links to Todav's tasks are next (see the [roadmap](docs/ROADMAP.md)).
 
 Notav is developed in my free time. If it keeps your notes in order, you can support its
 development:
@@ -38,7 +38,8 @@ development:
 - A Markdown editor that saves as you type; the title is the file name.
 - Your folders and notes as a tree, as in Obsidian; search through titles and text, ignoring
   case and accents.
-- Sign-in through GNOME Online Accounts, the browser, or a login name and app password.
+- Sign-in through GNOME Online Accounts, the browser, or a login name and app password; more
+  than one account, or none: notes kept on this device only.
 - Settings synced between your devices.
 
 All of what Notav does, and what it will, is listed in [FEATURES.md](docs/FEATURES.md).
@@ -60,7 +61,7 @@ sudo tar -xzf notav-<version>-x86_64.tar.gz -C /
 ```
 
 Or [build and install](#building-and-installing) Notav from source. Then open Notav, sign in to
-your Nextcloud and pick the folder your notes are in.
+your Nextcloud and pick the folder your notes are in, or keep your notes on this device only.
 
 ## Translations
 

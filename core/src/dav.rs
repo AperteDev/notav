@@ -345,6 +345,16 @@ impl Dav {
         Ok(multistatus(&r.body)?.0)
     }
 
+    /// What `status.php` at the server's base (before `/remote.php/`) says.
+    pub fn server_info(&self) -> Result<ServerInfo> {
+        let base = self.root.split_once("/remote.php/").map_or("", |(b, _)| b);
+        let r = self.request("GET", &format!("{base}/status.php"), &[], "")?;
+        if r.status != 200 {
+            return Err(Error::Http(r.status, r.body));
+        }
+        server_info(&r.body).ok_or_else(|| Error::Parse("not a Nextcloud status".into()))
+    }
+
     pub fn principal(&self) -> Result<String> {
         let p = self.propfind(&self.root, "0", "<d:current-user-principal/>")?;
         p.first()
@@ -604,10 +614,48 @@ pub fn xml_escape(s: &str) -> String {
         .replace('"', "&quot;")
 }
 
-#[cfg(test)]
+/// What the Nextcloud server says about itself (`status.php`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct ServerInfo {
+    /// "Nextcloud", or the name a themed server gives itself.
+    pub product: String,
+    /// "32.0.1"
+    pub version: String,
+    pub maintenance: bool,
+}
+
+/// `status.php`: `{"installed":true,"maintenance":false,"versionstring":"32.0.1","productname":"Nextcloud",…}`.
+fn server_info(body: &str) -> Option<ServerInfo> {
+    let j = crate::json::Json::parse(body)?;
+    let text = |k| {
+        j.get(k)
+            .and_then(crate::json::Json::str)
+            .map(str::to_string)
+    };
+    Some(ServerInfo {
+        product: text("productname").unwrap_or_else(|| "Nextcloud".into()),
+        version: text("versionstring")?,
+        maintenance: j.get("maintenance") == Some(&crate::json::Json::Bool(true)),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn server_info_from_status_php() {
+        let body = r#"{"installed":true,"maintenance":true,"needsDbUpgrade":false,"version":"32.0.1.2","versionstring":"32.0.1","edition":"","productname":"Nextcloud","extendedSupport":false}"#;
+        assert_eq!(
+            server_info(body),
+            Some(ServerInfo {
+                product: "Nextcloud".into(),
+                version: "32.0.1".into(),
+                maintenance: true,
+            })
+        );
+        assert_eq!(server_info("<html>not found</html>"), None);
+    }
 
     #[test]
     fn parses_multistatus() {

@@ -1,13 +1,15 @@
 //! Front-end settings, kept locally and synced through `.config/notav/settings.json` in
 //! Nextcloud Files: every key carries its last change time and the newer value wins.
 
+use crate::account::key;
 use crate::json::Json;
 use crate::{Client, Error, Result, store};
 use std::collections::BTreeMap;
 
 /// Settings that only make sense on one device and are never synced.
 pub const DEVICE_ONLY: &[&str] = &[
-    "sync_settings",
+    // Accounts are this device's.
+    "settings_account",
     // Light, dark or the system's: each device follows its own desktop.
     "color_scheme",
     // Row density suits the screen.
@@ -20,7 +22,7 @@ pub const DEVICE_ONLY: &[&str] = &[
     "text_zoom",
     "full_width",
     "wrap_lines",
-    "goa_account",
+    // Notav 0.1's browser sign-in, kept while GNOME Online Accounts was used.
     "manual_url",
     "manual_user",
     // UI state.
@@ -50,22 +52,23 @@ impl Client {
         store::kv_set(&db, &format!("settime_{key}"), &crate::now().to_string())
     }
 
-    /// Merge local and server settings (newer wins), uploading if this device has newer ones.
-    /// Off when the `sync_settings` setting is "false".
-    pub(crate) fn sync_settings(&self) -> Result<()> {
-        if self.setting("sync_settings".into()).as_deref() == Some("false") {
+    /// Merge local and server settings (newer wins), uploading if this device has newer ones;
+    /// through the settings account (`settings_account`), while it syncs.
+    pub fn sync_settings(&self) -> Result<()> {
+        let Some(id) = self.settings_account().filter(|&id| self.syncing(id)) else {
             return Ok(());
-        }
+        };
         let local_only = DEVICE_ONLY;
-        let dav = self.dav()?;
-        let href = format!("{}.config/notav/settings.json", self.files_home()?);
+        let dav = self.dav(id)?;
+        let href = format!("{}.config/notav/settings.json", self.files_home(id)?);
+        let (etag_key, json_key) = (key(id, "settings_etag"), key(id, "settings_json"));
         // A failed If-Match means another device wrote in between: fetch again and re-merge.
         for _ in 0..3 {
             let (etag, cached) = {
                 let db = self.db.lock().unwrap();
                 (
-                    store::kv_get(&db, "config_settings_etag")?,
-                    store::kv_get(&db, "config_settings_json")?,
+                    store::kv_get(&db, &etag_key)?,
+                    store::kv_get(&db, &json_key)?,
                 )
             };
             let headers: Vec<(&str, &str)> = etag
@@ -88,12 +91,8 @@ impl Client {
                     store::kv_set(&db, &format!("setting_{k}"), v)?;
                     store::kv_set(&db, &format!("settime_{k}"), &t.to_string())?;
                 }
-                store::kv_set(&db, "config_settings_json", &body)?;
-                store::kv_set(
-                    &db,
-                    "config_settings_etag",
-                    etag.as_deref().unwrap_or_default(),
-                )?;
+                store::kv_set(&db, &json_key, &body)?;
+                store::kv_set(&db, &etag_key, etag.as_deref().unwrap_or_default())?;
             }
             if !apply.is_empty() {
                 for l in self.listeners.lock().unwrap().iter() {
@@ -122,13 +121,9 @@ impl Client {
             match r.status {
                 200..=299 => {
                     let db = self.db.lock().unwrap();
-                    store::kv_set(&db, "config_settings_json", &new_body)?;
+                    store::kv_set(&db, &json_key, &new_body)?;
                     // Without an ETag the next GET simply returns the file again.
-                    store::kv_set(
-                        &db,
-                        "config_settings_etag",
-                        r.etag.as_deref().unwrap_or_default(),
-                    )?;
+                    store::kv_set(&db, &etag_key, r.etag.as_deref().unwrap_or_default())?;
                     return Ok(());
                 }
                 412 => continue,

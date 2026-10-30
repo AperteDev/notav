@@ -1,3 +1,4 @@
+mod account;
 pub mod dav;
 mod files;
 pub mod journal;
@@ -13,19 +14,15 @@ mod undo;
 
 use dav::Dav;
 use rusqlite::Connection;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
+pub use account::{Account, AccountKind};
 pub use files::{Deleted, Features, Version};
 pub use login::{Credentials, LoginFlow, login_flow_poll, login_flow_start, password_login};
 pub use notes::Note;
 pub use settings::DEVICE_ONLY;
 pub use sync::{DEFAULT_FOLDER, Locked, SyncReport};
-
-#[derive(Debug, Clone)]
-pub struct Account {
-    pub url: String,
-    pub user: String,
-}
 
 pub trait ChangeListener: Send + Sync {
     /// Notes changed, by path relative to the notes folder.
@@ -36,12 +33,13 @@ pub trait ChangeListener: Send + Sync {
 
 pub struct Client {
     db: Mutex<Connection>,
-    dav: Mutex<Option<Arc<Dav>>>,
+    /// The connections of the accounts connected in this run, by account id.
+    dav: Mutex<HashMap<i64, Arc<Dav>>>,
     listeners: Mutex<Vec<Box<dyn ChangeListener>>>,
     sync_lock: Mutex<()>,
     journal: Mutex<undo::Journal>,
-    /// The server's features were asked for in this run (`refresh_features`).
-    features_asked: std::sync::atomic::AtomicBool,
+    /// The accounts whose server's features were asked for in this run (`refresh_features`).
+    features_asked: Mutex<HashSet<i64>>,
 }
 
 pub fn now() -> i64 {
@@ -57,74 +55,12 @@ impl Client {
         let db = store::open(&format!("{data_dir}/core.sqlite"))?;
         Ok(Client {
             db: Mutex::new(db),
-            dav: Mutex::new(None),
+            dav: Mutex::default(),
             listeners: Mutex::new(Vec::new()),
             sync_lock: Mutex::new(()),
             journal: Mutex::default(),
             features_asked: Default::default(),
         })
-    }
-
-    /// The password is kept in memory only; front-ends keep it in the platform keyring.
-    pub fn set_account(&self, url: String, user: String, app_password: String) -> Result<()> {
-        let db = self.db.lock().unwrap();
-        if store::kv_get(&db, "account_url")?.as_deref() != Some(&url)
-            || store::kv_get(&db, "account_user")?.as_deref() != Some(&user)
-        {
-            // Different account: its copy belongs to the old one.
-            db.execute_batch(
-                "DELETE FROM notes; DELETE FROM folders; DELETE FROM moves;
-                 DELETE FROM kv WHERE key LIKE 'config_%';",
-            )?;
-            self.journal.lock().unwrap().clear();
-            self.features_asked
-                .store(false, std::sync::atomic::Ordering::SeqCst);
-        }
-        store::kv_set(&db, "account_url", &url)?;
-        store::kv_set(&db, "account_user", &user)?;
-        *self.dav.lock().unwrap() = Some(Arc::new(Dav::new(&url, &user, &app_password)));
-        Ok(())
-    }
-
-    pub fn account(&self) -> Option<Account> {
-        let db = self.db.lock().unwrap();
-        Some(Account {
-            url: store::kv_get(&db, "account_url").ok()??,
-            user: store::kv_get(&db, "account_user").ok()??,
-        })
-    }
-
-    /// Forget the account and its local copy.
-    pub fn logout(&self) -> Result<()> {
-        let db = self.db.lock().unwrap();
-        db.execute_batch(
-            "DELETE FROM notes; DELETE FROM folders; DELETE FROM moves;
-             DELETE FROM kv WHERE key LIKE 'config_%' OR key LIKE 'account_%';",
-        )?;
-        self.journal.lock().unwrap().clear();
-        *self.dav.lock().unwrap() = None;
-        Ok(())
-    }
-
-    fn dav(&self) -> Result<Arc<Dav>> {
-        self.dav.lock().unwrap().clone().ok_or(Error::NoAccount)
-    }
-
-    /// The user's Nextcloud Files root, `/remote.php/dav/files/<user id>/`. The user id can
-    /// differ from the login name (an email address, for one), so it comes from the principal.
-    pub fn files_home(&self) -> Result<String> {
-        if let Some(h) = store::kv_get(&self.db.lock().unwrap(), "config_files_home")? {
-            return Ok(h);
-        }
-        let principal = self.dav()?.principal()?;
-        let user = principal
-            .trim_end_matches('/')
-            .rsplit('/')
-            .next()
-            .unwrap_or_default();
-        let home = format!("/remote.php/dav/files/{user}/");
-        store::kv_set(&self.db.lock().unwrap(), "config_files_home", &home)?;
-        Ok(home)
     }
 
     pub fn subscribe(&self, listener: Box<dyn ChangeListener>) {
@@ -241,32 +177,5 @@ mod tests {
             Error::Http(500, "oops".into()).to_string(),
             "HTTP 500: oops"
         );
-    }
-
-    #[test]
-    fn another_account_or_signing_out_drops_what_waits_for_the_server() {
-        let dir = std::env::temp_dir().join(format!("notav-test-account-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        let c = Client::open(dir.to_string_lossy().into()).unwrap();
-        let account = |user: &str| {
-            c.set_account("https://cloud.example".into(), user.into(), "x".into())
-                .unwrap()
-        };
-        // A folder pulled from the server, then moved here: one MOVE queued.
-        let queue_a_move = || {
-            c.db.lock()
-                .unwrap()
-                .execute("INSERT INTO folders (path, etag) VALUES ('Work', 'e')", [])
-                .unwrap();
-            c.move_folder("Work".into(), "Old".into()).unwrap();
-            assert!(c.pending());
-        };
-        account("a");
-        queue_a_move();
-        account("b");
-        assert!(!c.pending(), "a's move would go to b's files");
-        queue_a_move();
-        c.logout().unwrap();
-        assert!(!c.pending());
     }
 }

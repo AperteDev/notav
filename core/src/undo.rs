@@ -8,16 +8,22 @@ const KEEP: usize = 100;
 /// take what was typed into it since.
 #[derive(Debug, Clone)]
 pub(crate) enum Before {
-    /// Note `id` (ids are never reused) was at `path`; `text`: it was deleted, with that text.
+    /// Note `id` (ids are never reused) of `account` was at `path`; `text`: it was deleted, with
+    /// that text.
     Note {
         id: i64,
+        account: i64,
         path: String,
         text: Option<String>,
     },
-    /// Folder `path` was deleted.
-    Folder(String),
-    /// A folder was at `from`, now at `to`.
-    FolderMoved { from: String, to: String },
+    /// Folder `path` of an account was deleted.
+    Folder(i64, String),
+    /// A folder of `account` was at `from`, now at `to`.
+    FolderMoved {
+        account: i64,
+        from: String,
+        to: String,
+    },
 }
 
 #[derive(Default)]

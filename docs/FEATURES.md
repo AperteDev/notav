@@ -10,11 +10,13 @@ What Notav can do, in short. The details of each release are in the
 - Notes are Markdown files in a folder of your Nextcloud Files (`Notes/` by default, as the
   Nextcloud Notes app); subfolders are folders in Notav too.
 - Sign in with GNOME Online Accounts, the browser, or a login name and app password.
+- More than one account, as in Todav: Nextcloud ones, and notes on this device only, with no
+  server at all.
 - Works from a local copy: offline too; changes go up when the server is reachable.
 - A note changed on two devices at once keeps both versions (the other as a conflict copy).
 - A note locked on the server (open in Nextcloud Text) waits with its change; Notav says who
   locked it and can unlock it.
-- Settings synced between your devices.
+- Settings synced between your devices, through the account you choose.
 
 **Organizing**
 
@@ -61,7 +63,7 @@ What Notav can do, in short. The details of each release are in the
 
 ## Planned
 
-- Use Notav without a server: notes on this device only.
+- Notes moved between accounts; the journal in an account of your choice.
 - Notes in GNOME Shell's search.
 - Emptying the Trash of notes at once; a version's changes shown against the note.
 - Spell checking.

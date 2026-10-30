@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notav\n"
 "Report-Msgid-Bugs-To: https://github.com/AperteDev/notav/issues\n"
-"POT-Creation-Date: 2026-10-30 10:04+0100\n"
+"POT-Creation-Date: 2026-10-30 12:44+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,8 +18,44 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: linux/app/src/connection.rs:39 linux/app/src/window.rs:2252
+#: linux/app/src/add_account.rs:77
+msgid "Its Nextcloud accounts are all added"
+msgstr ""
+
+#: linux/app/src/add_account.rs:79
 msgid "No Nextcloud account in Settings → Online Accounts"
+msgstr ""
+
+#: linux/app/src/add_account.rs:92 linux/app/src/add_account.rs:96
+#: linux/app/ui/settings.blp:188
+msgid "Add Account"
+msgstr ""
+
+#: linux/app/src/add_account.rs:94
+msgid "Notes of another Nextcloud account, or kept on this device"
+msgstr ""
+
+#: linux/app/src/add_account.rs:111 linux/app/src/settings.rs:680
+#: linux/app/src/settings.rs:807 linux/app/ui/add-account.blp:38
+msgid "GNOME Online Accounts"
+msgstr ""
+
+#: linux/app/src/add_account.rs:114
+msgid "Connect with a Nextcloud account from GNOME Settings"
+msgstr ""
+
+#: linux/app/src/add_account.rs:117 linux/app/ui/add-account.blp:53
+msgid "Nextcloud Server"
+msgstr ""
+
+#: linux/app/src/add_account.rs:120
+msgid "Sign in to your Nextcloud; Notav gets an app password of its own"
+msgstr ""
+
+#: linux/app/src/add_account.rs:297 linux/app/src/settings.rs:131
+#: linux/app/src/settings.rs:373 linux/app/src/window.rs:2025
+#: linux/app/src/window.rs:2057
+msgid "Not a folder name"
 msgstr ""
 
 #: linux/app/src/editor.rs:493 linux/app/src/editor.rs:924
@@ -114,197 +150,333 @@ msgstr ""
 msgid "Insert Table"
 msgstr ""
 
-#: linux/app/src/files.rs:76
+#: linux/app/src/files.rs:93
 #, rust-format
 msgid "Deleted {date}"
 msgstr ""
 
-#: linux/app/src/files.rs:99 linux/app/ui/versions.blp:98
+#: linux/app/src/files.rs:117 linux/app/ui/versions.blp:98
 msgid "Restore"
 msgstr ""
 
-#: linux/app/src/files.rs:120
+#: linux/app/src/files.rs:138
 #, rust-format
 msgid "“{title}” restored"
 msgstr ""
 
-#: linux/app/src/files.rs:132
+#: linux/app/src/files.rs:150
 msgid "Delete Permanently"
 msgstr ""
 
-#: linux/app/src/files.rs:170
+#: linux/app/src/files.rs:188
 msgid "Delete Permanently?"
 msgstr ""
 
-#: linux/app/src/files.rs:171
+#: linux/app/src/files.rs:189
 #, rust-format
 msgid "“{title}” cannot be restored afterwards"
 msgstr ""
 
-#: linux/app/src/files.rs:174 linux/app/src/settings.rs:334
-#: linux/app/src/window.rs:503 linux/app/ui/new-folder.blp:11
-#: linux/app/ui/password-login.blp:19 linux/app/ui/settings.blp:196
-#: linux/app/ui/window.blp:118
+#: linux/app/src/files.rs:192 linux/app/src/settings.rs:346
+#: linux/app/src/settings.rs:971 linux/app/src/window.rs:581
+#: linux/app/ui/account.blp:34 linux/app/ui/add-account.blp:185
+#: linux/app/ui/new-folder.blp:11 linux/app/ui/password-login.blp:19
 msgid "Cancel"
 msgstr ""
 
-#: linux/app/src/files.rs:175 linux/app/src/window.rs:1996
-#: linux/app/src/window.rs:2004
+#: linux/app/src/files.rs:193 linux/app/src/window.rs:2162
+#: linux/app/src/window.rs:2170
 msgid "Delete"
 msgstr ""
 
-#: linux/app/src/files.rs:207
+#: linux/app/src/files.rs:225
 #, rust-format
 msgid "Restored the version of {date}"
 msgstr ""
 
-#: linux/app/src/files.rs:240
+#: linux/app/src/files.rs:259
 msgid "Current version"
 msgstr ""
 
-#: linux/app/src/main.rs:246
+#: linux/app/src/main.rs:239
+msgid "On This Device"
+msgstr ""
+
+#: linux/app/src/main.rs:299
 #, rust-format
 msgid "Cannot upload pending changes first: {error}"
 msgstr ""
 
-#: linux/app/src/main.rs:264
-msgid "Disconnecting failed"
-msgstr ""
-
-#: linux/app/src/main.rs:283
+#: linux/app/src/main.rs:316
 msgid "Online Accounts has no password for this account"
 msgstr ""
 
-#: linux/app/src/main.rs:301
+#: linux/app/src/main.rs:331
+msgid "This account is already added"
+msgstr ""
+
+#: linux/app/src/main.rs:339 linux/app/src/main.rs:387
 #, rust-format
 msgid "Cannot save password: {error}"
 msgstr ""
 
-#: linux/app/src/main.rs:315
+#: linux/app/src/main.rs:349 linux/app/src/main.rs:384
+#: linux/app/src/main.rs:402
 msgid "Connecting failed"
 msgstr ""
 
-#: linux/app/src/settings.rs:122 linux/app/src/settings.rs:360
-#: linux/app/src/window.rs:1869 linux/app/src/window.rs:1901
-#: linux/app/src/window.rs:2456
-msgid "Not a folder name"
+#: linux/app/src/main.rs:367
+msgid "Welcome to Notav"
 msgstr ""
 
-#: linux/app/src/settings.rs:141
+#: linux/app/src/main.rs:369
+msgid ""
+"Your notes stay on this device. They are written in Markdown: # starts a "
+"heading, - a list, - [ ] a task, and [[Title]] links another note."
+msgstr ""
+
+#: linux/app/src/main.rs:429
+msgid "It has changes not uploaded yet: sign in again to upload them"
+msgstr ""
+
+#: linux/app/src/main.rs:439
+msgid "Removing the account failed"
+msgstr ""
+
+#: linux/app/src/settings.rs:150
 #, rust-format
 msgid "No note “{name}”"
 msgstr ""
 
-#: linux/app/src/settings.rs:324
+#: linux/app/src/settings.rs:336
 msgid "Move the Notes?"
 msgstr ""
 
-#: linux/app/src/settings.rs:327
+#: linux/app/src/settings.rs:339
 #, rust-format
 msgid ""
 "Move your notes from “{old}” to “{new}”, or leave them there and show the "
 "notes in “{new}”?"
 msgstr ""
 
-#: linux/app/src/settings.rs:335
+#: linux/app/src/settings.rs:347
 msgid "Leave Them"
 msgstr ""
 
-#: linux/app/src/settings.rs:336
+#: linux/app/src/settings.rs:348
 msgid "Move"
 msgstr ""
 
-#: linux/app/src/settings.rs:358
+#: linux/app/src/settings.rs:371
 #, rust-format
 msgid "Notes folder changed to “{folder}”"
 msgstr ""
 
-#: linux/app/src/settings.rs:361
+#: linux/app/src/settings.rs:374
 #, rust-format
 msgid "Notes folder not changed: {error}"
 msgstr ""
 
-#: linux/app/src/settings.rs:363
+#: linux/app/src/settings.rs:376
 msgid "Notes folder not changed"
 msgstr ""
 
-#: linux/app/src/settings.rs:398 linux/app/src/settings.rs:437
+#: linux/app/src/settings.rs:437
 #, rust-format
-msgid "Connected as {name}"
+msgid "Last synced: {time}"
 msgstr ""
 
-#: linux/app/src/settings.rs:399 linux/app/src/window.rs:2267
-#: linux/app/ui/window.blp:43
-msgid "GNOME Online Accounts"
+#: linux/app/src/settings.rs:441
+msgid "Syncing…"
 msgstr ""
 
-#: linux/app/src/settings.rs:402 linux/app/src/settings.rs:444
-#: linux/app/src/settings.rs:576
+#: linux/app/src/settings.rs:447
+msgid "Choose its notes folder below to sync it"
+msgstr ""
+
+#: linux/app/src/settings.rs:453
+#, rust-format
+msgid "Failed: {error}"
+msgstr ""
+
+#: linux/app/src/settings.rs:457
+msgid "Not synced yet"
+msgstr ""
+
+#: linux/app/src/settings.rs:465
+msgid "Checking…"
+msgstr ""
+
+#: linux/app/src/settings.rs:477
+#, rust-format
+msgid "{server}, in maintenance mode"
+msgstr ""
+
+#: linux/app/src/settings.rs:487
+#, rust-format
+msgid "Cannot reach the server: {error}"
+msgstr ""
+
+#: linux/app/src/settings.rs:551
+#, rust-format
+msgid "{name} added"
+msgstr ""
+
+#: linux/app/src/settings.rs:565
+msgid "Drag to Move"
+msgstr ""
+
+#: linux/app/src/settings.rs:676
+msgctxt "account"
+msgid "Off"
+msgstr ""
+
+#: linux/app/src/settings.rs:677 linux/app/ui/add-account.blp:71
+msgid "Notes that stay on this computer"
+msgstr ""
+
+#: linux/app/src/settings.rs:678 linux/app/src/settings.rs:796
+msgid "Not connected"
+msgstr ""
+
+#: linux/app/src/settings.rs:679
+msgid "No notes folder chosen"
+msgstr ""
+
+#: linux/app/src/settings.rs:681 linux/app/ui/account.blp:51
+#: linux/app/ui/add-account.blp:127
+msgid "Nextcloud server"
+msgstr ""
+
+#: linux/app/src/settings.rs:703
+msgctxt "settings sync"
+msgid "Off"
+msgstr ""
+
+#: linux/app/src/settings.rs:798
+msgid "Sign in again to sync it"
+msgstr ""
+
+#: linux/app/src/settings.rs:800
+msgid "Check the account in Settings → Online Accounts"
+msgstr ""
+
+#: linux/app/src/settings.rs:803 linux/app/src/settings.rs:843
 #, rust-format
 msgid "Signed in as {name}"
 msgstr ""
 
-#: linux/app/src/settings.rs:406
-msgid "Not signed in"
+#: linux/app/src/settings.rs:806
+#, rust-format
+msgid "Connected as {name}"
 msgstr ""
 
-#: linux/app/src/settings.rs:448
-msgid "Disconnected"
+#: linux/app/src/settings.rs:839
+#, rust-format
+msgid "Signed in as {name}: add that as another account"
 msgstr ""
 
-#: linux/app/src/settings.rs:499 linux/app/src/window.rs:2384
+#: linux/app/src/settings.rs:880
 msgid "Waiting for Sign-In…"
 msgstr ""
 
-#: linux/app/src/settings.rs:501 linux/app/src/window.rs:2386
+#: linux/app/src/settings.rs:882
 msgid "Waiting for Browser…"
 msgstr ""
 
-#: linux/app/src/window.rs:64
+#: linux/app/src/settings.rs:930
+msgid "No saved password: sign in again first"
+msgstr ""
+
+#: linux/app/src/settings.rs:932
+msgid "Nextcloud server changed"
+msgstr ""
+
+#: linux/app/src/settings.rs:961
+msgid ""
+"Its notes are deleted from this device, with everything in them. This cannot "
+"be undone."
+msgstr ""
+
+#: linux/app/src/settings.rs:965
+msgid ""
+"Its notes leave this device; they stay on the server. Switch it off instead "
+"to only hide them."
+msgstr ""
+
+#: linux/app/src/settings.rs:978
+#, rust-format
+msgid "Remove {name}?"
+msgstr ""
+
+#: linux/app/src/settings.rs:980
+msgid "Remove"
+msgstr ""
+
+#: linux/app/src/settings.rs:988
+msgid "Remove Without Uploading?"
+msgstr ""
+
+#: linux/app/src/settings.rs:989
+#, rust-format
+msgid ""
+"{error}. Changes made here that the server does not have yet will be lost."
+msgstr ""
+
+#: linux/app/src/settings.rs:991
+msgid "Remove Anyway"
+msgstr ""
+
+#: linux/app/src/settings.rs:1005
+#, rust-format
+msgid "{name} removed"
+msgstr ""
+
+#: linux/app/src/window.rs:87
 msgid "Support on Ko-fi"
 msgstr ""
 
-#: linux/app/src/window.rs:68
+#: linux/app/src/window.rs:91
 msgid "Sponsor on GitHub"
 msgstr ""
 
-#: linux/app/src/window.rs:72
+#: linux/app/src/window.rs:95
 msgid "Donate on Liberapay"
 msgstr ""
 
-#: linux/app/src/window.rs:227
+#: linux/app/src/window.rs:247
 msgid ""
 "Notav is developed in my free time. If it keeps your notes in order, you can "
 "support its development."
 msgstr ""
 
 #. Translators: the About row that opens the page with the donation links.
-#: linux/app/src/window.rs:257
+#: linux/app/src/window.rs:277
 msgid "_Support"
 msgstr ""
 
 #. Translators: title of About's page with the donation links.
-#: linux/app/src/window.rs:259
+#: linux/app/src/window.rs:279
 msgid "Support"
 msgstr ""
 
-#: linux/app/src/window.rs:378 linux/app/ui/shortcuts.blp:59
+#: linux/app/src/window.rs:456 linux/app/ui/shortcuts.blp:59
 msgid "Undo"
 msgstr ""
 
-#: linux/app/src/window.rs:424
+#: linux/app/src/window.rs:502
 #, rust-format
 msgid "Sync failed: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:441
+#: linux/app/src/window.rs:519
 #, rust-format
 msgid ""
 "“{title}” was changed elsewhere too: your version is kept next to it as a "
 "copy"
 msgstr ""
 
-#: linux/app/src/window.rs:445
+#: linux/app/src/window.rs:523
 #, rust-format
 msgid ""
 "{n} note was changed elsewhere too: your version is kept next to it as a copy"
@@ -314,212 +486,292 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: linux/app/src/window.rs:471
+#: linux/app/src/window.rs:549
 #, rust-format
 msgid "Something in “{title}” is locked on the server"
 msgstr ""
 
-#: linux/app/src/window.rs:473
+#: linux/app/src/window.rs:551
 #, rust-format
 msgid "“{title}” is locked on the server by {owner} since {time}"
 msgstr ""
 
-#: linux/app/src/window.rs:475
+#: linux/app/src/window.rs:553
 #, rust-format
 msgid "“{title}” is locked on the server by {owner}"
 msgstr ""
 
-#: linux/app/src/window.rs:476
+#: linux/app/src/window.rs:554
 #, rust-format
 msgid "“{title}” is locked on the server"
 msgstr ""
 
-#: linux/app/src/window.rs:484
+#: linux/app/src/window.rs:562
 msgid "Unlock…"
 msgstr ""
 
-#: linux/app/src/window.rs:497
+#: linux/app/src/window.rs:575
 #, rust-format
 msgid "Unlock “{title}”?"
 msgstr ""
 
-#: linux/app/src/window.rs:499
+#: linux/app/src/window.rs:577
 msgid ""
 "Your change to it waits for the lock. If it is still open in an editor, what "
 "is saved there afterwards may be lost: unlock it only if nobody is editing "
 "it."
 msgstr ""
 
-#: linux/app/src/window.rs:504
+#: linux/app/src/window.rs:582
 msgid "Unlock"
 msgstr ""
 
-#: linux/app/src/window.rs:518
+#: linux/app/src/window.rs:596
 #, rust-format
 msgid "Cannot unlock “{title}”: {error}"
 msgstr ""
 
 #. Translators: the note's text size in the view menu, as "100%".
-#: linux/app/src/window.rs:730
+#: linux/app/src/window.rs:820
 #, rust-format
 msgid "{percent}%"
 msgstr ""
 
-#: linux/app/src/window.rs:1029
+#: linux/app/src/window.rs:1119
 msgid "No Headings"
 msgstr ""
 
-#: linux/app/src/window.rs:1489
+#: linux/app/src/window.rs:1629
 msgid "Favorite"
 msgstr ""
 
-#: linux/app/src/window.rs:1669
+#: linux/app/src/window.rs:1817
 #, rust-format
 msgid "Linked from {count} note"
 msgid_plural "Linked from {count} notes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: linux/app/src/window.rs:1729
+#: linux/app/src/window.rs:1877
 #, rust-format
 msgid "Cannot save the note: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:1780
+#: linux/app/src/window.rs:1928
 msgid "A note with this name exists already"
 msgstr ""
 
-#: linux/app/src/window.rs:1823
+#: linux/app/src/window.rs:1979
 msgid "Untitled"
 msgstr ""
 
-#: linux/app/src/window.rs:1859 linux/app/src/window.rs:1899
+#: linux/app/src/window.rs:2015 linux/app/src/window.rs:2055
 msgid "A folder with this name exists already"
 msgstr ""
 
-#: linux/app/src/window.rs:1880
+#: linux/app/src/window.rs:2036
 msgid "Rename Folder"
 msgstr ""
 
-#: linux/app/src/window.rs:1881
+#: linux/app/src/window.rs:2037
 msgid "Rename"
 msgstr ""
 
-#: linux/app/src/window.rs:1917 linux/app/src/window.rs:1936
+#: linux/app/src/window.rs:2073 linux/app/src/window.rs:2092
 #, rust-format
 msgid "“{title}” deleted"
 msgstr ""
 
-#: linux/app/src/window.rs:1973 linux/app/ui/shortcuts.blp:10
+#: linux/app/src/window.rs:2139 linux/app/ui/shortcuts.blp:10
 msgid "New Note"
 msgstr ""
 
-#: linux/app/src/window.rs:1975 linux/app/ui/new-folder.blp:6
+#: linux/app/src/window.rs:2141 linux/app/ui/new-folder.blp:6
 msgid "New Folder"
 msgstr ""
 
-#: linux/app/src/window.rs:1985
+#: linux/app/src/window.rs:2151
 msgid "Remove from Favorites"
 msgstr ""
 
-#: linux/app/src/window.rs:1987
+#: linux/app/src/window.rs:2153
 msgid "Add to Favorites"
 msgstr ""
 
-#: linux/app/src/window.rs:1994
+#: linux/app/src/window.rs:2160
 msgid "Versions…"
 msgstr ""
 
-#: linux/app/src/window.rs:2003
+#: linux/app/src/window.rs:2169
 msgid "Rename…"
 msgstr ""
 
-#: linux/app/src/window.rs:2154
+#: linux/app/src/window.rs:2321
 msgid "A note with this name exists in that folder already"
 msgstr ""
 
-#: linux/app/src/window.rs:2157
+#: linux/app/src/window.rs:2324
 msgid "A folder with this name exists in that folder already"
 msgstr ""
 
-#: linux/app/src/window.rs:2270
-msgid "Connect with a Nextcloud account from GNOME Settings"
-msgstr ""
-
-#: linux/app/src/window.rs:2273 linux/app/ui/window.blp:58
-msgid "Nextcloud Server"
-msgstr ""
-
-#: linux/app/src/window.rs:2276
-msgid "Sign in to your Nextcloud; Notav gets an app password of its own"
-msgstr ""
-
-#: linux/app/src/window.rs:2357
+#: linux/app/src/window.rs:2428
 msgid "Enter the Nextcloud server first"
 msgstr ""
 
-#: linux/app/src/window.rs:2473 linux/app/ui/settings.blp:213
-#: linux/app/ui/window.blp:110
-msgid "Sign In with Browser"
-msgstr ""
-
-#: linux/app/src/window.rs:2487
+#: linux/app/src/window.rs:2463
 msgid "Cannot start login"
 msgstr ""
 
-#: linux/app/src/window.rs:2488
+#: linux/app/src/window.rs:2464
 #, rust-format
 msgid "Cannot start login: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:2496
+#: linux/app/src/window.rs:2472
 msgid "Login link copied to clipboard"
 msgstr ""
 
-#: linux/app/src/window.rs:2516
+#: linux/app/src/window.rs:2492
 #, rust-format
 msgid "Login failed: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:2518
+#: linux/app/src/window.rs:2494
 msgid "Login failed"
 msgstr ""
 
-#: linux/app/src/window.rs:2521
+#: linux/app/src/window.rs:2497
 msgid "Login timed out"
 msgstr ""
 
-#: linux/app/src/window.rs:2570
+#: linux/app/src/window.rs:2546
 msgid "Wrong login name or password"
 msgstr ""
 
-#: linux/app/src/window.rs:2571
+#: linux/app/src/window.rs:2547
 #, rust-format
 msgid "Sign-in failed: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:2572
+#: linux/app/src/window.rs:2548
 msgid "Sign-in failed"
 msgstr ""
 
-#: linux/app/ui/connection.blp:7
-msgid "Use GNOME Online Accounts"
+#: linux/app/ui/account.blp:13
+msgid "Use This Account"
 msgstr ""
 
-#: linux/app/ui/connection.blp:11 linux/app/ui/settings.blp:183
+#: linux/app/ui/account.blp:14
+msgid "Off hides its notes and stops syncing them; nothing is deleted"
+msgstr ""
+
+#: linux/app/ui/account.blp:18 linux/app/ui/new-folder.blp:17
+msgid "Name"
+msgstr ""
+
+#: linux/app/ui/account.blp:26
+msgid "Connection"
+msgstr ""
+
+#: linux/app/ui/account.blp:42
+msgid "Sign In Again"
+msgstr ""
+
+#: linux/app/ui/account.blp:44
+msgid "More Sign-In Options"
+msgstr ""
+
+#: linux/app/ui/account.blp:65
+msgid "Notes"
+msgstr ""
+
+#: linux/app/ui/account.blp:68
+msgid "Notes folder in Nextcloud Files"
+msgstr ""
+
+#: linux/app/ui/account.blp:75
+msgid "Server Status"
+msgstr ""
+
+#: linux/app/ui/account.blp:78
+msgid "Server"
+msgstr ""
+
+#: linux/app/ui/account.blp:85 linux/app/ui/settings.blp:199
+#: linux/app/ui/shortcuts.blp:30
+msgid "Sync"
+msgstr ""
+
+#: linux/app/ui/account.blp:94
+msgid "Remove Account"
+msgstr ""
+
+#: linux/app/ui/account.blp:104 linux/app/ui/add-account.blp:172
+msgid "Copy Login Link"
+msgstr ""
+
+#: linux/app/ui/account.blp:105 linux/app/ui/add-account.blp:178
+msgid "Sign In with Password…"
+msgstr ""
+
+#: linux/app/ui/add-account.blp:22
+msgid ""
+"Notes and a journal kept as Markdown files in your Nextcloud, or on this "
+"device"
+msgstr ""
+
+#: linux/app/ui/add-account.blp:54
+msgid "Sign in with the browser or an app password"
+msgstr ""
+
+#: linux/app/ui/add-account.blp:70
+msgid "On This Device Only"
+msgstr ""
+
+#: linux/app/ui/add-account.blp:88
+msgid "You can add more accounts later in Preferences"
+msgstr ""
+
+#: linux/app/ui/add-account.blp:122
 msgid "Account"
 msgstr ""
 
-#: linux/app/ui/connection.blp:16
-msgid "Nextcloud server"
+#: linux/app/ui/add-account.blp:143
+msgid "Sync settings with this account"
+msgstr ""
+
+#: linux/app/ui/add-account.blp:144
+msgid "Use the same settings on all devices"
+msgstr ""
+
+#: linux/app/ui/add-account.blp:154
+msgid "Connect"
+msgstr ""
+
+#: linux/app/ui/add-account.blp:167
+msgid "Sign In with Browser"
+msgstr ""
+
+#: linux/app/ui/add-account.blp:200 linux/app/ui/add-account.blp:209
+msgid "Notes Folder"
+msgstr ""
+
+#: linux/app/ui/add-account.blp:210
+msgid ""
+"The folder in Nextcloud Files your notes are kept in. The Nextcloud Notes "
+"app uses the same one; it is created if it does not exist."
+msgstr ""
+
+#: linux/app/ui/add-account.blp:222 linux/app/ui/settings.blp:150
+msgid "Folder"
+msgstr ""
+
+#: linux/app/ui/add-account.blp:227
+msgid "Continue"
 msgstr ""
 
 #: linux/app/ui/new-folder.blp:12
 msgid "Create"
-msgstr ""
-
-#: linux/app/ui/new-folder.blp:17
-msgid "Name"
 msgstr ""
 
 #: linux/app/ui/password-login.blp:6
@@ -652,10 +904,6 @@ msgid ""
 "in it filled in."
 msgstr ""
 
-#: linux/app/ui/settings.blp:150 linux/app/ui/window.blp:155
-msgid "Folder"
-msgstr ""
-
 #: linux/app/ui/settings.blp:156
 msgid "Template note"
 msgstr ""
@@ -679,50 +927,20 @@ msgstr ""
 msgid "Today’s note"
 msgstr ""
 
-#: linux/app/ui/settings.blp:178
+#: linux/app/ui/settings.blp:178 linux/app/ui/settings.blp:184
 msgid "Accounts"
 msgstr ""
 
+#: linux/app/ui/settings.blp:193
+msgid "Add"
+msgstr ""
+
+#: linux/app/ui/settings.blp:203
+msgid "Sync settings with"
+msgstr ""
+
 #: linux/app/ui/settings.blp:204
-msgid "Sign Out"
-msgstr ""
-
-#: linux/app/ui/settings.blp:206 linux/app/ui/settings.blp:244
-msgid "Sign In Again"
-msgstr ""
-
-#: linux/app/ui/settings.blp:215 linux/app/ui/window.blp:112
-msgid "More Sign-In Options"
-msgstr ""
-
-#: linux/app/ui/settings.blp:223
-msgid "Notes"
-msgstr ""
-
-#: linux/app/ui/settings.blp:226
-msgid "Notes folder in Nextcloud Files"
-msgstr ""
-
-#: linux/app/ui/settings.blp:232 linux/app/ui/shortcuts.blp:30
-msgid "Sync"
-msgstr ""
-
-#: linux/app/ui/settings.blp:235
-msgid "Sync settings with server"
-msgstr ""
-
-#: linux/app/ui/settings.blp:236
-msgid "The Nextcloud server always stays on this device"
-msgstr ""
-
-#: linux/app/ui/settings.blp:245 linux/app/ui/settings.blp:250
-#: linux/app/ui/window.blp:563
-msgid "Copy Login Link"
-msgstr ""
-
-#: linux/app/ui/settings.blp:246 linux/app/ui/settings.blp:251
-#: linux/app/ui/window.blp:564
-msgid "Sign In with Password…"
+msgid "Accounts and servers always stay on this device"
 msgstr ""
 
 #: linux/app/ui/shortcuts.blp:15
@@ -737,11 +955,11 @@ msgstr ""
 msgid "Undo Delete or Move"
 msgstr ""
 
-#: linux/app/ui/shortcuts.blp:35 linux/app/ui/window.blp:556
+#: linux/app/ui/shortcuts.blp:35 linux/app/ui/window.blp:404
 msgid "Preferences"
 msgstr ""
 
-#: linux/app/ui/shortcuts.blp:40 linux/app/ui/window.blp:557
+#: linux/app/ui/shortcuts.blp:40 linux/app/ui/window.blp:405
 msgid "Keyboard Shortcuts"
 msgstr ""
 
@@ -749,7 +967,7 @@ msgstr ""
 msgid "Close Window"
 msgstr ""
 
-#: linux/app/ui/shortcuts.blp:50 linux/app/ui/window.blp:559
+#: linux/app/ui/shortcuts.blp:50 linux/app/ui/window.blp:407
 msgid "Quit"
 msgstr ""
 
@@ -785,7 +1003,7 @@ msgstr ""
 msgid "Reset Text Size"
 msgstr ""
 
-#: linux/app/ui/trash.blp:7 linux/app/ui/window.blp:551
+#: linux/app/ui/trash.blp:7 linux/app/ui/window.blp:399
 msgid "Trash"
 msgstr ""
 
@@ -829,129 +1047,103 @@ msgstr ""
 msgid "Cannot Load the Versions"
 msgstr ""
 
-#: linux/app/ui/window.blp:32
-msgid "Notes and a journal kept as Markdown files in your Nextcloud"
-msgstr ""
-
-#: linux/app/ui/window.blp:59
-msgid "Sign in with the browser or an app password"
-msgstr ""
-
-#: linux/app/ui/window.blp:104
-msgid "Connect"
-msgstr ""
-
-#: linux/app/ui/window.blp:133 linux/app/ui/window.blp:142
-msgid "Notes Folder"
-msgstr ""
-
-#: linux/app/ui/window.blp:143
-msgid ""
-"The folder in Nextcloud Files your notes are kept in. The Nextcloud Notes "
-"app uses the same one; it is created if it does not exist."
-msgstr ""
-
-#: linux/app/ui/window.blp:161
-msgid "Continue"
-msgstr ""
-
-#: linux/app/ui/window.blp:192
+#: linux/app/ui/window.blp:40
 msgid "Main Menu"
 msgstr ""
 
-#: linux/app/ui/window.blp:215
+#: linux/app/ui/window.blp:63
 msgid "No Notes"
 msgstr ""
 
-#: linux/app/ui/window.blp:216
+#: linux/app/ui/window.blp:64
 msgid "Add one with Ctrl+N"
 msgstr ""
 
-#: linux/app/ui/window.blp:225
+#: linux/app/ui/window.blp:73
 msgid "Note"
 msgstr ""
 
-#: linux/app/ui/window.blp:235
+#: linux/app/ui/window.blp:83
 msgid "New Note (Ctrl+N)"
 msgstr ""
 
-#: linux/app/ui/window.blp:243
+#: linux/app/ui/window.blp:91
 msgid "Today’s Note (Ctrl+T)"
 msgstr ""
 
-#: linux/app/ui/window.blp:252
+#: linux/app/ui/window.blp:100
 msgid "Outline"
 msgstr ""
 
-#: linux/app/ui/window.blp:259
+#: linux/app/ui/window.blp:107
 msgid "View Options"
 msgstr ""
 
-#: linux/app/ui/window.blp:274
+#: linux/app/ui/window.blp:122
 msgid "Smaller Text (Ctrl+−)"
 msgstr ""
 
-#: linux/app/ui/window.blp:281
+#: linux/app/ui/window.blp:129
 msgid "Reset Text Size (Ctrl+0)"
 msgstr ""
 
-#: linux/app/ui/window.blp:293
+#: linux/app/ui/window.blp:141
 msgid "Larger Text (Ctrl++)"
 msgstr ""
 
-#: linux/app/ui/window.blp:309
+#: linux/app/ui/window.blp:157
 msgid "Editor Mode"
 msgstr ""
 
-#: linux/app/ui/window.blp:315
+#: linux/app/ui/window.blp:163
 msgid "Source Mode"
 msgstr ""
 
-#: linux/app/ui/window.blp:322
+#: linux/app/ui/window.blp:170
 msgid "Sync (F5)"
 msgstr ""
 
-#: linux/app/ui/window.blp:346
+#: linux/app/ui/window.blp:194
 msgid "Search (Ctrl+F)"
 msgstr ""
 
-#: linux/app/ui/window.blp:353
+#: linux/app/ui/window.blp:201
 msgid "Notav was updated: restart it to use the new version"
 msgstr ""
 
-#: linux/app/ui/window.blp:354
+#: linux/app/ui/window.blp:202
 msgid "Restart"
 msgstr ""
 
-#: linux/app/ui/window.blp:368
+#: linux/app/ui/window.blp:216
 msgid "Search notes"
 msgstr ""
 
-#: linux/app/ui/window.blp:405
+#: linux/app/ui/window.blp:253
 msgid "No Note Selected"
 msgstr ""
 
-#: linux/app/ui/window.blp:406
+#: linux/app/ui/window.blp:254
 msgid "Pick a note or add one with Ctrl+N"
 msgstr ""
 
-#: linux/app/ui/window.blp:438
+#: linux/app/ui/window.blp:286
 msgid "No Results"
 msgstr ""
 
-#: linux/app/ui/window.blp:472
+#: linux/app/ui/window.blp:320
 msgid "Title"
 msgstr ""
 
-#: linux/app/ui/window.blp:543
+#: linux/app/ui/window.blp:391
 msgid "Wrap Lines"
 msgstr ""
 
-#: linux/app/ui/window.blp:544
+#: linux/app/ui/window.blp:392
 msgid "Full Width"
 msgstr ""
 
-#: linux/app/ui/window.blp:558
+#: linux/app/ui/window.blp:406
 msgid "About Notav"
 msgstr ""
 
@@ -988,5 +1180,11 @@ msgid "Folders, search, and a Markdown editor"
 msgstr ""
 
 #: linux/data/dev.aperte.Notav.metainfo.xml:18
-msgid "Connects through GNOME Online Accounts or a browser sign-in"
+msgid ""
+"Connects through GNOME Online Accounts or a browser sign-in, to more than "
+"one account"
+msgstr ""
+
+#: linux/data/dev.aperte.Notav.metainfo.xml:19
+msgid "Or keeps your notes on this device only, without a server"
 msgstr ""

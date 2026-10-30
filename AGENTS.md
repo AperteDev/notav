@@ -24,14 +24,15 @@
   | Minimal JSON | `core/src/json.rs` | As is |
   | WebDAV XML, multistatus, percent-encoding, requests with retries | `core/src/caldav.rs` (first part) | `core/src/dav.rs` |
   | Synced settings | `core/src/settings.rs` | Its own `DEVICE_ONLY`, no ntfy keys |
-  | `Error`, `b64encode`, `Client::open`/`set_account`/`logout`, store migrations, `kv` | `core/src/lib.rs`, `store.rs` | Without tasks and calendars |
+  | `Error`, `b64encode`, `Client::open`, store migrations, `kv` | `core/src/lib.rs`, `store.rs` | Without tasks and calendars |
+  | Accounts (Todav 2.3): the `accounts` table, per-account `kv` keys, settings account, `server_info` | `core/src/account.rs`, `caldav.rs` (`server_info`) | Nextcloud and local only (no Google or system calendars); notes and folders per account instead of lists; no push |
   | Undo of local changes | `core/src/undo.rs` | Steps of notes and folders, no grouping |
   | CLI `.env` loading | `cli/src/main.rs` | `NOTAV_*` |
   | GNOME Online Accounts | `linux/app/src/goa.rs` | As is |
   | gettext over glibc, first weekday | `linux/app/src/i18n.rs` | Domain `notav` |
-  | Secret Service, account handling, sync worker | `linux/app/src/main.rs` | No push, reminders, D-Bus or local mode |
-  | Welcome page, login dialogs | `connection.rs`, `ui/connection.blp`, `ui/password-login.blp`, parts of `window.rs` | GOA accounts need Files on |
-  | Preferences: style, account | `linux/app/src/settings.rs`, `ui/settings.blp` | The account group as is |
+  | Secret Service, accounts (add, local, reconnect, switch off, remove), sync worker | `linux/app/src/main.rs`, `todav/app/src/accounts.rs` | No push, reminders, D-Bus or Google; the worker syncs each account itself and names the failed ones |
+  | Adding an account (welcome page, Preferences), login dialogs | `add_account.rs`, `ui/add-account.blp`, `ui/password-login.blp`, parts of `window.rs` | A notes folder step after connecting; no ntfy or Google; GOA accounts need Files on |
+  | Preferences: style, accounts (a page each, settings sync, reordering) | `linux/app/src/settings.rs`, `ui/settings.blp`, `ui/account.blp` | A notes folder row; no DAV Push row or ntfy |
   | Undo toast, Ctrl+Z | `linux/app/src/window.rs` (`undo_toast`, `undo`) | As is |
   | About with Support and donation links | `window.rs` (`about_support`, `DONATIONS`) | As is |
   | Update while running, Restart banner | `linux/app/src/update.rs`, `update_banners` in `window.rs` | No restart in the background (no service): only the banner, quitting as closing the window does |
@@ -69,6 +70,20 @@
 - All text a user sees is translatable; one gettext domain, `notav`, with catalogs in `po/`.
   The rules are Todav's (see its `AGENTS.md`): named placeholders, plurals with `ngettext`,
   whole sentences, Polish translated for review, dates from the locale.
+
+## Accounts
+
+- Notes, folders and folder moves belong to accounts (`accounts` table, as in Todav): Nextcloud
+  ones and the local one (on this device only, never synced), at most one. Paths are unique
+  within an account; core calls that take a path take its account too. Anything per server
+  (connection, notes folder, Files root, features, last notes root, settings' ETag) is per
+  account; per-account `kv` keys are `a<id>_…` (`account::key`).
+- A Nextcloud account syncs once its notes folder is chosen (`chosen_notes_folder`), device-only.
+  Settings sync through the account picked in "Sync settings with" (device-only
+  `settings_account`); that account's notes folder is also the synced `notes_folder`, offered
+  to other devices signing in to it.
+- The tree shows an account's row only while more than one is switched on. Notes and folders
+  move within their account only (see `docs/ROADMAP.md`).
 
 ## Linux UI
 

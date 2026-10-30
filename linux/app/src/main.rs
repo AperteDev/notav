@@ -1,7 +1,7 @@
 //! Notav for Linux: the GTK app, with a sync worker while it runs. There is no background
 //! service: closing the window quits, once what is waiting for the server has gone up.
 
-mod connection;
+mod add_account;
 mod editor;
 mod files;
 mod goa;
@@ -12,7 +12,7 @@ mod window;
 
 use adw::prelude::*;
 use gtk::{gio, glib};
-use notav_core::{ChangeListener, Client};
+use notav_core::{Account, AccountKind, ChangeListener, Client};
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::sync::mpsc::{Sender, channel};
@@ -24,6 +24,10 @@ pub const APP_ID: &str = "dev.aperte.Notav";
 static CORE: OnceLock<Arc<Client>> = OnceLock::new();
 static SYNC: OnceLock<Sender<()>> = OnceLock::new();
 static SYNC_STATE: Mutex<String> = Mutex::new(String::new());
+/// Per account: when its last sync went through (unix time) and why its last one failed, for
+/// Preferences; this run's only.
+static LAST_SYNC: Mutex<Option<HashMap<i64, i64>>> = Mutex::new(None);
+static SYNC_ERRORS: Mutex<Option<HashMap<i64, String>>> = Mutex::new(None);
 
 thread_local! {
     /// The window was closed with changes waiting for the server: quit after the next sync.
@@ -36,7 +40,7 @@ pub fn core() -> &'static Arc<Client> {
 
 /// After an edit: sync if it left something for the server.
 pub fn request_sync() {
-    if core().pending() {
+    if core().pending(None) {
         sync_now();
     }
 }
@@ -48,20 +52,33 @@ pub fn sync_now() {
     }
 }
 
-/// Connected to the account (restored at start or signed in to), with its password.
-static CONNECTED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-
-pub fn connected() -> bool {
-    CONNECTED.load(std::sync::atomic::Ordering::SeqCst) && core().account().is_some()
+/// The main window has something to show: an account whose notes are here (the local one, or
+/// a Nextcloud one with its notes folder chosen; one not connected too: a banner offers to sign
+/// in again).
+pub fn ready() -> bool {
+    core()
+        .accounts()
+        .iter()
+        .any(|a| a.kind == AccountKind::Local || core().chosen_notes_folder(a.id).is_some())
 }
 
-/// The main window has something to show: an account, and the notes folder chosen for it.
-pub fn ready() -> bool {
-    connected() && core().setting("notes_folder".into()).is_some()
+/// Some account syncs.
+pub fn can_sync() -> bool {
+    core().accounts().iter().any(|a| core().syncing(a.id))
 }
 
 pub fn sync_state() -> String {
     SYNC_STATE.lock().unwrap().clone()
+}
+
+/// When account `id` last synced in this run (unix time).
+pub fn last_sync(id: i64) -> Option<i64> {
+    LAST_SYNC.lock().unwrap().as_ref()?.get(&id).copied()
+}
+
+/// Why account `id`'s last sync failed.
+pub fn sync_error(id: i64) -> Option<String> {
+    SYNC_ERRORS.lock().unwrap().as_ref()?.get(&id).cloned()
 }
 
 /// Events from background threads, handled on the main thread.
@@ -71,6 +88,7 @@ pub enum Event {
     Changed(Vec<String>),
     /// Settings from another device arrived.
     SettingsChanged,
+    /// "idle", "syncing" or "error:" with what failed, naming the accounts.
     SyncState(String),
     /// Conflict copies a sync made, by path.
     Conflicts(Vec<String>),
@@ -91,19 +109,48 @@ fn post(ev: Event) {
             }
         }
         window::on_event(&ev);
+        if let Event::SyncState(_) = &ev {
+            settings::status_changed();
+        }
     });
 }
 
-fn set_state(r: &Result<notav_core::SyncReport, notav_core::Error>) {
-    if let Some(report) = r.as_ref().ok().filter(|r| !r.conflicts.is_empty()) {
-        post(Event::Conflicts(report.conflicts.clone()));
+/// Settings, then every account that syncs; what failed is told by account.
+fn sync_all() {
+    let (mut conflicts, mut locked, mut failed) = (Vec::new(), Vec::new(), Vec::new());
+    let mut errors = HashMap::new();
+    if let Err(e) = core().sync_settings() {
+        failed.push(e.to_string());
     }
-    if let Ok(report) = r {
-        post(Event::Locked(report.locked.clone()));
+    for a in core().accounts() {
+        if a.kind != AccountKind::Nextcloud || !core().syncing(a.id) {
+            continue;
+        }
+        match core().sync_account(a.id) {
+            Ok(r) => {
+                conflicts.extend(r.conflicts);
+                locked.extend(r.locked);
+                LAST_SYNC
+                    .lock()
+                    .unwrap()
+                    .get_or_insert_default()
+                    .insert(a.id, notav_core::now());
+            }
+            Err(e) => {
+                failed.push(format!("{}: {e}", account_name(&a)));
+                errors.insert(a.id, e.to_string());
+            }
+        }
     }
-    post(Event::SyncState(match r {
-        Ok(_) => "idle".into(),
-        Err(e) => format!("error:{e}"),
+    *SYNC_ERRORS.lock().unwrap() = Some(errors);
+    if !conflicts.is_empty() {
+        post(Event::Conflicts(conflicts));
+    }
+    post(Event::Locked(locked));
+    post(Event::SyncState(if failed.is_empty() {
+        "idle".into()
+    } else {
+        format!("error:{}", failed.join("; "))
     }));
 }
 
@@ -121,7 +168,7 @@ impl ChangeListener for Listener {
 /// The window closed (it only hides): quit, once the changes waiting for the server are up (or
 /// the sync failed).
 pub fn quit_after_sync(app: &adw::Application) {
-    if SYNC.get().is_some() && connected() && core().pending() {
+    if SYNC.get().is_some() && can_sync() && core().pending(None) {
         QUIT_PENDING.set(true);
         sync_now();
     } else {
@@ -181,103 +228,89 @@ pub fn password_clear(url: &str, user: &str) {
     let _ = libsecret::password_clear_sync(Some(&schema()), attrs, gio::Cancellable::NONE);
 }
 
-// --- account -----------------------------------------------------------------
+// --- accounts ----------------------------------------------------------------
 
-/// The GNOME Online Accounts account Notav connects through; None means signed in here.
-pub fn goa_id() -> Option<String> {
-    core()
-        .setting("goa_account".into())
-        .filter(|id| !id.is_empty())
-}
-
-/// Restore the account, its password from GOA or the keyring; false → the UI shows the
-/// welcome page (also when the GOA account is gone or has files turned off).
-pub fn restore_account() -> bool {
-    let Some(acc) = core().account() else {
-        return false;
-    };
-    let (url, user, pw) = match goa_id() {
-        Some(id) => match goa::accounts().into_iter().find(|a| a.id == id) {
-            Some(a) => (a.url, a.user, goa::password(&id)),
-            None => return false,
-        },
-        None => (
-            acc.url.clone(),
-            acc.user.clone(),
-            password_load(&acc.url, &acc.user),
-        ),
-    };
-    let Some(pw) = pw else {
-        return false;
-    };
-    let ok = core().set_account(url, user, pw).is_ok();
-    CONNECTED.store(ok, std::sync::atomic::Ordering::SeqCst);
-    ok
-}
-
-/// (server, user) of the last browser sign-in.
-fn remembered() -> Option<(String, String)> {
-    let get = |k: &str| core().setting(k.into()).filter(|v| !v.is_empty());
-    Some((get("manual_url")?, get("manual_user")?))
-}
-
-/// The last browser sign-in, while its password is still saved: where turning GOA off goes.
-pub fn remembered_sign_in() -> Option<notav_core::Credentials> {
-    let (server, login_name) = remembered()?;
-    let app_password = password_load(&server, &login_name)?;
-    Some(notav_core::Credentials {
-        server,
-        login_name,
-        app_password,
-    })
-}
-
-/// Forget the browser sign-in (Sign Out): its saved password goes too.
-pub fn forget_sign_in() {
-    if let Some((u, n)) = remembered() {
-        password_clear(&u, &n);
+/// What an account is called: the name given to it, else "user@host", or "On This Device".
+pub fn account_name(a: &Account) -> String {
+    if !a.name.is_empty() {
+        return a.name.clone();
     }
-    let _ = core().set_setting("manual_url".into(), String::new());
-    let _ = core().set_setting("manual_user".into(), String::new());
+    match a.kind {
+        AccountKind::Local => i18n::gettext("On This Device"),
+        AccountKind::Nextcloud => format!("{}@{}", a.user, host(a)),
+    }
 }
 
-/// Why the account cannot change yet: edits not on the server would be lost with the local copy.
-fn pending_error(e: &notav_core::Error) -> String {
+/// The host of a Nextcloud account's server, as its default name shows it ("user@host").
+pub fn host(a: &Account) -> &str {
+    let host = a.url.split_once("://").map_or(a.url.as_str(), |(_, h)| h);
+    host.trim_end_matches('/')
+}
+
+/// Connect a Nextcloud account with its saved password: from GNOME Online Accounts (its
+/// `source`) or Notav's keyring entry. False without one (keyring cleared, GOA account gone or
+/// with files turned off).
+pub fn connect_saved(a: &Account) -> bool {
+    if a.kind == AccountKind::Local {
+        return false;
+    }
+    let pw = if a.source.is_empty() {
+        password_load(&a.url, &a.user)
+    } else if goa::accounts().iter().any(|g| g.id == a.source) {
+        goa::password(&a.source)
+    } else {
+        None
+    };
+    pw.is_some_and(|pw| core().connect(a.id, pw).is_ok())
+}
+
+/// Connect every account with its saved password; false when there is none (the welcome page
+/// shows).
+pub fn restore_accounts() -> bool {
+    forget_old_sign_in();
+    let all = core().accounts();
+    for a in &all {
+        connect_saved(a);
+    }
+    !all.is_empty()
+}
+
+/// Notav 0.1 remembered a browser sign-in while GNOME Online Accounts was used, to go back to
+/// it; its password goes unless an account still uses it.
+fn forget_old_sign_in() {
+    let get = |k: &str| core().setting(k.into()).filter(|v| !v.is_empty());
+    let (Some(url), Some(user)) = (get("manual_url"), get("manual_user")) else {
+        return;
+    };
+    let used = core()
+        .accounts()
+        .iter()
+        .any(|a| a.source.is_empty() && a.url == url && a.user == user);
+    if !used {
+        password_clear(&url, &user);
+    }
+    for k in ["manual_url", "manual_user"] {
+        let _ = core().set_setting(k.into(), String::new());
+    }
+}
+
+/// Why the edits waiting for an account's server could not go up before it changes.
+fn upload_error(e: &notav_core::Error) -> String {
     i18n::gettext("Cannot upload pending changes first: {error}").replace("{error}", &e.to_string())
 }
 
-/// Stop using the current account and drop the local copy; the window shows the welcome page.
-/// Pending edits are uploaded first, unless `force` (then they are lost when that fails).
-pub async fn disconnect(force: bool) -> Result<(), String> {
-    gio::spawn_blocking(move || -> Result<(), String> {
-        if core().account().is_some()
-            && let Err(e) = core().sync()
-            && !force
-        {
-            return Err(pending_error(&e));
-        }
-        let _ = core().set_setting("goa_account".into(), String::new());
-        CONNECTED.store(false, std::sync::atomic::Ordering::SeqCst);
-        core().logout().map_err(|e| e.to_string())
-    })
-    .await
-    .map_err(|_| i18n::gettext("Disconnecting failed"))??;
-    window::show_welcome();
-    Ok(())
-}
-
-/// An account to connect with.
+/// A Nextcloud account to add.
 pub enum Target {
     Goa(goa::Account),
-    /// Signed in here (browser login); the app password goes into Notav's keyring entry.
+    /// Signed in here (browser or password); the app password goes into Notav's keyring entry.
     Manual(notav_core::Credentials),
 }
 
-/// Connect with `target`, replacing the current account (its pending edits are uploaded
-/// first). The caller starts syncing (`start_background`) once the notes folder is known.
-pub async fn switch_account(target: Target) -> Result<(), String> {
-    gio::spawn_blocking(move || -> Result<(), String> {
-        let (url, user, pw, goa) = match target {
+/// Add a Nextcloud account and connect it (`settings`: settings sync through it); its notes
+/// sync once its notes folder is chosen.
+pub async fn add_account(target: Target, settings: bool) -> Result<i64, String> {
+    let id = gio::spawn_blocking(move || -> Result<i64, String> {
+        let (url, user, pw, source) = match target {
             Target::Goa(a) => {
                 let pw = goa::password(&a.id).ok_or_else(|| {
                     i18n::gettext("Online Accounts has no password for this account")
@@ -286,33 +319,129 @@ pub async fn switch_account(target: Target) -> Result<(), String> {
             }
             Target::Manual(c) => (c.server, c.login_name, c.app_password, String::new()),
         };
-        if let Some(old) = core().account().filter(|_| SYNC.get().is_some())
-            && (old.url.as_str(), old.user.as_str()) != (url.as_str(), user.as_str())
-        {
-            // A different account drops the local copy: pending edits must reach the old one.
-            core().sync().map_err(|e| pending_error(&e))?;
-        }
-        // The browser sign-in is remembered while GOA is used, to go back to it.
-        if goa.is_empty() {
-            if let Some((u, n)) = remembered().filter(|r| *r != (url.clone(), user.clone())) {
-                password_clear(&u, &n);
-            }
-            password_store(&url, &user, &pw).map_err(|e| {
-                i18n::gettext("Cannot save password: {error}").replace("{error}", &e.to_string())
+        let url = url.trim_end_matches('/').to_string();
+        let id = core()
+            .add_account(
+                AccountKind::Nextcloud,
+                url.clone(),
+                user.clone(),
+                source.clone(),
+            )
+            .map_err(|e| match e {
+                notav_core::Error::Exists(_) => i18n::gettext("This account is already added"),
+                e => e.to_string(),
             })?;
-            let _ = core().set_setting("manual_url".into(), url.clone());
-            let _ = core().set_setting("manual_user".into(), user.clone());
+        if source.is_empty()
+            && let Err(e) = password_store(&url, &user, &pw)
+        {
+            let _ = core().remove_account(id);
+            return Err(
+                i18n::gettext("Cannot save password: {error}").replace("{error}", &e.to_string())
+            );
         }
-        core()
-            .set_account(url, user, pw)
-            .map_err(|e| e.to_string())?;
-        CONNECTED.store(true, std::sync::atomic::Ordering::SeqCst);
-        core()
-            .set_setting("goa_account".into(), goa)
-            .map_err(|e| e.to_string())
+        core().connect(id, pw).map_err(|e| e.to_string())?;
+        if settings {
+            let _ = core().set_settings_account(Some(id));
+        }
+        Ok(id)
     })
     .await
     .map_err(|_| i18n::gettext("Connecting failed"))??;
+    start_background();
+    Ok(id)
+}
+
+/// The local account, the first time with a note to start from.
+pub fn add_local() -> Result<i64, String> {
+    let id = core()
+        .add_account(
+            AccountKind::Local,
+            String::new(),
+            String::new(),
+            String::new(),
+        )
+        .map_err(|e| e.to_string())?;
+    let _ = core().add_note(
+        id,
+        String::new(),
+        i18n::gettext("Welcome to Notav"),
+        i18n::gettext(
+            "Your notes stay on this device. They are written in Markdown: # starts a \
+             heading, - a list, - [ ] a task, and [[Title]] links another note.",
+        ),
+    );
+    start_background();
+    Ok(id)
+}
+
+/// Account `id` (signed in here) at `url` with `password`: a new app password, or the same
+/// user on a moved server (then its notes come again from there, after the edits waiting for
+/// the old one went up).
+pub async fn reconnect(id: i64, url: String, password: String) -> Result<(), String> {
+    gio::spawn_blocking(move || -> Result<(), String> {
+        let a = core()
+            .account(id)
+            .ok_or_else(|| i18n::gettext("Connecting failed"))?;
+        let url = url.trim_end_matches('/').to_string();
+        password_store(&url, &a.user, &password).map_err(|e| {
+            i18n::gettext("Cannot save password: {error}").replace("{error}", &e.to_string())
+        })?;
+        if url == a.url {
+            return core().connect(id, password).map_err(|e| e.to_string());
+        }
+        if core().connected(id) || core().pending(Some(id)) {
+            core().sync_account(id).map_err(|e| upload_error(&e))?;
+        }
+        core()
+            .move_account(id, url, password)
+            .map_err(|e| e.to_string())?;
+        password_clear(&a.url, &a.user);
+        Ok(())
+    })
+    .await
+    .map_err(|_| i18n::gettext("Connecting failed"))??;
+    sync_now();
+    Ok(())
+}
+
+/// Switch account `id` on or off (off hides its notes and stops syncing them).
+pub async fn enable_account(id: i64, on: bool) {
+    let _ = gio::spawn_blocking(move || core().set_account_enabled(id, on)).await;
+    window::account_changed();
+    if on {
+        sync_now();
+    }
+}
+
+/// Remove account `id` from this device, with its saved password; edits waiting for its server
+/// go up first, unless `force` (then they are lost).
+pub async fn remove_account(id: i64, force: bool) -> Result<(), String> {
+    window::save();
+    gio::spawn_blocking(move || -> Result<(), String> {
+        let Some(a) = core().account(id) else {
+            return Ok(());
+        };
+        if a.kind == AccountKind::Nextcloud && !force {
+            if core().connected(id) {
+                core().sync_account(id).map_err(|e| upload_error(&e))?;
+            } else if core().pending(Some(id)) {
+                return Err(i18n::gettext(
+                    "It has changes not uploaded yet: sign in again to upload them",
+                ));
+            }
+        }
+        if a.kind == AccountKind::Nextcloud && a.source.is_empty() {
+            password_clear(&a.url, &a.user);
+        }
+        core().remove_account(id).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|_| i18n::gettext("Removing the account failed"))??;
+    if core().accounts().is_empty() {
+        window::show_welcome();
+    } else {
+        window::account_changed();
+    }
     Ok(())
 }
 
@@ -331,16 +460,16 @@ pub fn start_background() {
             // Let a burst of edits settle: typing saves every second or so.
             std::thread::sleep(Duration::from_millis(1500));
             while rx.try_recv().is_ok() {}
-            if core().account().is_none() {
-                continue; // disconnected: nothing to sync until the next account
+            if !core().accounts().iter().any(|a| core().syncing(a.id)) {
+                continue; // nothing to sync until an account connects
             }
             post(Event::SyncState("syncing".into()));
-            set_state(&core().sync());
+            sync_all();
         }
     });
     sync_now();
 
-    // Changes from other devices: every 30 s while the window is focused (the notes folder's
+    // Changes from other devices: every 30 s while the window is focused (each notes folder's
     // ETag, one request when nothing changed), and when it gets the focus.
     // TODO(v2): Nextcloud's Client Push (notify_push) instead, where the server has it.
     glib::timeout_add_seconds_local(30, || {
@@ -375,7 +504,7 @@ fn main() -> glib::ExitCode {
             .append_search_path("resource:///dev/aperte/Notav/sourceview/");
         window::setup_actions(app);
         settings::apply_color_scheme();
-        if restore_account() && core().setting("notes_folder".into()).is_some() {
+        if restore_accounts() {
             start_background();
         }
         update::watch(app);

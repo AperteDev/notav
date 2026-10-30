@@ -83,6 +83,81 @@ END;
 ALTER TABLE notes ADD COLUMN favorite INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE notes ADD COLUMN favorite_dirty INTEGER NOT NULL DEFAULT 0;
 "#,
+    // Accounts (`account.rs`): the one account so far (kept in `kv`) becomes the first; notes,
+    // folders and moves belong to one each. Its `config_` keys become per-account keys, the
+    // notes folder (a synced setting) its own, and settings sync through it unless turned off.
+    r#"
+CREATE TABLE accounts (
+  id INTEGER PRIMARY KEY,
+  kind TEXT NOT NULL,                   -- 'nextcloud' or 'local'
+  name TEXT NOT NULL DEFAULT '',        -- given by the user; '': the front-end names it
+  url TEXT NOT NULL DEFAULT '',
+  user TEXT NOT NULL DEFAULT '',
+  source TEXT NOT NULL DEFAULT '',      -- the front-end's: where the password comes from
+  enabled INTEGER NOT NULL DEFAULT 1,
+  position INTEGER NOT NULL DEFAULT 0
+);
+INSERT INTO accounts (id, kind, url, user, source, position)
+  SELECT 1, 'nextcloud', u.value, n.value,
+    coalesce((SELECT value FROM kv WHERE key = 'setting_goa_account'), ''), 1
+  FROM kv u JOIN kv n ON n.key = 'account_user' WHERE u.key = 'account_url';
+UPDATE kv SET key = 'a1_' || substr(key, 8)
+  WHERE substr(key, 1, 7) = 'config_' AND EXISTS (SELECT 1 FROM accounts);
+INSERT INTO kv (key, value)
+  SELECT 'a1_notes_folder', value FROM kv
+  WHERE key = 'setting_notes_folder' AND EXISTS (SELECT 1 FROM accounts);
+INSERT INTO kv (key, value)
+  SELECT 'setting_settings_account', '1' FROM accounts
+  WHERE NOT EXISTS (SELECT 1 FROM kv WHERE key = 'setting_sync_settings' AND value = 'false');
+DELETE FROM kv WHERE substr(key, 1, 7) = 'config_' OR key IN ('account_url', 'account_user',
+  'setting_goa_account', 'settime_goa_account', 'setting_sync_settings', 'settime_sync_settings');
+
+CREATE TABLE notes_new (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  account INTEGER NOT NULL,
+  path TEXT NOT NULL,
+  fileid TEXT,
+  etag TEXT,
+  server_path TEXT,
+  text TEXT NOT NULL,
+  base TEXT,
+  mtime INTEGER,
+  modified INTEGER NOT NULL,
+  dirty INTEGER NOT NULL DEFAULT 0,
+  favorite INTEGER NOT NULL DEFAULT 0,
+  favorite_dirty INTEGER NOT NULL DEFAULT 0,
+  UNIQUE (account, path),
+  UNIQUE (account, fileid)              -- a file shared with two accounts has one oc:id
+);
+INSERT INTO notes_new SELECT id, 1, path, fileid, etag, server_path, text, base, mtime, modified,
+  dirty, favorite, favorite_dirty FROM notes;
+DROP TABLE notes;
+ALTER TABLE notes_new RENAME TO notes;
+CREATE TRIGGER notes_fts_insert AFTER INSERT ON notes BEGIN
+  INSERT INTO notes_fts (rowid, path, text) VALUES (new.id,
+    replace(replace(new.path, 'ł', 'l'), 'Ł', 'L'), replace(replace(new.text, 'ł', 'l'), 'Ł', 'L'));
+END;
+CREATE TRIGGER notes_fts_delete AFTER DELETE ON notes BEGIN
+  DELETE FROM notes_fts WHERE rowid = old.id;
+END;
+CREATE TRIGGER notes_fts_update AFTER UPDATE OF path, text ON notes BEGIN
+  DELETE FROM notes_fts WHERE rowid = old.id;
+  INSERT INTO notes_fts (rowid, path, text) VALUES (new.id,
+    replace(replace(new.path, 'ł', 'l'), 'Ł', 'L'), replace(replace(new.text, 'ł', 'l'), 'Ł', 'L'));
+END;
+
+CREATE TABLE folders_new (
+  account INTEGER NOT NULL,
+  path TEXT NOT NULL,
+  etag TEXT,
+  dirty INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (account, path)
+);
+INSERT INTO folders_new SELECT 1, path, etag, dirty FROM folders;
+DROP TABLE folders;
+ALTER TABLE folders_new RENAME TO folders;
+ALTER TABLE moves ADD COLUMN account INTEGER NOT NULL DEFAULT 1;
+"#,
 ];
 
 pub const CLEAN: i64 = 0;
@@ -95,6 +170,7 @@ pub const FOLDER_DELETED: i64 = 2;
 #[derive(Debug, Clone)]
 pub struct Row {
     pub id: i64,
+    pub account: i64,
     pub path: String,
     pub fileid: Option<String>,
     pub etag: Option<String>,
@@ -108,7 +184,7 @@ pub struct Row {
 }
 
 const ROW: &str = "SELECT id, path, fileid, etag, server_path, text, base, mtime, modified, dirty,
-    favorite FROM notes";
+    favorite, account FROM notes";
 
 fn row(r: &rusqlite::Row) -> rusqlite::Result<Row> {
     Ok(Row {
@@ -123,6 +199,7 @@ fn row(r: &rusqlite::Row) -> rusqlite::Result<Row> {
         modified: r.get(8)?,
         dirty: r.get(9)?,
         favorite: r.get(10)?,
+        account: r.get(11)?,
     })
 }
 
@@ -137,12 +214,22 @@ pub fn by_id(db: &Connection, id: i64) -> Result<Option<Row>> {
     Ok(rows(db, "id = ?", [id])?.pop())
 }
 
-pub fn by_path(db: &Connection, path: &str) -> Result<Option<Row>> {
-    Ok(rows(db, "path = ?", [path])?.pop())
+pub fn by_path(db: &Connection, account: i64, path: &str) -> Result<Option<Row>> {
+    Ok(rows(
+        db,
+        "account = ? AND path = ?",
+        rusqlite::params![account, path],
+    )?
+    .pop())
 }
 
-pub fn by_fileid(db: &Connection, fileid: &str) -> Result<Option<Row>> {
-    Ok(rows(db, "fileid = ?", [fileid])?.pop())
+pub fn by_fileid(db: &Connection, account: i64, fileid: &str) -> Result<Option<Row>> {
+    Ok(rows(
+        db,
+        "account = ? AND fileid = ?",
+        rusqlite::params![account, fileid],
+    )?
+    .pop())
 }
 
 pub fn open(path: &str) -> Result<Connection> {
@@ -170,4 +257,58 @@ pub fn kv_set(db: &Connection, key: &str, value: &str) -> Result<()> {
         [key, value],
     )?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_one_account_becomes_the_first() {
+        let dir = std::env::temp_dir().join(format!("notav-test-migrate-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("core.sqlite").to_string_lossy().to_string();
+        {
+            // Notav 0.1's database, signed in through GNOME Online Accounts.
+            let db = Connection::open(&path).unwrap();
+            for m in &MIGRATIONS[..4] {
+                db.execute_batch(m).unwrap();
+            }
+            db.pragma_update(None, "user_version", 4).unwrap();
+            db.execute_batch(
+                "INSERT INTO kv VALUES ('account_url', 'https://cloud.example'),
+                   ('account_user', 'kris'), ('setting_goa_account', 'account_1'),
+                   ('setting_notes_folder', 'Docs/Notes'), ('config_files_home', '/h/'),
+                   ('setting_tree_icons', 'all');
+                 INSERT INTO notes (path, text, modified, fileid) VALUES ('a.md', 'x', 1, 'f1');
+                 INSERT INTO folders (path, etag) VALUES ('Work', 'e');
+                 INSERT INTO moves (src, dst) VALUES ('Work', 'Old');",
+            )
+            .unwrap();
+        }
+        let db = open(&path).unwrap();
+        let account: (i64, String, String, String) = db
+            .query_row("SELECT id, kind, user, source FROM accounts", [], |r| {
+                Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
+            })
+            .unwrap();
+        assert_eq!(
+            account,
+            (1, "nextcloud".into(), "kris".into(), "account_1".into())
+        );
+        let kv = |k: &str| kv_get(&db, k).unwrap();
+        assert_eq!(kv("a1_files_home").as_deref(), Some("/h/"));
+        assert_eq!(kv("a1_notes_folder").as_deref(), Some("Docs/Notes"));
+        assert_eq!(kv("setting_settings_account").as_deref(), Some("1"));
+        assert_eq!(kv("setting_tree_icons").as_deref(), Some("all"));
+        assert_eq!(kv("account_url"), None);
+        let note = by_path(&db, 1, "a.md").unwrap().unwrap();
+        assert_eq!((note.account, note.fileid.as_deref()), (1, Some("f1")));
+        let owned = |t: &str| -> i64 {
+            db.query_row(&format!("SELECT account FROM {t}"), [], |r| r.get(0))
+                .unwrap()
+        };
+        assert_eq!((owned("folders"), owned("moves")), (1, 1));
+    }
 }

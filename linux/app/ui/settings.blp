@@ -178,75 +178,32 @@ Adw.PreferencesDialog dialog {
     title: _("Accounts");
     icon-name: "system-users-symbolic";
 
-    // The status row, then the shared connection rows (ui/connection.blp).
-    Adw.PreferencesGroup account {
-      title: _("Account");
+    // A row per account (src/settings.rs `connect_accounts`), each opening its page
+    // (ui/account.blp).
+    Adw.PreferencesGroup accounts {
+      title: _("Accounts");
 
-      // How Notav is connected now. Signed in here: "Sign Out", with signing in again in its
-      // menu. Not connected: "Sign In with Browser". A GOA account is managed in GNOME Settings.
-      Adw.ActionRow status {
-        [prefix]
-        Gtk.Image status_icon {
-          icon-name: "object-select-symbolic";
-          styles ["success"]
+      header-suffix: Gtk.Button add_account {
+        valign: center;
+        tooltip-text: _("Add Account");
+        styles ["flat"]
+
+        Adw.ButtonContent {
+          icon-name: "list-add-symbolic";
+          label: _("Add");
         }
-
-        [suffix]
-        Gtk.Button cancel_sign_in {
-          label: _("Cancel");
-          valign: center;
-          visible: false;
-          styles ["flat"]
-        }
-
-        [suffix]
-        Adw.SplitButton sign_out {
-          label: _("Sign Out");
-          menu-model: sign_out_menu;
-          dropdown-tooltip: _("Sign In Again");
-          valign: center;
-          styles ["destructive-action"]
-        }
-
-        [suffix]
-        Adw.SplitButton sign_in {
-          label: _("Sign In with Browser");
-          menu-model: sign_in_menu;
-          dropdown-tooltip: _("More Sign-In Options");
-          valign: center;
-        }
-      }
-    }
-
-    // The notes folder (synced); another one asks whether to move the notes there.
-    Adw.PreferencesGroup notes {
-      title: _("Notes");
-
-      Adw.EntryRow notes_folder {
-        title: _("Notes folder in Nextcloud Files");
-        show-apply-button: true;
-      }
+      };
     }
 
     Adw.PreferencesGroup sync {
       title: _("Sync");
 
-      Adw.SwitchRow sync_settings {
-        title: _("Sync settings with server");
-        subtitle: _("The Nextcloud server always stays on this device");
-        active: true;
+      // Off, or one of the Nextcloud accounts (src/settings.rs `connect_settings_sync`).
+      Adw.ComboRow settings_account {
+        title: _("Sync settings with");
+        subtitle: _("Accounts and servers always stay on this device");
+        model: Gtk.StringList settings_accounts {};
       }
     }
   }
-}
-
-menu sign_out_menu {
-  item (_("Sign In Again"), "account.sign-in")
-  item (_("Copy Login Link"), "account.sign-in-copy")
-  item (_("Sign In with Password…"), "account.sign-in-password")
-}
-
-menu sign_in_menu {
-  item (_("Copy Login Link"), "account.sign-in-copy")
-  item (_("Sign In with Password…"), "account.sign-in-password")
 }

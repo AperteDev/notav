@@ -1,7 +1,7 @@
 //! What Nextcloud keeps besides the notes (`notav_core`'s `files.rs`): the Trash dialog, from
-//! the main menu, and a note's Versions, from its menu in the tree. Each is offered only when
-//! the server has it (`Client::features`); the server is asked in the background, the dialog
-//! showing a spinner meanwhile.
+//! the main menu, and a note's Versions, from its menu in the tree. Each is offered only where
+//! an account's server has it (`Client::features`); the server is asked in the background, the
+//! dialog showing a spinner meanwhile.
 
 use crate::core;
 use crate::i18n::gettext;
@@ -17,9 +17,9 @@ fn when(t: i64) -> String {
         .unwrap_or_default()
 }
 
-/// The Trash dialog: what was deleted from the notes folder, latest first, each to restore or
-/// (where the server lets it) to delete for good. Notes deleted here and not synced yet go to
-/// the server first, so they are listed too.
+/// The Trash dialog: what was deleted from the notes folders of the accounts whose server keeps
+/// it, latest first, each to restore or (where the server lets it) to delete for good. Notes
+/// deleted here and not synced yet go to the server first, so they are listed too.
 pub fn trash() {
     let b = view!("trash");
     let dialog: adw::Dialog = get(&b, "dialog");
@@ -28,10 +28,21 @@ pub fn trash() {
     let error: adw::StatusPage = get(&b, "error");
     let toasts: adw::ToastOverlay = get(&b, "toasts");
     crate::window::present_dialog(&dialog);
+    let accounts: Vec<i64> = crate::window::trash_accounts()
+        .iter()
+        .map(|a| a.id)
+        .collect();
+    // With more than one, each row says which account it is from.
+    let named = accounts.len() > 1;
     glib::spawn_future_local(async move {
-        let found = gio::spawn_blocking(|| {
+        let found = gio::spawn_blocking(move || {
             let _ = core().sync();
-            core().trash()
+            let mut all = Vec::new();
+            for a in accounts {
+                all.extend(core().trash(a)?.into_iter().map(|d| (a, d)));
+            }
+            all.sort_by_key(|(_, d)| std::cmp::Reverse(d.deleted));
+            Ok::<_, notav_core::Error>(all)
         })
         .await;
         let deleted = match found {
@@ -43,9 +54,12 @@ pub fn trash() {
             }
             Err(_) => return,
         };
-        let purge = core().features().purge;
-        for d in deleted {
-            list.append(&trash_row(&d, purge, &list, &stack, &toasts));
+        for (account, d) in deleted {
+            let from = core()
+                .account(account)
+                .filter(|_| named)
+                .map(|a| crate::account_name(&a));
+            list.append(&trash_row(account, from, &d, &list, &stack, &toasts));
         }
         show_list(&list, &stack);
     });
@@ -60,13 +74,16 @@ fn show_list(list: &gtk::ListBox, stack: &gtk::Stack) {
     });
 }
 
+/// A deleted note or folder of `account` (named `from`, with more than one).
 fn trash_row(
+    account: i64,
+    from: Option<String>,
     d: &notav_core::Deleted,
-    purge: bool,
     list: &gtk::ListBox,
     stack: &gtk::Stack,
     toasts: &adw::ToastOverlay,
 ) -> adw::ActionRow {
+    let purge = core().features(account).purge;
     let (folder, name) = d.path.rsplit_once('/').unwrap_or(("", &d.path));
     let title = if d.folder {
         name
@@ -74,11 +91,12 @@ fn trash_row(
         name.rsplit_once('.').map_or(name, |(t, _)| t)
     };
     let deleted = gettext("Deleted {date}").replace("{date}", &when(d.deleted));
-    let subtitle = if folder.is_empty() {
-        deleted
-    } else {
-        format!("{folder} · {deleted}")
-    };
+    let subtitle = from
+        .into_iter()
+        .chain(Some(folder.to_string()).filter(|f| !f.is_empty()))
+        .chain([deleted])
+        .collect::<Vec<_>>()
+        .join(" · ");
     let row = adw::ActionRow::builder()
         .title(glib::markup_escape_text(title))
         .subtitle(glib::markup_escape_text(&subtitle))
@@ -111,7 +129,7 @@ fn trash_row(
             b.clone(),
         );
         glib::spawn_future_local(async move {
-            match gio::spawn_blocking(move || core().restore_deleted(id)).await {
+            match gio::spawn_blocking(move || core().restore_deleted(account, id)).await {
                 Ok(Ok(())) => {
                     l.remove(&r);
                     show_list(&l, &s);
@@ -147,7 +165,7 @@ fn trash_row(
                     return;
                 }
                 b.set_sensitive(false);
-                match gio::spawn_blocking(move || core().purge(id)).await {
+                match gio::spawn_blocking(move || core().purge(account, id)).await {
                     Ok(Ok(())) => {
                         l.remove(&r);
                         show_list(&l, &s);
@@ -209,8 +227,9 @@ pub fn versions(id: i64) {
     });
     glib::spawn_future_local(async move {
         // What waits for the server goes first, so the latest version is the note as it is.
+        let account = n.account;
         let found = gio::spawn_blocking(move || {
-            let _ = core().sync();
+            let _ = core().sync_account(account);
             core().versions(id)
         })
         .await;
@@ -253,7 +272,7 @@ pub fn versions(id: i64) {
                     shown.clone(),
                     toasts.clone(),
                 );
-                let (version, at) = (v.id.clone(), v.modified);
+                let (version, at, account) = (v.id.clone(), v.modified, n.account);
                 row.connect_activated(move |row| {
                     row.set_sensitive(false);
                     let (nav, preview, text, shown, toasts, row, version) = (
@@ -266,7 +285,9 @@ pub fn versions(id: i64) {
                         version.clone(),
                     );
                     glib::spawn_future_local(async move {
-                        let got = gio::spawn_blocking(move || core().version_text(version)).await;
+                        let got =
+                            gio::spawn_blocking(move || core().version_text(account, version))
+                                .await;
                         row.set_sensitive(true);
                         match got {
                             Ok(Ok(body)) => {

@@ -44,10 +44,9 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
 
 ## Planned features
 
-- **On This Device Only**, as in Todav: use Notav without a server, chosen on the welcome page;
-  the notes stay on this computer, synced nowhere. Later, with an account too, notes kept on
-  this device next to the synced ones, as Todav's local lists (see
-  [Open questions](#open-questions-and-risks)).
+- **Accounts**, more: notes and folders moved between accounts (dragged in the tree; now a
+  drag stays within its account), as a copy there and a deletion here; the journal's account
+  chosen in Preferences (now the first account switched on, `Client::journal_account`).
 - **GNOME Shell search**: notes found from the Activities overview by title and text, as Iotas
   and Folio have it; Todav's search provider (`linux/app/src/search.rs`, its `.ini`) over the
   core's search, under the app's own bus name.
@@ -101,9 +100,9 @@ Later (v2):
 - A three-way merge of a note changed here and on the server, from the text as of the last
   sync (`notes.base`), instead of a conflict copy.
 - A shared crate, in its own repository, for the code copied from Todav (listed in
-  `AGENTS.md`), once copying costs more than sharing: when multiple accounts or other services
-  rework the account layer, when a third app or a front-end of its own needs it, or when the
-  same fix keeps being made twice.
+  `AGENTS.md`), once copying costs more than sharing: when other services rework the account
+  layer (accounts are copied already), when a third app or a front-end of its own needs it, or
+  when the same fix keeps being made twice.
 
 ## Distribution
 
@@ -131,9 +130,9 @@ Later (v2):
   text view. Tidying changes the file's text, which other devices and apps
   see.
 
-- **On This Device Only**: where the notes live, the local database only (as Todav's local
-  lists) or Markdown files in a folder on disk that other apps (Obsidian) open too; and how a
-  local note moves to an account later.
+- **Notes on this device as files**: the local account keeps its notes in the database only,
+  as Todav's local lists; Markdown files in a folder on disk would let other apps (Obsidian)
+  open them too, at the cost of watching that folder for their changes.
 - **Spell checking**: libspelling is a new dependency (as `AGENTS.md` asks, with its reason);
   whether the GNOME runtime the Flatpak uses ships it, or the manifest builds it.
 - **GNOME Shell search**: the provider is reached through the app's bus name and D-Bus

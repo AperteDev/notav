@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Accounts, as in Todav: notes of more than one Nextcloud account, and On This Device Only,
+  notes kept on this computer without a server. The welcome page offers a GNOME Online
+  Accounts account, a Nextcloud server or this device; Preferences → Accounts adds more, each
+  with its page (use it or not, its name, signing in again, its server, notes folder and
+  status, Remove). With more than one shown, each account is a row of the tree with its notes
+  under it
 - A dense tree in Preferences: smaller rows, as in Files
 - Favorites, shared with Nextcloud Files and the Nextcloud Notes app: "Add to Favorites" in a
   note's menu stars it; starred notes come first in their folder, with a star
@@ -67,7 +73,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Deleting a note no longer asks first: the toast can undo it
-- The notes folder is set in Preferences under Accounts, with the account it belongs to
+- The notes folder is set on its account's page in Preferences, on each device; the one of the
+  account settings sync through is offered to other devices signing in to it
+- Settings sync through the account chosen in "Sync settings with" (Preferences → Accounts), or
+  stay on this device; Remove Account takes the place of Sign Out
 
 ### Fixed
 

@@ -4,7 +4,7 @@
 #![cfg(feature = "integration")]
 
 use notav_core::dav::Dav;
-use notav_core::{Client, Note};
+use notav_core::{AccountKind, Client, Note};
 
 fn get(k: &str) -> Option<String> {
     let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../.env"))
@@ -33,15 +33,22 @@ struct Fixture {
     b: Client,
 }
 
+/// The Test account, the first (and only) account of each client.
+const A: i64 = 1;
+
+/// A device with the Test account and `folder` as its notes folder; no settings sync (no
+/// settings account).
 fn client(test: &str, dev: &str, folder: &str) -> Client {
     let (url, user, pass) = env();
     let dir = std::env::temp_dir().join(format!("notav-it-{test}-{dev}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let c = Client::open(dir.to_string_lossy().into()).unwrap();
-    c.set_account(url, user, pass).unwrap();
-    c.set_setting("sync_settings".into(), "false".into())
+    let a = c
+        .add_account(AccountKind::Nextcloud, url, user, String::new())
         .unwrap();
-    c.set_setting("notes_folder".into(), folder.into()).unwrap();
+    assert_eq!(a, A);
+    c.connect(A, pass).unwrap();
+    retry(|| c.set_notes_folder(A, folder.into(), false));
     c
 }
 
@@ -66,7 +73,7 @@ impl Fixture {
         let dav = Dav::new(&url, &user, &pass);
         let folder = format!("it-notav/{name}");
         let a = client(name, "a", &folder);
-        let home = retry(|| a.files_home());
+        let home = retry(|| a.files_home(A));
         // Tests making it at once trip the server up (503, 409).
         static PARENT: std::sync::Once = std::sync::Once::new();
         PARENT.call_once(|| retry(|| dav.mkcol_all(&home, &format!("{home}it-notav/"))));
@@ -112,17 +119,17 @@ fn paths(c: &Client) -> Vec<String> {
 fn two_devices_round_trip() {
     let f = Fixture::new("round-trip");
     let n =
-        f.a.add_note("Work".into(), "Plan".into(), "# Plan\n\nŻółw ✓".into())
+        f.a.add_note(A, "Work".into(), "Plan".into(), "# Plan\n\nŻółw ✓".into())
             .unwrap();
     let r = f.a.sync().unwrap();
     assert_eq!(r.uploaded, 1);
-    assert!(!f.a.pending());
+    assert!(!f.a.pending(None));
     assert_eq!(f.server_text("Work/Plan.md").unwrap(), "# Plan\n\nŻółw ✓");
 
     f.b.sync().unwrap();
     let on_b = find(&f.b, "Work/Plan.md");
     assert_eq!(f.b.note_text(on_b.id).unwrap(), "# Plan\n\nŻółw ✓");
-    assert_eq!(f.b.folders(), ["Work"]);
+    assert_eq!(f.b.folders(A), ["Work"]);
 
     f.b.set_text(on_b.id, "changed on b".into()).unwrap();
     f.b.sync().unwrap();
@@ -160,7 +167,7 @@ fn changes_made_on_the_server() {
     let r = f.a.sync().unwrap();
     assert_eq!(r.downloaded, 3);
     assert_eq!(paths(&f.a), ["A/B/Deep.md", "Old.txt", "Top.md"]);
-    assert_eq!(f.a.folders(), ["A", "A/B"]);
+    assert_eq!(f.a.folders(A), ["A", "A/B"]);
     assert_eq!(f.a.note(find(&f.a, "Old.txt").id).unwrap().title, "Old");
 
     // Nothing changed: one PROPFIND, nothing downloaded.
@@ -182,14 +189,14 @@ fn changes_made_on_the_server() {
         f.a.note_text(find(&f.a, "Top.md").id).unwrap(),
         "top, edited"
     );
-    assert_eq!(f.a.folders(), ["A", "A/B"]);
+    assert_eq!(f.a.folders(A), ["A", "A/B"]);
 }
 
 #[test]
 fn offline_edits_on_both_make_a_conflict_copy() {
     let f = Fixture::new("conflict");
     let n =
-        f.a.add_note("".into(), "Shared".into(), "v1".into())
+        f.a.add_note(A, "".into(), "Shared".into(), "v1".into())
             .unwrap();
     f.a.sync().unwrap();
     f.b.sync().unwrap();
@@ -206,15 +213,15 @@ fn offline_edits_on_both_make_a_conflict_copy() {
     assert_eq!(f.b.note_text(on_b.id).unwrap(), "edited on a");
     assert_eq!(f.b.note_text(find(&f.b, copy).id).unwrap(), "edited on b");
     assert_eq!(f.server_text(copy).unwrap(), "edited on b");
-    assert!(!f.b.pending());
+    assert!(!f.b.pending(None));
 
     f.a.sync().unwrap();
     assert_eq!(f.a.notes().len(), 2);
 
     // A note made on both with the same name: the same, as a conflict.
-    f.a.add_note("".into(), "Idea".into(), "from a".into())
+    f.a.add_note(A, "".into(), "Idea".into(), "from a".into())
         .unwrap();
-    f.b.add_note("".into(), "Idea".into(), "from b".into())
+    f.b.add_note(A, "".into(), "Idea".into(), "from b".into())
         .unwrap();
     f.a.sync().unwrap();
     let r = f.b.sync().unwrap();
@@ -226,7 +233,9 @@ fn offline_edits_on_both_make_a_conflict_copy() {
 #[test]
 fn edited_here_deleted_there_comes_back() {
     let f = Fixture::new("delete-edit");
-    let n = f.a.add_note("".into(), "Keep".into(), "v1".into()).unwrap();
+    let n =
+        f.a.add_note(A, "".into(), "Keep".into(), "v1".into())
+            .unwrap();
     f.a.sync().unwrap();
     f.b.sync().unwrap();
     f.b.delete_note(find(&f.b, "Keep.md").id).unwrap();
@@ -243,14 +252,14 @@ fn notes_folder_moves_with_its_notes() {
     let f = Fixture::new("folder-from");
     let to = "it-notav/folder-to";
     f.dav
-        .delete(&format!("{}{to}/", f.a.files_home().unwrap()), None)
+        .delete(&format!("{}{to}/", f.a.files_home(A).unwrap()), None)
         .unwrap();
     let n =
-        f.a.add_note("Sub".into(), "Moved".into(), "text".into())
+        f.a.add_note(A, "Sub".into(), "Moved".into(), "text".into())
             .unwrap();
     f.a.sync().unwrap();
-    f.a.set_notes_folder(to.into(), true).unwrap();
-    assert_eq!(f.a.notes_folder(), to);
+    f.a.set_notes_folder(A, to.into(), true).unwrap();
+    assert_eq!(f.a.notes_folder(A), to);
     let r = f.a.sync().unwrap();
     assert_eq!((r.downloaded, r.removed), (0, 0), "{r:?}");
     assert_eq!(f.a.note(n.id).unwrap().path, "Sub/Moved.md");
@@ -258,12 +267,12 @@ fn notes_folder_moves_with_its_notes() {
 
     // b had the old folder: it follows (as the synced setting would make it).
     f.b.sync().unwrap();
-    f.b.set_setting("notes_folder".into(), to.into()).unwrap();
+    f.b.set_notes_folder(A, to.into(), false).unwrap();
     f.b.sync().unwrap();
     assert_eq!(paths(&f.b), ["Sub/Moved.md"]);
 
     // Without moving: the other folder's notes only.
-    f.a.set_notes_folder("it-notav/folder-from".into(), false)
+    f.a.set_notes_folder(A, "it-notav/folder-from".into(), false)
         .unwrap();
     f.a.sync().unwrap();
     assert!(f.a.notes().is_empty());
@@ -272,9 +281,11 @@ fn notes_folder_moves_with_its_notes() {
 #[test]
 fn a_note_locked_on_the_server_waits_and_the_rest_syncs() {
     let f = Fixture::new("locked");
-    let locked = f.a.add_note("".into(), "Open".into(), "v1".into()).unwrap();
+    let locked =
+        f.a.add_note(A, "".into(), "Open".into(), "v1".into())
+            .unwrap();
     let other =
-        f.a.add_note("".into(), "Other".into(), "v1".into())
+        f.a.add_note(A, "".into(), "Other".into(), "v1".into())
             .unwrap();
     f.a.sync().unwrap();
     // An app's lock, as the Nextcloud Text editor takes while it has the note open.
@@ -303,14 +314,14 @@ fn a_note_locked_on_the_server_waits_and_the_rest_syncs() {
     assert!(l.owner.is_some() && l.since.is_some_and(|t| t > 0), "{l:?}");
     assert_eq!(r.uploaded, 1);
     assert_eq!(f.server_text("Other.md").unwrap(), "v2");
-    assert!(f.a.pending());
+    assert!(f.a.pending(None));
     assert!(f.server_text("Open.md").is_some());
 
     // Unlocked from here: the move goes up.
-    f.a.unlock(l.file.clone().unwrap()).unwrap();
+    f.a.unlock(A, l.file.clone().unwrap()).unwrap();
     let r = f.a.sync().unwrap();
     assert!(r.locked.is_empty(), "{r:?}");
-    assert!(!f.a.pending());
+    assert!(!f.a.pending(None));
     assert_eq!(f.server_text("Work/Open.md").unwrap(), "v1");
 }
 
@@ -318,23 +329,23 @@ fn a_note_locked_on_the_server_waits_and_the_rest_syncs() {
 fn a_folder_moves_whole_on_the_server() {
     let f = Fixture::new("folder-move");
     let plan =
-        f.a.add_note("Work".into(), "Plan".into(), "p".into())
+        f.a.add_note(A, "Work".into(), "Plan".into(), "p".into())
             .unwrap();
-    f.a.add_note("Work/Old".into(), "Deep".into(), "d".into())
+    f.a.add_note(A, "Work/Old".into(), "Deep".into(), "d".into())
         .unwrap();
-    f.a.add_folder("Work/Empty".into()).unwrap();
-    f.a.add_folder("Archive".into()).unwrap();
+    f.a.add_folder(A, "Work/Empty".into()).unwrap();
+    f.a.add_folder(A, "Archive".into()).unwrap();
     f.a.sync().unwrap();
     f.b.sync().unwrap();
 
     // Edited, then moved, before the next sync: the edit goes up at the new place.
     f.a.set_text(plan.id, "p2".into()).unwrap();
-    let to = f.a.move_folder("Work".into(), "Archive".into()).unwrap();
+    let to = f.a.move_folder(A, "Work".into(), "Archive".into()).unwrap();
     assert_eq!(to, "Archive/Work");
     assert_eq!(f.a.note(plan.id).unwrap().path, "Archive/Work/Plan.md");
     let r = f.a.sync().unwrap();
     assert!(r.conflicts.is_empty(), "{r:?}");
-    assert!(!f.a.pending());
+    assert!(!f.a.pending(None));
     assert_eq!(f.server_text("Archive/Work/Plan.md").unwrap(), "p2");
     assert_eq!(f.server_text("Archive/Work/Old/Deep.md").unwrap(), "d");
     assert!(f.server_text("Work/Plan.md").is_none());
@@ -351,23 +362,23 @@ fn a_folder_moves_whole_on_the_server() {
         paths(&f.b),
         ["Archive/Work/Old/Deep.md", "Archive/Work/Plan.md"]
     );
-    assert!(f.b.folders().contains(&"Archive/Work/Empty".to_string()));
+    assert!(f.b.folders(A).contains(&"Archive/Work/Empty".to_string()));
 }
 
 #[test]
 fn a_folder_moved_onto_a_name_taken_on_the_server_moves_note_by_note() {
     let f = Fixture::new("folder-merge");
-    f.a.add_note("Work".into(), "Plan".into(), "p".into())
+    f.a.add_note(A, "Work".into(), "Plan".into(), "p".into())
         .unwrap();
-    f.a.add_folder("Archive".into()).unwrap();
+    f.a.add_folder(A, "Archive".into()).unwrap();
     f.a.sync().unwrap();
     // Made elsewhere, not pulled here yet.
     f.put("Archive/Work/Other.md", "o");
 
-    f.a.move_folder("Work".into(), "Archive".into()).unwrap();
+    f.a.move_folder(A, "Work".into(), "Archive".into()).unwrap();
     let r = f.a.sync().unwrap();
     assert!(r.conflicts.is_empty(), "{r:?}");
-    assert!(!f.a.pending());
+    assert!(!f.a.pending(None));
     assert_eq!(f.server_text("Archive/Work/Plan.md").unwrap(), "p");
     assert!(f.server_text("Work/Plan.md").is_none());
     assert_eq!(
@@ -381,7 +392,7 @@ fn a_new_note_takes_the_name_of_one_moved_away() {
     let f = Fixture::new("name-freed");
     // As the app adds them: "Untitled", empty.
     let first =
-        f.a.add_note("".into(), "Untitled".into(), "".into())
+        f.a.add_note(A, "".into(), "Untitled".into(), "".into())
             .unwrap();
     f.a.sync().unwrap();
     f.b.sync().unwrap();
@@ -391,12 +402,12 @@ fn a_new_note_takes_the_name_of_one_moved_away() {
     f.a.move_note(first.id, "work".into(), "Moved".into())
         .unwrap();
     let second =
-        f.a.add_note("".into(), "Untitled".into(), "".into())
+        f.a.add_note(A, "".into(), "Untitled".into(), "".into())
             .unwrap();
     assert_eq!(second.path, "Untitled.md");
     let r = f.a.sync().unwrap();
     assert!(r.conflicts.is_empty(), "{r:?}");
-    assert!(!f.a.pending());
+    assert!(!f.a.pending(None));
     assert_eq!(paths(&f.a), ["Untitled.md", "work/Moved.md"]);
     assert_eq!(f.server_text("work/Moved.md").unwrap(), "");
     assert_eq!(f.server_text("Untitled.md").unwrap(), "");
@@ -410,7 +421,9 @@ fn a_new_note_takes_the_name_of_one_moved_away() {
 #[test]
 fn a_new_note_on_the_name_of_one_changed_here_and_moved_there_waits() {
     let f = Fixture::new("name-held");
-    let old = f.a.add_note("".into(), "Old".into(), "v1".into()).unwrap();
+    let old =
+        f.a.add_note(A, "".into(), "Old".into(), "v1".into())
+            .unwrap();
     f.a.sync().unwrap();
     // Renamed by another client, not pulled here yet; edited here meanwhile, and a new note
     // takes the name it has there now.
@@ -418,13 +431,14 @@ fn a_new_note_on_the_name_of_one_changed_here_and_moved_there_waits() {
         .mv(&format!("{}Old.md", f.root), &format!("{}New.md", f.root))
         .unwrap();
     f.a.set_text(old.id, "v2".into()).unwrap();
-    f.a.add_note("".into(), "New".into(), "new".into()).unwrap();
+    f.a.add_note(A, "".into(), "New".into(), "new".into())
+        .unwrap();
 
     // The file there is the edited note's, not the new note's to take: no text is lost.
     for _ in 0..3 {
         f.a.sync().unwrap();
     }
-    assert!(!f.a.pending(), "{:?}", f.a.notes());
+    assert!(!f.a.pending(None), "{:?}", f.a.notes());
     let texts: Vec<String> =
         f.a.notes()
             .iter()
@@ -438,44 +452,45 @@ fn a_new_note_on_the_name_of_one_changed_here_and_moved_there_waits() {
 #[test]
 fn a_folder_renamed_then_deleted_on_the_other_device() {
     let f = Fixture::new("folder-rename-delete");
-    f.a.add_note("Work".into(), "Plan".into(), "p".into())
+    f.a.add_note(A, "Work".into(), "Plan".into(), "p".into())
         .unwrap();
-    f.a.add_note("Work/Sub".into(), "Deep".into(), "d".into())
+    f.a.add_note(A, "Work/Sub".into(), "Deep".into(), "d".into())
         .unwrap();
     f.a.sync().unwrap();
     f.b.sync().unwrap();
 
     assert_eq!(
-        f.a.rename_folder("Work".into(), "Projects".into()).unwrap(),
+        f.a.rename_folder(A, "Work".into(), "Projects".into())
+            .unwrap(),
         "Projects"
     );
     f.a.sync().unwrap();
-    assert!(!f.a.pending());
+    assert!(!f.a.pending(None));
     assert_eq!(f.server_text("Projects/Sub/Deep.md").unwrap(), "d");
     assert!(f.server_text("Work/Plan.md").is_none());
     let r = f.b.sync().unwrap();
     assert_eq!(r.downloaded, 0, "a rename downloads nothing: {r:?}");
     assert_eq!(paths(&f.b), ["Projects/Plan.md", "Projects/Sub/Deep.md"]);
 
-    f.b.delete_folder("Projects".into()).unwrap();
-    assert!(f.b.notes().is_empty() && f.b.folders().is_empty());
+    f.b.delete_folder(A, "Projects".into()).unwrap();
+    assert!(f.b.notes().is_empty() && f.b.folders(A).is_empty());
     f.b.sync().unwrap();
-    assert!(!f.b.pending());
+    assert!(!f.b.pending(None));
     let gone = format!("{}Projects/", f.root);
     assert!(f.dav.list(&gone, "0").unwrap().is_empty(), "folder deleted");
     let r = f.a.sync().unwrap();
     assert_eq!(r.removed, 2, "{r:?}");
-    assert!(f.a.notes().is_empty() && f.a.folders().is_empty());
+    assert!(f.a.notes().is_empty() && f.a.folders(A).is_empty());
 }
 
 #[test]
 fn a_deleted_folder_keeps_what_changed_on_the_server() {
     let f = Fixture::new("folder-delete-keep");
-    f.a.add_note("Work".into(), "Plan".into(), "p".into())
+    f.a.add_note(A, "Work".into(), "Plan".into(), "p".into())
         .unwrap();
-    f.a.add_note("Work".into(), "Other".into(), "o".into())
+    f.a.add_note(A, "Work".into(), "Other".into(), "o".into())
         .unwrap();
-    f.a.add_note("Inbox".into(), "Old".into(), "o".into())
+    f.a.add_note(A, "Inbox".into(), "Old".into(), "o".into())
         .unwrap();
     f.a.sync().unwrap();
     // Changed and added by another client, not pulled here yet; a second later, as Nextcloud's
@@ -484,43 +499,45 @@ fn a_deleted_folder_keeps_what_changed_on_the_server() {
     f.put("Work/Plan.md", "p2");
     f.put("Inbox/New.md", "n");
 
-    f.a.delete_folder("Work".into()).unwrap();
-    f.a.delete_folder("Inbox".into()).unwrap();
+    f.a.delete_folder(A, "Work".into()).unwrap();
+    f.a.delete_folder(A, "Inbox".into()).unwrap();
     f.a.sync().unwrap();
-    assert!(!f.a.pending());
+    assert!(!f.a.pending(None));
     assert!(f.server_text("Work/Other.md").is_none());
     assert!(f.server_text("Inbox/Old.md").is_none());
     assert_eq!(paths(&f.a), ["Inbox/New.md", "Work/Plan.md"]);
     assert_eq!(f.a.note_text(find(&f.a, "Work/Plan.md").id).unwrap(), "p2");
-    assert_eq!(f.a.folders(), ["Inbox", "Work"]);
+    assert_eq!(f.a.folders(A), ["Inbox", "Work"]);
 }
 
 #[test]
 fn undo_before_and_after_the_server_has_the_change() {
     let f = Fixture::new("undo");
     let plan =
-        f.a.add_note("Work".into(), "Plan".into(), "p".into())
+        f.a.add_note(A, "Work".into(), "Plan".into(), "p".into())
             .unwrap();
-    let idea = f.a.add_note("".into(), "Idea".into(), "i".into()).unwrap();
+    let idea =
+        f.a.add_note(A, "".into(), "Idea".into(), "i".into())
+            .unwrap();
     f.a.sync().unwrap();
 
     // Undone before a sync: nothing to do on the server.
     f.a.move_note(idea.id, "Work".into(), "Idea".into())
         .unwrap();
-    f.a.delete_folder("Work".into()).unwrap();
+    f.a.delete_folder(A, "Work".into()).unwrap();
     assert!(f.a.undo(None).unwrap() && f.a.undo(None).unwrap());
     let r = f.a.sync().unwrap();
     assert_eq!((r.uploaded, r.removed), (0, 0), "{r:?}");
-    assert!(!f.a.pending());
+    assert!(!f.a.pending(None));
     assert_eq!(f.server_text("Idea.md").unwrap(), "i");
 
     // Undone after: the deleted folder and note come back as new ones there.
-    f.a.delete_folder("Work".into()).unwrap();
+    f.a.delete_folder(A, "Work".into()).unwrap();
     f.a.sync().unwrap();
     assert!(f.server_text("Work/Plan.md").is_none());
     assert!(f.a.undo(None).unwrap());
     f.a.sync().unwrap();
-    assert!(!f.a.pending());
+    assert!(!f.a.pending(None));
     assert_eq!(f.server_text("Work/Plan.md").unwrap(), "p");
     assert_eq!(f.a.note(plan.id).unwrap().path, "Work/Plan.md");
     f.b.sync().unwrap();
@@ -530,11 +547,13 @@ fn undo_before_and_after_the_server_has_the_change() {
 #[test]
 fn favorites_go_both_ways() {
     let f = Fixture::new("favorites");
-    let n = f.a.add_note("".into(), "Plan".into(), "p".into()).unwrap();
+    let n =
+        f.a.add_note(A, "".into(), "Plan".into(), "p".into())
+            .unwrap();
     // Starred before it is on the server: it goes up with the note.
     f.a.set_favorite(n.id, true).unwrap();
     f.a.sync().unwrap();
-    assert!(!f.a.pending());
+    assert!(!f.a.pending(None));
     f.b.sync().unwrap();
     let on_b = find(&f.b, "Plan.md");
     assert!(on_b.favorite);
@@ -555,49 +574,49 @@ fn favorites_go_both_ways() {
 #[test]
 fn deleted_notes_come_back_from_the_trash() {
     let f = Fixture::new("trash");
-    if !retry(|| f.a.refresh_features()).trash {
+    if !retry(|| f.a.refresh_features(A)).trash {
         return; // the server keeps no trash
     }
     // Earlier runs' notes are in the trash too: this run's have a name of their own.
     let title = format!("Gone {}", notav_core::now());
     let n =
-        f.a.add_note("Work".into(), title.clone(), "g".into())
+        f.a.add_note(A, "Work".into(), title.clone(), "g".into())
             .unwrap();
     f.a.sync().unwrap();
     f.a.delete_note(n.id).unwrap();
     f.a.sync().unwrap();
     let path = format!("Work/{title}.md");
-    let deleted = f.a.trash().unwrap();
+    let deleted = f.a.trash(A).unwrap();
     let item = deleted
         .iter()
         .find(|d| d.path == path)
         .expect("in the trash");
     assert!(!item.folder && item.deleted > 0);
 
-    f.a.restore_deleted(item.id.clone()).unwrap();
-    assert!(!f.a.trash().unwrap().iter().any(|d| d.id == item.id));
+    f.a.restore_deleted(A, item.id.clone()).unwrap();
+    assert!(!f.a.trash(A).unwrap().iter().any(|d| d.id == item.id));
     f.a.sync().unwrap();
     assert_eq!(f.a.note_text(find(&f.a, &path).id).unwrap(), "g");
 
     // Deleted for good, where the server lets it.
-    if f.a.features().purge {
+    if f.a.features(A).purge {
         f.a.delete_note(find(&f.a, &path).id).unwrap();
         f.a.sync().unwrap();
-        let again = f.a.trash().unwrap();
+        let again = f.a.trash(A).unwrap();
         let item = again.iter().find(|d| d.path == path).unwrap();
-        f.a.purge(item.id.clone()).unwrap();
-        assert!(!f.a.trash().unwrap().iter().any(|d| d.id == item.id));
+        f.a.purge(A, item.id.clone()).unwrap();
+        assert!(!f.a.trash(A).unwrap().iter().any(|d| d.id == item.id));
     }
 }
 
 #[test]
 fn a_note_has_its_versions() {
     let f = Fixture::new("versions");
-    if !retry(|| f.a.refresh_features()).versions {
+    if !retry(|| f.a.refresh_features(A)).versions {
         return; // the server keeps no versions
     }
     let n =
-        f.a.add_note("".into(), "Plan".into(), "first".into())
+        f.a.add_note(A, "".into(), "Plan".into(), "first".into())
             .unwrap();
     assert!(
         f.a.versions(n.id).unwrap().is_empty(),
@@ -612,5 +631,8 @@ fn a_note_has_its_versions() {
     assert!(versions.len() >= 2, "{versions:?}");
     assert!(versions[0].current && !versions[1].current);
     assert!(versions[0].modified > versions[1].modified);
-    assert_eq!(f.a.version_text(versions[1].id.clone()).unwrap(), "first");
+    assert_eq!(
+        f.a.version_text(A, versions[1].id.clone()).unwrap(),
+        "first"
+    );
 }

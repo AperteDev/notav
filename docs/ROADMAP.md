@@ -48,10 +48,6 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
   the notes stay on this computer, synced nowhere. Later, with an account too, notes kept on
   this device next to the synced ones, as Todav's local lists (see
   [Open questions](#open-questions-and-risks)).
-- **Favorites**, shared with Nextcloud: a note starred from the tree's menu gets Nextcloud's
-  favorite flag (`oc:favorite` over WebDAV, which Nextcloud Files and, as far as known, the
-  Nextcloud Notes app show too); favorites come first in their folder, as pinned notes in
-  Iotas, Bear and Apple Notes.
 - **Versions** of a note from Nextcloud's file versions (`remote.php/dav/versions/<user>/`):
   "Versions" in a note's menu lists them, shows one and restores it (moved into `restore`), as
   Joplin's and Standard Notes' note history; also a way back after a conflict copy.

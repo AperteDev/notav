@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - A dense tree in Preferences: smaller rows, as in Files
+- Favorites, shared with Nextcloud Files and the Nextcloud Notes app: "Add to Favorites" in a
+  note's menu stars it; starred notes come first in their folder, with a star
 - When Notav is updated while it runs, a banner offers Restart into the new version (as in
   Todav)
 - Folders in the tree show how many notes they hold, their folders' included, dimmed

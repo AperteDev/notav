@@ -885,6 +885,26 @@ fn connect(ui: &Rc<Ui>) {
         }
     });
     ui.window.add_action(&delete);
+    // Star or unstar a note, from its menu in the tree.
+    let favorite = gio::SimpleAction::new("favorite-note", Some(glib::VariantTy::INT64));
+    let weak = Rc::downgrade(ui);
+    favorite.connect_activate(move |_, id| {
+        let (Some(ui), Some(n)) = (
+            weak.upgrade(),
+            id.and_then(|i| i.get::<i64>())
+                .and_then(|id| core().note(id)),
+        ) else {
+            return;
+        };
+        match core().set_favorite(n.id, !n.favorite) {
+            Ok(()) => {
+                refresh_tree(&ui);
+                request_sync();
+            }
+            Err(e) => toast(&e.to_string()),
+        }
+    });
+    ui.window.add_action(&favorite);
     // From the tree's menus, with the folder ("": the top level).
     for (name, f) in [
         ("new-note-in", new_note_in as fn(&Rc<Ui>, String)),
@@ -1296,8 +1316,8 @@ fn refresh_tree(ui: &Rc<Ui>) {
     *ui.items.borrow_mut() = items.into_iter().map(|(_, i)| i).collect();
 }
 
-/// The tree's rows: each folder's folders, then its notes, by name; what is in a folder only
-/// while it is open. With each row its depth.
+/// The tree's rows: each folder's folders, then its notes (favorites first), by name; what is in
+/// a folder only while it is open. With each row its depth.
 fn tree(folders: &[String], notes: &[Note], expanded: &HashSet<String>) -> Vec<(usize, Item)> {
     fn add(
         out: &mut Vec<(usize, Item)>,
@@ -1317,7 +1337,10 @@ fn tree(folders: &[String], notes: &[Note], expanded: &HashSet<String>) -> Vec<(
             }
         }
         let mut here: Vec<&Note> = notes.iter().filter(|n| n.folder == folder).collect();
-        here.sort_by(|a, b| by_name(&a.title, &b.title));
+        // Favorites first.
+        here.sort_by(|a, b| {
+            (b.favorite.cmp(&a.favorite)).then_with(|| by_name(&a.title, &b.title))
+        });
         out.extend(here.into_iter().map(|n| (depth, Item::Note(n.clone()))));
     }
     let mut out = Vec::new();
@@ -1409,6 +1432,13 @@ fn tree_row(
         count.add_css_class("numeric");
         count.set_margin_end(4);
         line.append(&count);
+    }
+    if matches!(item, Item::Note(n) if n.favorite) {
+        let star = gtk::Image::from_icon_name("starred-symbolic");
+        star.add_css_class("dim-label");
+        star.set_margin_end(4);
+        star.update_property(&[gtk::accessible::Property::Label(&gettext("Favorite"))]);
+        line.append(&star);
     }
     let row = gtk::ListBoxRow::new();
     row.set_child(Some(&line));
@@ -1897,9 +1927,18 @@ fn context_menu(ui: &Rc<Ui>) {
         m.append_section(None, &add);
         match &item {
             Some(Item::Note(n)) => {
-                let delete =
-                    gio::Action::print_detailed_name("win.delete-note", Some(&n.id.to_variant()));
+                let id = Some(n.id.to_variant());
+                let favorite = gio::Action::print_detailed_name("win.favorite-note", id.as_ref());
+                let delete = gio::Action::print_detailed_name("win.delete-note", id.as_ref());
                 let note = gio::Menu::new();
+                note.append(
+                    Some(&if n.favorite {
+                        gettext("Remove from Favorites")
+                    } else {
+                        gettext("Add to Favorites")
+                    }),
+                    Some(&favorite),
+                );
                 note.append(Some(&gettext("Delete")), Some(&delete));
                 m.append_section(None, &note);
             }
@@ -2563,6 +2602,20 @@ mod tests {
                 s(0, "b")
             ]
         );
+    }
+
+    #[test]
+    fn favorites_come_first_in_their_folder() {
+        let mut notes = ["a.md", "b.md", "c.md"].map(note);
+        notes[2].favorite = true;
+        let titles: Vec<String> = tree(&[], &notes, &HashSet::new())
+            .into_iter()
+            .filter_map(|(_, i)| match i {
+                Item::Note(n) => Some(n.title),
+                Item::Folder(_) => None,
+            })
+            .collect();
+        assert_eq!(titles, ["c", "a", "b"]);
     }
 
     #[test]

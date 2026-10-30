@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notav\n"
 "Report-Msgid-Bugs-To: https://github.com/AperteDev/notav/issues\n"
-"POT-Creation-Date: 2026-10-30 09:30+0100\n"
+"POT-Creation-Date: 2026-10-30 10:01+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,7 +18,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: linux/app/src/connection.rs:39 linux/app/src/window.rs:2159
+#: linux/app/src/connection.rs:39 linux/app/src/window.rs:2198
 msgid "No Nextcloud account in Settings → Online Accounts"
 msgstr ""
 
@@ -137,8 +137,8 @@ msgid "Connecting failed"
 msgstr ""
 
 #: linux/app/src/settings.rs:122 linux/app/src/settings.rs:360
-#: linux/app/src/window.rs:1790 linux/app/src/window.rs:1822
-#: linux/app/src/window.rs:2363
+#: linux/app/src/window.rs:1820 linux/app/src/window.rs:1852
+#: linux/app/src/window.rs:2402
 msgid "Not a folder name"
 msgstr ""
 
@@ -191,7 +191,7 @@ msgstr ""
 msgid "Connected as {name}"
 msgstr ""
 
-#: linux/app/src/settings.rs:399 linux/app/src/window.rs:2174
+#: linux/app/src/settings.rs:399 linux/app/src/window.rs:2213
 #: linux/app/ui/window.blp:43
 msgid "GNOME Online Accounts"
 msgstr ""
@@ -210,11 +210,11 @@ msgstr ""
 msgid "Disconnected"
 msgstr ""
 
-#: linux/app/src/settings.rs:499 linux/app/src/window.rs:2291
+#: linux/app/src/settings.rs:499 linux/app/src/window.rs:2330
 msgid "Waiting for Sign-In…"
 msgstr ""
 
-#: linux/app/src/settings.rs:501 linux/app/src/window.rs:2293
+#: linux/app/src/settings.rs:501 linux/app/src/window.rs:2332
 msgid "Waiting for Browser…"
 msgstr ""
 
@@ -323,128 +323,140 @@ msgstr ""
 msgid "{percent}%"
 msgstr ""
 
-#: linux/app/src/window.rs:960
+#: linux/app/src/window.rs:980
 msgid "No Headings"
 msgstr ""
 
-#: linux/app/src/window.rs:1590
+#: linux/app/src/window.rs:1440
+msgid "Favorite"
+msgstr ""
+
+#: linux/app/src/window.rs:1620
 #, rust-format
 msgid "Linked from {count} note"
 msgid_plural "Linked from {count} notes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: linux/app/src/window.rs:1650
+#: linux/app/src/window.rs:1680
 #, rust-format
 msgid "Cannot save the note: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:1701
+#: linux/app/src/window.rs:1731
 msgid "A note with this name exists already"
 msgstr ""
 
-#: linux/app/src/window.rs:1744
+#: linux/app/src/window.rs:1774
 msgid "Untitled"
 msgstr ""
 
-#: linux/app/src/window.rs:1780 linux/app/src/window.rs:1820
+#: linux/app/src/window.rs:1810 linux/app/src/window.rs:1850
 msgid "A folder with this name exists already"
 msgstr ""
 
-#: linux/app/src/window.rs:1801
+#: linux/app/src/window.rs:1831
 msgid "Rename Folder"
 msgstr ""
 
-#: linux/app/src/window.rs:1802
+#: linux/app/src/window.rs:1832
 msgid "Rename"
 msgstr ""
 
-#: linux/app/src/window.rs:1838 linux/app/src/window.rs:1857
+#: linux/app/src/window.rs:1868 linux/app/src/window.rs:1887
 #, rust-format
 msgid "“{title}” deleted"
 msgstr ""
 
-#: linux/app/src/window.rs:1894 linux/app/ui/shortcuts.blp:10
+#: linux/app/src/window.rs:1924 linux/app/ui/shortcuts.blp:10
 msgid "New Note"
 msgstr ""
 
-#: linux/app/src/window.rs:1896 linux/app/ui/new-folder.blp:6
+#: linux/app/src/window.rs:1926 linux/app/ui/new-folder.blp:6
 msgid "New Folder"
 msgstr ""
 
-#: linux/app/src/window.rs:1903 linux/app/src/window.rs:1911
+#: linux/app/src/window.rs:1936
+msgid "Remove from Favorites"
+msgstr ""
+
+#: linux/app/src/window.rs:1938
+msgid "Add to Favorites"
+msgstr ""
+
+#: linux/app/src/window.rs:1942 linux/app/src/window.rs:1950
 msgid "Delete"
 msgstr ""
 
-#: linux/app/src/window.rs:1910
+#: linux/app/src/window.rs:1949
 msgid "Rename…"
 msgstr ""
 
-#: linux/app/src/window.rs:2061
+#: linux/app/src/window.rs:2100
 msgid "A note with this name exists in that folder already"
 msgstr ""
 
-#: linux/app/src/window.rs:2064
+#: linux/app/src/window.rs:2103
 msgid "A folder with this name exists in that folder already"
 msgstr ""
 
-#: linux/app/src/window.rs:2177
+#: linux/app/src/window.rs:2216
 msgid "Connect with a Nextcloud account from GNOME Settings"
 msgstr ""
 
-#: linux/app/src/window.rs:2180 linux/app/ui/window.blp:58
+#: linux/app/src/window.rs:2219 linux/app/ui/window.blp:58
 msgid "Nextcloud Server"
 msgstr ""
 
-#: linux/app/src/window.rs:2183
+#: linux/app/src/window.rs:2222
 msgid "Sign in to your Nextcloud; Notav gets an app password of its own"
 msgstr ""
 
-#: linux/app/src/window.rs:2264
+#: linux/app/src/window.rs:2303
 msgid "Enter the Nextcloud server first"
 msgstr ""
 
-#: linux/app/src/window.rs:2380 linux/app/ui/settings.blp:213
+#: linux/app/src/window.rs:2419 linux/app/ui/settings.blp:213
 #: linux/app/ui/window.blp:110
 msgid "Sign In with Browser"
 msgstr ""
 
-#: linux/app/src/window.rs:2394
+#: linux/app/src/window.rs:2433
 msgid "Cannot start login"
 msgstr ""
 
-#: linux/app/src/window.rs:2395
+#: linux/app/src/window.rs:2434
 #, rust-format
 msgid "Cannot start login: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:2403
+#: linux/app/src/window.rs:2442
 msgid "Login link copied to clipboard"
 msgstr ""
 
-#: linux/app/src/window.rs:2423
+#: linux/app/src/window.rs:2462
 #, rust-format
 msgid "Login failed: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:2425
+#: linux/app/src/window.rs:2464
 msgid "Login failed"
 msgstr ""
 
-#: linux/app/src/window.rs:2428
+#: linux/app/src/window.rs:2467
 msgid "Login timed out"
 msgstr ""
 
-#: linux/app/src/window.rs:2477
+#: linux/app/src/window.rs:2516
 msgid "Wrong login name or password"
 msgstr ""
 
-#: linux/app/src/window.rs:2478
+#: linux/app/src/window.rs:2517
 #, rust-format
 msgid "Sign-in failed: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:2479
+#: linux/app/src/window.rs:2518
 msgid "Sign-in failed"
 msgstr ""
 

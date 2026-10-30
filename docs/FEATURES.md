@@ -19,6 +19,7 @@ What Notav can do, in short. The details of each release are in the
 **Organizing**
 
 - Folders and notes as a tree, as in Obsidian; each folder shows how many notes it holds.
+- Favorites, shared with Nextcloud Files and Notes: starred notes come first in their folder.
 - Drag notes and folders into and out of folders.
 - New notes and folders, renaming folders and deleting both from the tree's menu; a note is
   renamed through its title.
@@ -59,7 +60,6 @@ What Notav can do, in short. The details of each release are in the
 ## Planned
 
 - Use Notav without a server: notes on this device only.
-- Favorites shared with Nextcloud Notes and Files.
 - Trash: restore deleted notes from Nextcloud's trash bin.
 - Versions of a note, from Nextcloud's file versions.
 - Notes in GNOME Shell's search.

@@ -645,14 +645,14 @@ dependencies = [
 
 [[package]]
 name = "notav-cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "notav-core",
 ]
 
 [[package]]
 name = "notav-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "pulldown-cmark",
  "quick-xml",
@@ -662,7 +662,7 @@ dependencies = [
 
 [[package]]
 name = "notav-linux"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "gtk4",
  "libadwaita",

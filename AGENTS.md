@@ -34,6 +34,7 @@
   | Preferences: style, account | `linux/app/src/settings.rs`, `ui/settings.blp` | The account group as is |
   | Undo toast, Ctrl+Z | `linux/app/src/window.rs` (`undo_toast`, `undo`) | As is |
   | About with Support and donation links | `window.rs` (`about_support`, `DONATIONS`) | As is |
+  | Update while running, Restart banner | `linux/app/src/update.rs`, `update_banners` in `window.rs` | No restart in the background (no service): only the banner, quitting as closing the window does |
   | Build, packaging, release | `build.rs`, `linux/Makefile`, Flatpak manifest, `scripts/`, `.github/workflows/`, `po/its/`, RPM spec, `.copr/Makefile` | No GNOME extension, D-Bus service or autostart; GtkSourceView |
   | Polish translations | `po/pl.po` | Shared strings merged |
 

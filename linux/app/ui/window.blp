@@ -347,6 +347,14 @@ Adw.ApplicationWindow window {
                 }
               }
 
+              // A newer version installed (src/update.rs, src/window.rs `update_banner`).
+              [top]
+              Adw.Banner update_banner {
+                title: _("Notav was updated: restart it to use the new version");
+                button-label: _("Restart");
+                action-name: "app.restart";
+              }
+
               // While something is typed, the matching notes take the editor's place.
               [top]
               Gtk.SearchBar search_bar {

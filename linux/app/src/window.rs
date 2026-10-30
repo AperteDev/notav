@@ -109,6 +109,8 @@ struct Ui {
     /// Where a new note goes: the folder last opened in the tree, or the open note's.
     target_folder: RefCell<String>,
     note_title: adw::WindowTitle,
+    /// Offers to restart into a newer version (`update_banner`).
+    update_banner: adw::Banner,
     note_stack: gtk::Stack,
     title: gtk::Entry,
     note_scroll: gtk::ScrolledWindow,
@@ -171,6 +173,12 @@ pub fn setup_actions(app: &adw::Application) {
             None => app.quit(),
         }
     ));
+    let restart = gio::SimpleAction::new("restart", None);
+    restart.connect_activate(glib::clone!(
+        #[weak]
+        app,
+        move |_, _| crate::update::restart(&app)
+    ));
     let shortcuts = gio::SimpleAction::new("shortcuts", None);
     shortcuts.connect_activate(|_, _| {
         if let Some(ui) = ui() {
@@ -189,7 +197,7 @@ pub fn setup_actions(app: &adw::Application) {
         about_support(&d);
         d.present(Some(&ui.window));
     });
-    for a in [&sync, &quit, &shortcuts, &about] {
+    for a in [&sync, &quit, &restart, &shortcuts, &about] {
         app.add_action(a);
     }
     // Listed in ui/shortcuts.blp.
@@ -586,6 +594,7 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         ),
         target_folder: RefCell::new(String::new()),
         note_title: get(&b, "note_title"),
+        update_banner: get(&b, "update_banner"),
         note_stack: get(&b, "note_stack"),
         title: get(&b, "title"),
         note_scroll: get(&b, "note_scroll"),
@@ -626,7 +635,15 @@ fn build(app: &adw::Application) -> Rc<Ui> {
     close_note(&ui);
     connect(&ui);
     connect_welcome(&ui, &b);
+    ui.update_banner.set_revealed(crate::update::updated());
     ui
+}
+
+/// Offer to restart once a newer version is installed.
+pub fn update_banner() {
+    if let Some(ui) = ui() {
+        ui.update_banner.set_revealed(crate::update::updated());
+    }
 }
 
 /// The device-only `text_zoom` setting: the note's text size in percent, 50 to 300.

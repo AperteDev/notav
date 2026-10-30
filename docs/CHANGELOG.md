@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - A dense tree in Preferences: smaller rows, as in Files
+- When Notav is updated while it runs, a banner offers Restart into the new version (as in
+  Todav)
 - Folders in the tree show how many notes they hold, their folders' included, dimmed
 - An outline of the open note's headings at its right, shown and hidden with the Outline
   button; a click goes to the heading

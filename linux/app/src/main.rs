@@ -6,6 +6,7 @@ mod editor;
 mod goa;
 mod i18n;
 mod settings;
+mod update;
 mod window;
 
 use adw::prelude::*;
@@ -360,7 +361,8 @@ fn main() -> glib::ExitCode {
     let flags = if sandbox() {
         gio::ApplicationFlags::NON_UNIQUE
     } else {
-        gio::ApplicationFlags::empty()
+        // A restart after an update starts the new version before this one has quit (Flatpak).
+        gio::ApplicationFlags::ALLOW_REPLACEMENT
     };
     let app = adw::Application::new(Some(APP_ID), flags);
     app.connect_startup(|app| {
@@ -375,7 +377,10 @@ fn main() -> glib::ExitCode {
         if restore_account() && core().setting("notes_folder".into()).is_some() {
             start_background();
         }
+        update::watch(app);
     });
     app.connect_activate(window::present);
-    app.run()
+    let code = app.run();
+    update::exec_if_restarting();
+    code
 }

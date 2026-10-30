@@ -526,3 +526,91 @@ fn undo_before_and_after_the_server_has_the_change() {
     f.b.sync().unwrap();
     assert_eq!(paths(&f.b), ["Idea.md", "Work/Plan.md"]);
 }
+
+#[test]
+fn favorites_go_both_ways() {
+    let f = Fixture::new("favorites");
+    let n = f.a.add_note("".into(), "Plan".into(), "p".into()).unwrap();
+    // Starred before it is on the server: it goes up with the note.
+    f.a.set_favorite(n.id, true).unwrap();
+    f.a.sync().unwrap();
+    assert!(!f.a.pending());
+    f.b.sync().unwrap();
+    let on_b = find(&f.b, "Plan.md");
+    assert!(on_b.favorite);
+
+    // Unstarred on b: a learns it with its next sync, though no ETag changed.
+    f.b.set_favorite(on_b.id, false).unwrap();
+    f.b.sync().unwrap();
+    f.a.sync().unwrap();
+    assert!(!f.a.note(n.id).unwrap().favorite);
+    // And a star survives a rename.
+    f.a.set_favorite(n.id, true).unwrap();
+    f.a.move_note(n.id, "".into(), "Plan 2".into()).unwrap();
+    f.a.sync().unwrap();
+    f.b.sync().unwrap();
+    assert!(find(&f.b, "Plan 2.md").favorite);
+}
+
+#[test]
+fn deleted_notes_come_back_from_the_trash() {
+    let f = Fixture::new("trash");
+    if !retry(|| f.a.refresh_features()).trash {
+        return; // the server keeps no trash
+    }
+    // Earlier runs' notes are in the trash too: this run's have a name of their own.
+    let title = format!("Gone {}", notav_core::now());
+    let n =
+        f.a.add_note("Work".into(), title.clone(), "g".into())
+            .unwrap();
+    f.a.sync().unwrap();
+    f.a.delete_note(n.id).unwrap();
+    f.a.sync().unwrap();
+    let path = format!("Work/{title}.md");
+    let deleted = f.a.trash().unwrap();
+    let item = deleted
+        .iter()
+        .find(|d| d.path == path)
+        .expect("in the trash");
+    assert!(!item.folder && item.deleted > 0);
+
+    f.a.restore_deleted(item.id.clone()).unwrap();
+    assert!(!f.a.trash().unwrap().iter().any(|d| d.id == item.id));
+    f.a.sync().unwrap();
+    assert_eq!(f.a.note_text(find(&f.a, &path).id).unwrap(), "g");
+
+    // Deleted for good, where the server lets it.
+    if f.a.features().purge {
+        f.a.delete_note(find(&f.a, &path).id).unwrap();
+        f.a.sync().unwrap();
+        let again = f.a.trash().unwrap();
+        let item = again.iter().find(|d| d.path == path).unwrap();
+        f.a.purge(item.id.clone()).unwrap();
+        assert!(!f.a.trash().unwrap().iter().any(|d| d.id == item.id));
+    }
+}
+
+#[test]
+fn a_note_has_its_versions() {
+    let f = Fixture::new("versions");
+    if !retry(|| f.a.refresh_features()).versions {
+        return; // the server keeps no versions
+    }
+    let n =
+        f.a.add_note("".into(), "Plan".into(), "first".into())
+            .unwrap();
+    assert!(
+        f.a.versions(n.id).unwrap().is_empty(),
+        "not on the server yet"
+    );
+    f.a.sync().unwrap();
+    // A second apart: Nextcloud names versions by their time in seconds.
+    std::thread::sleep(std::time::Duration::from_secs(2));
+    f.a.set_text(n.id, "second".into()).unwrap();
+    f.a.sync().unwrap();
+    let versions = f.a.versions(n.id).unwrap();
+    assert!(versions.len() >= 2, "{versions:?}");
+    assert!(versions[0].current && !versions[1].current);
+    assert!(versions[0].modified > versions[1].modified);
+    assert_eq!(f.a.version_text(versions[1].id.clone()).unwrap(), "first");
+}

@@ -1,4 +1,5 @@
 pub mod dav;
+mod files;
 pub mod journal;
 pub mod json;
 mod login;
@@ -14,6 +15,7 @@ use dav::Dav;
 use rusqlite::Connection;
 use std::sync::{Arc, Mutex};
 
+pub use files::{Deleted, Features, Version};
 pub use login::{Credentials, LoginFlow, login_flow_poll, login_flow_start, password_login};
 pub use notes::Note;
 pub use settings::DEVICE_ONLY;
@@ -38,6 +40,8 @@ pub struct Client {
     listeners: Mutex<Vec<Box<dyn ChangeListener>>>,
     sync_lock: Mutex<()>,
     journal: Mutex<undo::Journal>,
+    /// The server's features were asked for in this run (`refresh_features`).
+    features_asked: std::sync::atomic::AtomicBool,
 }
 
 pub fn now() -> i64 {
@@ -57,6 +61,7 @@ impl Client {
             listeners: Mutex::new(Vec::new()),
             sync_lock: Mutex::new(()),
             journal: Mutex::default(),
+            features_asked: Default::default(),
         })
     }
 
@@ -72,6 +77,8 @@ impl Client {
                  DELETE FROM kv WHERE key LIKE 'config_%';",
             )?;
             self.journal.lock().unwrap().clear();
+            self.features_asked
+                .store(false, std::sync::atomic::Ordering::SeqCst);
         }
         store::kv_set(&db, "account_url", &url)?;
         store::kv_set(&db, "account_user", &user)?;

@@ -21,6 +21,8 @@ pub struct Note {
     pub modified: i64,
     /// Changed here and not on the server yet.
     pub pending: bool,
+    /// Starred, as Nextcloud's favorites.
+    pub favorite: bool,
 }
 
 impl From<&Row> for Note {
@@ -33,6 +35,7 @@ impl From<&Row> for Note {
             folder: folder.to_string(),
             modified: r.modified,
             pending: r.dirty != CLEAN,
+            favorite: r.favorite,
         }
     }
 }
@@ -636,7 +639,7 @@ impl Client {
     pub fn pending(&self) -> bool {
         let db = self.db.lock().unwrap();
         db.query_row(
-            "SELECT EXISTS (SELECT 1 FROM notes WHERE dirty != 0)
+            "SELECT EXISTS (SELECT 1 FROM notes WHERE dirty != 0 OR favorite_dirty = 1)
                OR EXISTS (SELECT 1 FROM folders WHERE dirty != 0)
                OR EXISTS (SELECT 1 FROM moves)",
             [],
@@ -694,6 +697,7 @@ mod tests {
                 folder: folder.to_string(),
                 modified: 0,
                 pending: false,
+                favorite: false,
             }
         })
         .collect();

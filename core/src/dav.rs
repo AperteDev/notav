@@ -329,7 +329,12 @@ impl Dav {
         })
     }
 
-    fn propfind(&self, href: &str, depth: &str, props: &str) -> Result<Vec<DavResponse>> {
+    pub(crate) fn propfind(
+        &self,
+        href: &str,
+        depth: &str,
+        props: &str,
+    ) -> Result<Vec<DavResponse>> {
         let body = format!(
             r#"<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:" xmlns:oc="{OC}" xmlns:nc="{NC}"><d:prop>{props}</d:prop></d:propfind>"#
         );
@@ -472,6 +477,40 @@ impl Dav {
             423 => Err(Error::Locked(from.into())),
             s => Err(Error::Http(s, r.body)),
         }
+    }
+}
+
+impl Dav {
+    /// Star or unstar file `href` (`oc:favorite`, Nextcloud Files' favorites).
+    pub fn set_favorite(&self, href: &str, on: bool) -> Result<()> {
+        let body = format!(
+            r#"<?xml version="1.0" encoding="utf-8"?><d:propertyupdate xmlns:d="DAV:" xmlns:oc="{OC}"><d:set><d:prop><oc:favorite>{}</oc:favorite></d:prop></d:set></d:propertyupdate>"#,
+            u8::from(on)
+        );
+        let r = self.request("PROPPATCH", href, &[], &body)?;
+        match r.status {
+            200..=299 => Ok(()),
+            404 => Err(Error::NotFound(href.into())),
+            423 => Err(Error::Locked(href.into())),
+            s => Err(Error::Http(s, r.body)),
+        }
+    }
+
+    /// The `oc:id`s of every file and folder the user starred, below Files root `home`: one
+    /// REPORT, as the Files app lists its favorites (starring changes no ETag a pull sees).
+    pub fn favorites(&self, home: &str) -> Result<Vec<String>> {
+        let body = format!(
+            r#"<?xml version="1.0" encoding="utf-8"?><oc:filter-files xmlns:d="DAV:" xmlns:oc="{OC}"><d:prop><oc:id/></d:prop><oc:filter-rules><oc:favorite>1</oc:favorite></oc:filter-rules></oc:filter-files>"#
+        );
+        let r = self.request("REPORT", home, &[], &body)?;
+        if r.status != 207 {
+            return Err(Error::Http(r.status, r.body));
+        }
+        Ok(multistatus(&r.body)?
+            .0
+            .into_iter()
+            .filter_map(|r| r.props.find_text(OC, "id"))
+            .collect())
     }
 }
 

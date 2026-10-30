@@ -45,6 +45,13 @@ impl Client {
     pub fn sync(&self) -> Result<SyncReport> {
         let _guard = self.sync_lock.lock().unwrap();
         self.sync_settings()?;
+        if !self
+            .features_asked
+            .load(std::sync::atomic::Ordering::SeqCst)
+        {
+            // Not worth failing the sync over: the trash and versions wait for the next run.
+            let _ = self.refresh_features();
+        }
         let dav = self.dav()?;
         let root = self.notes_root()?;
         {
@@ -65,7 +72,11 @@ impl Client {
                 .and_then(|moved| match moved {
                     true => self
                         .push(&dav, &root, &mut report, &mut changed)
-                        .and_then(|_| self.pull(&dav, &root, &mut report, &mut changed)),
+                        .and_then(|_| self.push_favorites(&root))
+                        .and_then(|_| self.pull(&dav, &root, &mut report, &mut changed))
+                        // Starring changes no ETag: the favorites are asked for each time.
+                        .and_then(|_| self.pull_favorites())
+                        .map(|starred| changed.extend(starred)),
                     false => Ok(()),
                 });
         self.emit(changed);
@@ -90,21 +101,7 @@ impl Client {
             return f;
         }
         let from_notes_app = || {
-            let dav = self.dav().ok()?;
-            let url = self.account()?.url;
-            let r = dav
-                .request(
-                    "GET",
-                    &format!(
-                        "{}/ocs/v2.php/cloud/capabilities?format=json",
-                        url.trim_end_matches('/')
-                    ),
-                    &[("OCS-APIRequest", "true")],
-                    "",
-                )
-                .ok()?;
-            let json = crate::json::Json::parse(&r.body)?;
-            let caps = json.get("ocs")?.get("data")?.get("capabilities")?;
+            let caps = self.capabilities().ok()?;
             caps.get("notes")?
                 .get("notes_path")?
                 .str()

@@ -2499,6 +2499,7 @@ mod tests {
             folder: folder.into(),
             modified: 0,
             pending: false,
+            favorite: false,
         }
     }
 

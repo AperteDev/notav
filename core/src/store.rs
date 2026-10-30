@@ -77,6 +77,12 @@ CREATE TRIGGER notes_fts_update AFTER UPDATE OF path, text ON notes BEGIN
     replace(replace(new.path, 'ł', 'l'), 'Ł', 'L'), replace(replace(new.text, 'ł', 'l'), 'Ł', 'L'));
 END;
 "#,
+    // Nextcloud's favorites (`oc:favorite`): starred here and not on the server yet while
+    // `favorite_dirty`.
+    r#"
+ALTER TABLE notes ADD COLUMN favorite INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE notes ADD COLUMN favorite_dirty INTEGER NOT NULL DEFAULT 0;
+"#,
 ];
 
 pub const CLEAN: i64 = 0;
@@ -98,10 +104,11 @@ pub struct Row {
     pub mtime: Option<i64>,
     pub modified: i64,
     pub dirty: i64,
+    pub favorite: bool,
 }
 
-const ROW: &str =
-    "SELECT id, path, fileid, etag, server_path, text, base, mtime, modified, dirty FROM notes";
+const ROW: &str = "SELECT id, path, fileid, etag, server_path, text, base, mtime, modified, dirty,
+    favorite FROM notes";
 
 fn row(r: &rusqlite::Row) -> rusqlite::Result<Row> {
     Ok(Row {
@@ -115,6 +122,7 @@ fn row(r: &rusqlite::Row) -> rusqlite::Result<Row> {
         mtime: r.get(7)?,
         modified: r.get(8)?,
         dirty: r.get(9)?,
+        favorite: r.get(10)?,
     })
 }
 

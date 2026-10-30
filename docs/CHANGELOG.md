@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   footnotes, front matter), the Markdown marks dimmed. Source mode keeps the editor as it was;
   the two toggles at the header's right switch between them
 - A view menu next to them: the text's size (also Ctrl+plus, Ctrl+minus, Ctrl+0) and Full
-  Width, the text across the window without margins; kept on each device
+  Width, the text across the window but for a small margin; kept on each device
 - Each mode's font in Preferences, under Editor, for each device: Source mode's is monospace
   (the system's by default, and only monospace ones are offered)
 - In Editor mode, a click on a task's `[ ]` or `[x]` ticks or unticks it

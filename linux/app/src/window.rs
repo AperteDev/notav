@@ -113,7 +113,6 @@ struct Ui {
     title: gtk::Entry,
     note_scroll: gtk::ScrolledWindow,
     note_clamp: adw::Clamp,
-    note_box: gtk::Box,
     note_mode: adw::ToggleGroup,
     backlinks_box: gtk::Box,
     backlinks_title: gtk::Label,
@@ -590,7 +589,6 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         title: get(&b, "title"),
         note_scroll: get(&b, "note_scroll"),
         note_clamp: get(&b, "note_clamp"),
-        note_box: get(&b, "note_box"),
         note_mode: get(&b, "note_mode"),
         backlinks_box: get(&b, "backlinks_box"),
         backlinks_title: get(&b, "backlinks_title"),
@@ -638,7 +636,7 @@ fn text_zoom() -> i32 {
         .clamp(50, 300)
 }
 
-/// The device-only `full_width` setting: the text across the window, without margins.
+/// The device-only `full_width` setting: the text across the window, but for a small margin.
 fn full_width() -> bool {
     core().setting("full_width".into()).as_deref() == Some("true")
 }
@@ -676,9 +674,6 @@ fn apply_text_look(ui: &Ui) {
         .set_maximum_size(if full { 100_000 } else { 720 });
     ui.note_clamp
         .set_tightening_threshold(if full { 100_000 } else { 600 });
-    let margin = if full { 0 } else { 12 };
-    ui.note_box.set_margin_start(margin);
-    ui.note_box.set_margin_end(margin);
 }
 
 /// A CSS rule giving `selector` `font` (`family` without one, else the inherited one) at its

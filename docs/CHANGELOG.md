@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Back from the Notes Folder step of adding an account (on the welcome page too): the account
+  just connected goes, to connect another
+
 ## [0.2.0] - 2026-10-30
 
 ### Added

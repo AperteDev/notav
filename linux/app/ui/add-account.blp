@@ -194,11 +194,11 @@ Adw.ToastOverlay root {
       };
     }
 
-    // Where the notes are, once connected; suggested from the server.
-    Adw.NavigationPage {
+    // Where the notes are, once connected; suggested from the server. Back drops the account
+    // just added, to connect another.
+    Adw.NavigationPage folder_page {
       tag: "folder";
       title: _("Notes Folder");
-      can-pop: false;
 
       child: Adw.ToolbarView {
         [top]

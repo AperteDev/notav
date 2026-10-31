@@ -29,6 +29,7 @@ pub struct AddAccount {
     sign_in: gtk::Box,
     login: gtk::Button,
     cancel_login: gtk::Button,
+    folder_page: adw::NavigationPage,
     folder: adw::EntryRow,
     folder_done: gtk::Button,
     /// The account whose notes folder the last step asks for.
@@ -58,6 +59,7 @@ pub fn new(welcome: bool, done: impl Fn(i64) + 'static) -> Rc<AddAccount> {
         sign_in: get(&b, "sign_in"),
         login: get(&b, "login"),
         cancel_login: get(&b, "cancel_login"),
+        folder_page: get(&b, "folder_page"),
         folder: get(&b, "folder"),
         folder_done: get(&b, "folder_done"),
         added: Cell::new(None),
@@ -182,12 +184,22 @@ pub fn new(welcome: bool, done: impl Fn(i64) + 'static) -> Rc<AddAccount> {
     actions.add_action(&password);
     a.root.insert_action_group("add", Some(&actions));
 
-    // Back to the first step: a sign-in waiting for the browser stops.
+    // Back to the first step: a sign-in waiting for the browser stops. Back from the notes
+    // folder: the account just added goes (it has synced nothing yet), to connect another.
     let weak = Rc::downgrade(&a);
-    a.view.connect_popped(move |_, _| {
-        cancel_login();
-        if let Some(a) = weak.upgrade() {
-            a.reset_login();
+    a.view.connect_popped(move |_, page| {
+        let Some(a) = weak.upgrade() else { return };
+        match page.tag().as_deref() {
+            Some("connect") => {
+                cancel_login();
+                a.reset_login();
+            }
+            Some("folder") => {
+                if let Some(id) = a.added.take() {
+                    glib::spawn_future_local(crate::drop_added_account(id));
+                }
+            }
+            _ => {}
         }
     });
 
@@ -271,6 +283,9 @@ impl AddAccount {
             let folder = gio::spawn_blocking(move || core().suggested_notes_folder(id))
                 .await
                 .unwrap_or_else(|_| notav_core::DEFAULT_FOLDER.into());
+            if a.added.get() != Some(id) {
+                return; // gone back meanwhile
+            }
             a.folder.set_text(&folder);
             a.folder.set_sensitive(true);
             a.folder_done.set_sensitive(true);
@@ -284,10 +299,12 @@ impl AddAccount {
             return;
         }
         self.folder_done.set_sensitive(false);
+        self.folder_page.set_can_pop(false); // the account stays while its folder is set
         let a = self.clone();
         glib::spawn_future_local(async move {
             let r = gio::spawn_blocking(move || core().set_notes_folder(id, folder, false)).await;
             a.folder_done.set_sensitive(true);
+            a.folder_page.set_can_pop(true);
             match r {
                 Ok(Ok(())) => {
                     crate::sync_now();

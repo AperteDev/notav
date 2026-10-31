@@ -354,6 +354,19 @@ pub fn add_local() -> Result<i64, String> {
     Ok(id)
 }
 
+/// Back from the notes folder step: account `id`, just added by `add_account`, goes again with
+/// its password.
+pub async fn drop_added_account(id: i64) {
+    let _ = gio::spawn_blocking(move || {
+        let Some(a) = core().account(id) else { return };
+        if a.source.is_empty() {
+            password_clear(&a.url, &a.user);
+        }
+        let _ = core().remove_account(id);
+    })
+    .await;
+}
+
 /// Account `id` (signed in here) at `url` with `password`: a new app password, or the same
 /// user on a moved server (then its notes come again from there, after the edits waiting for
 /// the old one went up).

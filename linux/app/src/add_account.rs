@@ -1,10 +1,10 @@
 //! Adding an account: first its kind (a GNOME Online Accounts Nextcloud account, a Nextcloud
 //! server, this device), then the account to connect, then its notes folder. The welcome page
-//! shows it for the first account, with whether settings sync through it; Preferences →
-//! Accounts shows it in a dialog for more.
+//! shows it for the first account, with whether settings sync through it, and waits for its
+//! first sync; Preferences → Accounts shows it in a dialog for more.
 
 use crate::core;
-use crate::i18n::gettext;
+use crate::i18n::{gettext, ngettext};
 use crate::window::{browser_login, cancel_login, get, no_server, note, url_text, view};
 use crate::{Target, goa};
 use adw::prelude::*;
@@ -12,6 +12,7 @@ use gtk::{gio, glib};
 use notav_core::AccountKind;
 use std::cell::Cell;
 use std::rc::Rc;
+use std::time::Duration;
 
 pub struct AddAccount {
     /// What to show: the steps, with their own toasts.
@@ -32,8 +33,13 @@ pub struct AddAccount {
     folder_page: adw::NavigationPage,
     folder: adw::EntryRow,
     folder_done: gtk::Button,
+    sync_bar: gtk::ProgressBar,
+    sync_count: gtk::Label,
     /// The account whose notes folder the last step asks for.
     added: Cell<Option<i64>>,
+    /// The welcome page's first sync runs; the notes it goes through are known.
+    syncing: Cell<bool>,
+    counted: Cell<bool>,
     welcome: bool,
     /// Runs with the new account's id.
     done: Box<dyn Fn(i64)>,
@@ -62,7 +68,11 @@ pub fn new(welcome: bool, done: impl Fn(i64) + 'static) -> Rc<AddAccount> {
         folder_page: get(&b, "folder_page"),
         folder: get(&b, "folder"),
         folder_done: get(&b, "folder_done"),
+        sync_bar: get(&b, "sync_bar"),
+        sync_count: get(&b, "sync_count"),
         added: Cell::new(None),
+        syncing: Cell::new(false),
+        counted: Cell::new(false),
         welcome,
         done: Box::new(done),
     });
@@ -306,6 +316,7 @@ impl AddAccount {
             a.folder_done.set_sensitive(true);
             a.folder_page.set_can_pop(true);
             match r {
+                Ok(Ok(())) if a.welcome => a.first_sync(id).await,
                 Ok(Ok(())) => {
                     crate::sync_now();
                     (a.done)(id);
@@ -317,6 +328,56 @@ impl AddAccount {
                 Err(_) => {}
             }
         });
+    }
+
+    /// The welcome page's first sync of account `id`, its progress on a page of its own unless
+    /// it is over in a moment; the notes show once it is done. A failed one is left to the
+    /// sync worker, which tries again and tells why.
+    async fn first_sync(self: &Rc<Self>, id: i64) {
+        self.folder_page.set_can_pop(false);
+        self.folder_done.set_sensitive(false);
+        self.syncing.set(true);
+        self.counted.set(false);
+        self.sync_bar.set_fraction(0.0);
+        self.sync_count.set_label(&gettext("Looking for notes…"));
+        let weak = Rc::downgrade(self);
+        glib::timeout_add_local_once(Duration::from_secs(1), move || {
+            let Some(a) = weak.upgrade().filter(|a| a.syncing.get()) else {
+                return;
+            };
+            a.view.push_by_tag("sync");
+            let weak = Rc::downgrade(&a);
+            glib::timeout_add_local(Duration::from_millis(150), move || match weak.upgrade() {
+                Some(a) if a.syncing.get() && !a.counted.get() => {
+                    a.sync_bar.pulse();
+                    glib::ControlFlow::Continue
+                }
+                _ => glib::ControlFlow::Break,
+            });
+        });
+        let _ = gio::spawn_blocking(move || core().sync_account(id)).await;
+        self.syncing.set(false);
+        crate::sync_now();
+        (self.done)(id);
+    }
+
+    /// A sync of account `account` went through `done` of `total` notes.
+    pub fn progress(&self, account: i64, done: u32, total: u32) {
+        if !self.syncing.get() || self.added.get() != Some(account) || total == 0 {
+            return;
+        }
+        self.counted.set(true);
+        self.sync_bar
+            .set_fraction(f64::from(done) / f64::from(total));
+        self.sync_count.set_label(
+            &ngettext(
+                "{done} of {total} note",
+                "{done} of {total} notes",
+                total.into(),
+            )
+            .replace("{done}", &done.to_string())
+            .replace("{total}", &total.to_string()),
+        );
     }
 }
 

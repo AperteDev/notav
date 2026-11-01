@@ -739,7 +739,14 @@ impl Client {
         drop(db);
         files.sort_by_key(|(_, e)| !known.contains(&e.fileid));
 
-        for (path, e) in files {
+        let total = files.len() as u32;
+        let progress = |done: u32| {
+            for l in self.listeners.lock().unwrap().iter() {
+                l.progress(account, done, total);
+            }
+        };
+        for (done, (path, e)) in (0..).zip(files) {
+            progress(done);
             let local = {
                 let db = self.db.lock().unwrap();
                 store::by_fileid(&db, account, &e.fileid)?
@@ -797,6 +804,7 @@ impl Client {
                 }
             }
         }
+        progress(total);
 
         let db = self.db.lock().unwrap();
         let tx = db.unchecked_transaction()?;

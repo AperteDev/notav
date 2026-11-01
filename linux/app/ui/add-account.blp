@@ -2,8 +2,8 @@ using Gtk 4.0;
 using Adw 1;
 
 // Adding an account: first its kind, then the account to connect, then its notes folder
-// (src/add_account.rs). The welcome page shows it for the first account, Preferences →
-// Accounts in a dialog for more.
+// (src/add_account.rs). The welcome page shows it for the first account, then its first sync;
+// Preferences → Accounts in a dialog for more.
 Adw.ToastOverlay root {
   Adw.NavigationView view {
     Adw.NavigationPage choose_page {
@@ -227,6 +227,41 @@ Adw.ToastOverlay root {
                 label: _("Continue");
                 halign: center;
                 styles ["suggested-action", "pill"]
+              }
+            }
+          }
+        };
+      };
+    }
+
+    // The welcome page's first sync, when it takes more than a moment; the notes show once it
+    // is done.
+    Adw.NavigationPage sync_page {
+      tag: "sync";
+      title: _("Downloading Notes");
+      can-pop: false;
+
+      child: Adw.ToolbarView {
+        [top]
+        Adw.HeaderBar {}
+
+        content: Adw.StatusPage {
+          icon-name: "folder-download-symbolic";
+          title: _("Downloading Notes");
+          description: _("Your notes are copied to this device, to work on them offline too. Later syncs bring only what changed.");
+          styles ["compact"]
+
+          Adw.Clamp {
+            maximum-size: 420;
+
+            Gtk.Box {
+              orientation: vertical;
+              spacing: 12;
+
+              Gtk.ProgressBar sync_bar {}
+
+              Gtk.Label sync_count {
+                styles ["dimmed", "numeric"]
               }
             }
           }

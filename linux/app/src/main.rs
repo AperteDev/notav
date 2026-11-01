@@ -94,6 +94,8 @@ pub enum Event {
     Conflicts(Vec<String>),
     /// Changes that wait for a lock on the server (empty: none).
     Locked(Vec<notav_core::Locked>),
+    /// A sync went through notes: account, done, total.
+    Progress(i64, u32, u32),
 }
 
 fn post(ev: Event) {
@@ -162,6 +164,10 @@ impl ChangeListener for Listener {
 
     fn settings_changed(&self) {
         post(Event::SettingsChanged);
+    }
+
+    fn progress(&self, account: i64, done: u32, total: u32) {
+        post(Event::Progress(account, done, total));
     }
 }
 

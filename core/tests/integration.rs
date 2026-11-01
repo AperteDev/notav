@@ -4,7 +4,8 @@
 #![cfg(feature = "integration")]
 
 use notav_core::dav::Dav;
-use notav_core::{AccountKind, Client, Note};
+use notav_core::{AccountKind, ChangeListener, Client, Note};
+use std::sync::{Arc, Mutex};
 
 fn get(k: &str) -> Option<String> {
     let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../.env"))
@@ -115,6 +116,24 @@ fn paths(c: &Client) -> Vec<String> {
     c.notes().into_iter().map(|n| n.path).collect()
 }
 
+/// The progress a client's syncs reported: (account, done, total).
+#[derive(Clone, Default)]
+struct Progress(Arc<Mutex<Vec<(i64, u32, u32)>>>);
+
+impl Progress {
+    fn take(&self) -> Vec<(i64, u32, u32)> {
+        std::mem::take(&mut self.0.lock().unwrap())
+    }
+}
+
+impl ChangeListener for Progress {
+    fn changed(&self, _: Vec<String>) {}
+
+    fn progress(&self, account: i64, done: u32, total: u32) {
+        self.0.lock().unwrap().push((account, done, total));
+    }
+}
+
 #[test]
 fn two_devices_round_trip() {
     let f = Fixture::new("round-trip");
@@ -164,14 +183,21 @@ fn changes_made_on_the_server() {
     f.put("A/B/Deep.md", "deep");
     f.put("A/photo.png", "not a note");
     f.put(".obsidian/app.md", "settings");
+    let progress = Progress::default();
+    f.a.subscribe(Box::new(progress.clone()));
     let r = f.a.sync().unwrap();
     assert_eq!(r.downloaded, 3);
     assert_eq!(paths(&f.a), ["A/B/Deep.md", "Old.txt", "Top.md"]);
     assert_eq!(f.a.folders(A), ["A", "A/B"]);
     assert_eq!(f.a.note(find(&f.a, "Old.txt").id).unwrap().title, "Old");
+    assert_eq!(
+        progress.take(),
+        [(A, 0, 3), (A, 1, 3), (A, 2, 3), (A, 3, 3)]
+    );
 
     // Nothing changed: one PROPFIND, nothing downloaded.
     assert_eq!(f.a.sync().unwrap(), Default::default());
+    assert_eq!(progress.take(), []);
 
     // Edited, moved, a folder removed with its notes.
     let deep = find(&f.a, "A/B/Deep.md");

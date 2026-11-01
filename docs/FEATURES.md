@@ -9,7 +9,8 @@ What Notav can do, in short. The details of each release are in the
 
 - Notes are Markdown files in a folder of your Nextcloud Files (`Notes/` by default, as the
   Nextcloud Notes app); subfolders are folders in Notav too.
-- Sign in with GNOME Online Accounts, the browser, or a login name and app password.
+- Sign in with GNOME Online Accounts, the browser, or a login name and app password; the
+  first sync shows how far it got.
 - More than one account, as in Todav: Nextcloud ones, and notes on this device only, with no
   server at all.
 - Works from a local copy: offline too; changes go up when the server is reachable.

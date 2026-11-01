@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The outline shows by itself for a note with two headings or more, and hides for others,
   while it is not switched on with its button; at once, without sliding. Preferences, Editor →
   Outline turns it off
+- The welcome page waits for the first sync, with how many notes it has downloaded, and
+  shows the notes once they are all here
 
 ### Fixed
 

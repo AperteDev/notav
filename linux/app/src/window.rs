@@ -510,6 +510,11 @@ pub fn on_event(ev: &Event) {
                 ui.last_error.borrow_mut().clear();
             }
         }
+        Event::Progress(account, done, total) => {
+            if let Some(a) = ui.add_account.borrow().as_ref() {
+                a.progress(*account, *done, *total);
+            }
+        }
         Event::Locked(locks) => {
             let told = ui.last_locked.replace(locks.clone());
             for l in locks.iter().filter(|l| !told.contains(l)) {

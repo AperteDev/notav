@@ -29,6 +29,9 @@ pub trait ChangeListener: Send + Sync {
     fn changed(&self, paths: Vec<String>);
     /// Settings changed by another device arrived.
     fn settings_changed(&self) {}
+    /// A sync of account `account` went through `done` of the `total` notes it found changed
+    /// on the server (all of them the first time), downloading those that need it.
+    fn progress(&self, _account: i64, _done: u32, _total: u32) {}
 }
 
 pub struct Client {

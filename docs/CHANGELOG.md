@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Opening or closing a folder in the tree no longer scrolls it to the top; the folder keeps
   the keyboard focus
+- The outline says "No Headings" for a note without headings, instead of staying blank once
+  a note was open
 
 ## [0.2.0] - 2026-10-30
 

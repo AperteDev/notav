@@ -897,7 +897,10 @@ fn refresh_outline(ui: &Ui) {
     let (start, end) = ui.buffer.bounds();
     let headings = notav_core::markdown::headings(&ui.buffer.text(&start, &end, true));
     let top = headings.iter().map(|h| h.level).min().unwrap_or(1);
-    ui.outline.remove_all();
+    // Row by row: `remove_all` would remove the placeholder ("No Headings") too.
+    while let Some(row) = ui.outline.row_at_index(0) {
+        ui.outline.remove(&row);
+    }
     for h in &headings {
         let label = gtk::Label::new(Some(&h.title));
         label.set_xalign(0.0);

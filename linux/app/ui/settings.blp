@@ -133,6 +133,16 @@ Adw.PreferencesDialog dialog {
         subtitle: _("Keep a table’s columns lined up as you type and move between its rows and cells");
       }
     }
+
+    // Synced.
+    Adw.PreferencesGroup {
+      title: _("Outline");
+
+      Adw.SwitchRow auto_outline {
+        title: _("Show outline automatically");
+        subtitle: _("While the outline is hidden, show it for notes with two or more headings");
+      }
+    }
   }
 
   // The journal's daily notes (synced settings, `notav_core::journal`); each field is saved

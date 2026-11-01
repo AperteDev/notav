@@ -141,6 +141,9 @@ struct Ui {
     backlinks_title: gtk::Label,
     backlinks: gtk::ListBox,
     outline_button: gtk::ToggleButton,
+    outline_split: adw::OverlaySplitView,
+    /// Set while the outline is shown or hidden by itself (`show_outline`), not by the user.
+    outline_auto: Cell<bool>,
     /// The open note's headings, where each starts (a character) as `outline`'s rows.
     outline: gtk::ListBox,
     outline_at: RefCell<Vec<usize>>,
@@ -713,6 +716,8 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         backlinks_title: get(&b, "backlinks_title"),
         backlinks: get(&b, "backlinks"),
         outline_button: get(&b, "outline_button"),
+        outline_split: get(&b, "outline_split"),
+        outline_auto: Cell::new(false),
         outline: get(&b, "outline"),
         outline_at: RefCell::new(Vec::new()),
         zoom_reset: get(&b, "zoom_reset"),
@@ -886,6 +891,39 @@ fn restyle(ui: &Rc<Ui>) {
         }
         glib::ControlFlow::Break
     });
+}
+
+/// The synced `auto_outline` setting (on unless "false"): while the user keeps the outline
+/// hidden, it shows for a note with two headings or more.
+pub fn auto_outline() -> bool {
+    core().setting("auto_outline".into()).as_deref() != Some("false")
+}
+
+/// Show or hide the outline for the note just opened (`text`, "" for none): shown if the user
+/// left it shown, else as `auto_outline` says; not while it would cover the note (a narrow
+/// window). At once: sliding in and out at each note would distract.
+fn show_outline(ui: &Ui, text: &str) {
+    if core().setting("show_outline".into()).as_deref() == Some("true")
+        || ui.outline_split.is_collapsed()
+    {
+        return;
+    }
+    let show = auto_outline() && notav_core::markdown::headings(text).len() >= 2;
+    if show == ui.outline_split.shows_sidebar() {
+        return;
+    }
+    // The split view has no way to skip its animation but animations off, for a moment.
+    let settings = gtk::Settings::default();
+    let animations = settings.as_ref().map(|s| s.is_gtk_enable_animations());
+    if let Some(s) = &settings {
+        s.set_gtk_enable_animations(false);
+    }
+    ui.outline_auto.set(true);
+    ui.outline_split.set_show_sidebar(show);
+    ui.outline_auto.set(false);
+    if let (Some(s), Some(on)) = (&settings, animations) {
+        s.set_gtk_enable_animations(on);
+    }
 }
 
 /// The open note's headings in the outline, while it shows: indented by level, the highest
@@ -1108,7 +1146,8 @@ fn connect(ui: &Rc<Ui>) {
         });
         ui.window.add_action(&a);
     }
-    // The outline: shown as last time; a click puts the heading at the top, the cursor on it.
+    // The outline: shown as last time (else as `show_outline` says); a click puts the heading at
+    // the top, the cursor on it.
     let none = gtk::Label::new(Some(&gettext("No Headings")));
     none.set_margin_top(12);
     none.add_css_class("dim-label");
@@ -1117,10 +1156,11 @@ fn connect(ui: &Rc<Ui>) {
         .set_active(core().setting("show_outline".into()).as_deref() == Some("true"));
     let weak = Rc::downgrade(ui);
     ui.outline_button.connect_active_notify(move |b| {
-        let _ = core().set_setting("show_outline".into(), b.is_active().to_string());
-        if let Some(ui) = weak.upgrade() {
-            refresh_outline(&ui);
+        let Some(ui) = weak.upgrade() else { return };
+        if !ui.outline_auto.get() {
+            let _ = core().set_setting("show_outline".into(), b.is_active().to_string());
         }
+        refresh_outline(&ui);
     });
     let weak = Rc::downgrade(ui);
     ui.outline.connect_row_activated(move |_, row| {
@@ -1788,6 +1828,7 @@ fn open_note(ui: &Rc<Ui>, n: &Note) {
     ui.title.set_text(&n.title);
     set_text(ui, &text, false);
     ui.buffer.place_cursor(&ui.buffer.start_iter());
+    show_outline(ui, &text);
     show_heading(ui, n);
     show_page(ui);
     show_backlinks(ui);
@@ -1851,6 +1892,7 @@ fn close_note(ui: &Rc<Ui>) {
     save_now(ui);
     ui.current.take();
     set_text(ui, "", false);
+    show_outline(ui, "");
     ui.title.set_text("");
     ui.note_title.set_title("");
     ui.note_title.set_subtitle("");

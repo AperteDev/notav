@@ -66,6 +66,11 @@ pub fn present(parent: &impl IsA<gtk::Widget>) {
     tables.connect_active_notify(|s| {
         let _ = core().set_setting("format_tables".into(), s.is_active().to_string());
     });
+    let outline: adw::SwitchRow = get(&b, "auto_outline");
+    outline.set_active(crate::window::auto_outline());
+    outline.connect_active_notify(|s| {
+        let _ = core().set_setting("auto_outline".into(), s.is_active().to_string());
+    });
     dialog.present(Some(parent));
 }
 

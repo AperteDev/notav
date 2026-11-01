@@ -42,7 +42,8 @@ What Notav can do, in short. The details of each release are in the
 - Links between notes: Markdown links and `[[wiki links]]`, to a heading too; a missing note is
   made when its link is followed.
 - Backlinks under each note.
-- Outline of the note's headings in a side panel; a click goes to one.
+- Outline of the note's headings in a side panel; a click goes to one. Shown by itself for
+  notes with two headings or more.
 
 **Tables**
 

@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Back from the Notes Folder step of adding an account (on the welcome page too): the account
   just connected goes, to connect another
+- The outline shows by itself for a note with two headings or more, and hides for others,
+  while it is not switched on with its button; at once, without sliding. Preferences, Editor →
+  Outline turns it off
 
 ### Fixed
 

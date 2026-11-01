@@ -11,6 +11,7 @@ use crate::store::{self, CLEAN, DELETED, FOLDER_DELETED, MODIFIED, Row};
 use crate::{Client, Error, Result, now};
 use rusqlite::{Connection, params};
 use std::collections::{HashMap, HashSet};
+use std::sync::Mutex;
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct SyncReport {
@@ -658,6 +659,31 @@ impl Client {
         let mut listed: HashMap<String, String> = HashMap::new(); // folder → etag
         let mut files: Vec<(String, Entry)> = Vec::new();
         let mut queue = vec![String::new()];
+        // Nothing listed before (the first sync, another notes folder): all of it in one
+        // request rather than one per folder, where the server allows Depth: infinity
+        // (Nextcloud does unless switched off).
+        if !stored.contains_key("")
+            && let Ok(all) = dav.list(root, "infinity")
+            && !all.is_empty()
+        {
+            queue.clear();
+            for e in all {
+                let Some(rel) = e.href.strip_prefix(root) else {
+                    continue;
+                };
+                let rel = rel.trim_end_matches('/').to_string();
+                // Skipped as the walk skips it: a dot-folder or file, or in one.
+                if rel.split('/').any(|s| s.starts_with('.')) {
+                    continue;
+                }
+                if e.folder {
+                    walked.insert(rel.clone());
+                    listed.insert(rel, e.etag);
+                } else if is_note(split(&rel).1) {
+                    files.push((rel, e));
+                }
+            }
+        }
         while let Some(folder) = queue.pop() {
             let href = format!("{root}{}", slash(&folder));
             let entries = dav.list(&href, "1")?;
@@ -745,66 +771,93 @@ impl Client {
                 l.progress(account, done, total);
             }
         };
-        for (done, (path, e)) in (0..).zip(files) {
-            progress(done);
-            let local = {
+        let mut base = 0;
+        for batch in files.chunks(BATCH) {
+            // The texts the batch needs, as the notes are now, downloaded together first; one
+            // needed only later (a note before it moved off its name) is downloaded then.
+            let mut wanted = Vec::new();
+            {
                 let db = self.db.lock().unwrap();
-                store::by_fileid(&db, account, &e.fileid)?
-            };
-            match local {
-                Some(n) if n.dirty != CLEAN => {
-                    // Changed here; the push sorts it out (a conflict copy if the text changed
-                    // there too). A move there is taken unless it was moved here as well.
-                    if n.server_path.is_none() && n.path != path {
-                        self.relocate(&n, &path, changed)?;
+                for (path, e) in batch {
+                    let want = match store::by_fileid(&db, account, &e.fileid)? {
+                        Some(n) => n.dirty == CLEAN && changed_there(&n, e),
+                        None => store::by_path(&db, account, path)?.is_none(),
+                    };
+                    if want {
+                        wanted.push(e.href.as_str());
                     }
                 }
-                Some(n) => {
-                    if n.path != path {
-                        self.relocate(&n, &path, changed)?;
+            }
+            let done = Mutex::new(base + (batch.len() - wanted.len()) as u32);
+            progress(*done.lock().unwrap());
+            let mut bodies = download(dav, &wanted, || {
+                let mut done = done.lock().unwrap();
+                *done += 1;
+                progress(*done);
+            })?;
+            let mut body = |e: &Entry| match bodies.remove(&e.href) {
+                Some(body) => Ok(body),
+                None => dav.get(&e.href).map(|r| r.map(|(_, body)| body)),
+            };
+            base += batch.len() as u32;
+
+            for (path, e) in batch {
+                let local = {
+                    let db = self.db.lock().unwrap();
+                    store::by_fileid(&db, account, &e.fileid)?
+                };
+                match local {
+                    Some(n) if n.dirty != CLEAN => {
+                        // Changed here; the push sorts it out (a conflict copy if the text
+                        // changed there too). A move there is taken unless it was moved here as
+                        // well.
+                        if n.server_path.is_none() && n.path != *path {
+                            self.relocate(&n, path, changed)?;
+                        }
                     }
-                    // Nextcloud can give a file written twice in one second the same ETag: a
-                    // size other than the last synced text's is a change too.
-                    let size = n.base.as_ref().map(|b| b.len() as u64);
-                    if n.etag.as_deref() != Some(&e.etag) || e.size.is_some_and(|s| Some(s) != size)
-                    {
-                        let Some((_, body)) = dav.get(&e.href)? else {
+                    Some(n) => {
+                        if n.path != *path {
+                            self.relocate(&n, path, changed)?;
+                        }
+                        if changed_there(&n, e) {
+                            let Some(body) = body(e)? else {
+                                continue;
+                            };
+                            let db = self.db.lock().unwrap();
+                            db.execute(
+                                "UPDATE notes SET text = ?, base = ?1, etag = ?, mtime = ?,
+                                   modified = ?3
+                                 WHERE id = ? AND dirty = 0",
+                                params![body, e.etag, e.modified, n.id],
+                            )?;
+                            report.downloaded += 1;
+                            changed.push(path.clone());
+                        }
+                    }
+                    None => {
+                        {
+                            // A note made here waits for this name: the push sorts it out.
+                            let db = self.db.lock().unwrap();
+                            if store::by_path(&db, account, path)?.is_some() {
+                                continue;
+                            }
+                        }
+                        let Some(body) = body(e)? else {
                             continue;
                         };
                         let db = self.db.lock().unwrap();
                         db.execute(
-                            "UPDATE notes SET text = ?, base = ?1, etag = ?, mtime = ?, modified = ?3
-                             WHERE id = ? AND dirty = 0",
-                            params![body, e.etag, e.modified, n.id],
+                            "INSERT OR IGNORE INTO notes
+                               (path, fileid, etag, text, base, mtime, modified, dirty, account)
+                             VALUES (?, ?, ?, ?, ?4, ?, ?5, ?, ?)",
+                            params![path, e.fileid, e.etag, body, e.modified, CLEAN, account],
                         )?;
                         report.downloaded += 1;
-                        changed.push(path);
+                        changed.push(path.clone());
                     }
-                }
-                None => {
-                    {
-                        // A note made here waits for this name: the push sorts it out.
-                        let db = self.db.lock().unwrap();
-                        if store::by_path(&db, account, &path)?.is_some() {
-                            continue;
-                        }
-                    }
-                    let Some((_, body)) = dav.get(&e.href)? else {
-                        continue;
-                    };
-                    let db = self.db.lock().unwrap();
-                    db.execute(
-                        "INSERT OR IGNORE INTO notes
-                           (path, fileid, etag, text, base, mtime, modified, dirty, account)
-                         VALUES (?, ?, ?, ?, ?4, ?, ?5, ?, ?)",
-                        params![path, e.fileid, e.etag, body, e.modified, CLEAN, account],
-                    )?;
-                    report.downloaded += 1;
-                    changed.push(path);
                 }
             }
         }
-        progress(total);
 
         let db = self.db.lock().unwrap();
         let tx = db.unchecked_transaction()?;
@@ -839,6 +892,57 @@ impl Client {
         )?;
         changed.extend([n.path.clone(), path.to_string()]);
         Ok(())
+    }
+}
+
+/// The pull goes through the notes changed on the server this many at a time: their texts are
+/// downloaded together, then taken in.
+const BATCH: usize = 60;
+/// Downloads at once: 6 is about 6 times as fast as one by one, and still few enough for a
+/// small server (more makes Nextcloud's file locking refuse reads, which `Dav::get` retries).
+const DOWNLOADS: usize = 6;
+
+/// Note `n`, synced before, changed on the server since: another ETag, or another size (Nextcloud
+/// can give a file written twice in one second the same ETag).
+fn changed_there(n: &Row, e: &Entry) -> bool {
+    let size = n.base.as_ref().map(|b| b.len() as u64);
+    n.etag.as_deref() != Some(&e.etag) || e.size.is_some_and(|s| Some(s) != size)
+}
+
+/// GET `hrefs`, `DOWNLOADS` at a time: the texts by href (None: gone meanwhile). `done` runs
+/// after each; the first failure stops the rest.
+fn download(
+    dav: &Dav,
+    hrefs: &[&str],
+    done: impl Fn() + Sync,
+) -> Result<HashMap<String, Option<String>>> {
+    let next = Mutex::new(hrefs.iter());
+    let bodies = Mutex::new(HashMap::new());
+    let failed = Mutex::new(None);
+    std::thread::scope(|s| {
+        for _ in 0..DOWNLOADS.min(hrefs.len()) {
+            s.spawn(|| {
+                while failed.lock().unwrap().is_none() {
+                    let Some(href) = next.lock().unwrap().next() else {
+                        break;
+                    };
+                    match dav.get(href) {
+                        Ok(r) => {
+                            let body = r.map(|(_, body)| body);
+                            bodies.lock().unwrap().insert(href.to_string(), body);
+                            done();
+                        }
+                        Err(e) => {
+                            failed.lock().unwrap().get_or_insert(e);
+                        }
+                    }
+                }
+            });
+        }
+    });
+    match failed.into_inner().unwrap() {
+        Some(e) => Err(e),
+        None => Ok(bodies.into_inner().unwrap()),
     }
 }
 

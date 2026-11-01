@@ -17,6 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The welcome page waits for the first sync, with how many notes it has downloaded, and
   shows the notes once they are all here
 
+### Changed
+
+- Syncing is faster when many notes changed on the server: they download six at a time, and
+  the first sync lists the notes folder in one request. A first sync of 277 notes in 61
+  folders takes 5 s instead of 27
+
 ### Fixed
 
 - Opening or closing a folder in the tree no longer scrolls it to the top; the folder keeps

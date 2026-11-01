@@ -13,6 +13,8 @@ pub const NC: &str = "http://nextcloud.org/ns";
 /// `CONNECT_TRIES` more times.
 const CONNECT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(4);
 const CONNECT_TRIES: u32 = 3;
+/// A read refused by file locking is tried again this many times, after 0.5, 1 and 2 s.
+const LOCKED_TRIES: u32 = 3;
 
 #[derive(Debug, Default, Clone)]
 pub struct Element {
@@ -363,12 +365,24 @@ impl Dav {
     }
 
     /// GET a resource: (etag, body), or None if gone.
+    ///
+    /// Nextcloud's file locking can refuse a read (423, "existing lock on file: none") while
+    /// it takes locks for others at the same time, as the sync's parallel downloads do: tried
+    /// again after a moment.
     pub fn get(&self, href: &str) -> Result<Option<(Option<String>, String)>> {
-        let r = self.request("GET", href, &[], "")?;
-        match r.status {
-            200 => Ok(Some((r.etag, r.body))),
-            404 => Ok(None),
-            s => Err(Error::Http(s, r.body)),
+        let mut tries = 0;
+        loop {
+            let r = self.request("GET", href, &[], "")?;
+            match r.status {
+                200 => return Ok(Some((r.etag, r.body))),
+                404 => return Ok(None),
+                423 if tries < LOCKED_TRIES => {
+                    tries += 1;
+                    std::thread::sleep(std::time::Duration::from_millis(250 << tries));
+                }
+                423 => return Err(Error::Locked(href.into())),
+                s => return Err(Error::Http(s, r.body)),
+            }
         }
     }
 

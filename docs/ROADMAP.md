@@ -88,6 +88,8 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
 - **Links to Todav's tasks**: a note links a task as `todav://task/<uid>`. Todav opens it (it
   handles the `todav` URI scheme), and Notav shows the task's title and state through Todav's
   D-Bus API (`GetTask`, to be added in Todav). Without Todav the link stays a plain link.
+- **Notebooks**: categories above folders, as Joplin's and OneNote's notebooks (see
+  [Open questions](#open-questions-and-risks)).
 - **Client Push**: Nextcloud's Client Push app (`notify_push`), which the desktop sync client
   uses. Its WebSocket (from the `notify_push` capability) sends `notify_file` when the user's
   files change; the app then pulls. Optional on the server; polling stays as the safety net
@@ -96,6 +98,13 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
 Later (v2):
 
 - Attachments (see [Open questions](#open-questions-and-risks)).
+- Handwritten notes and drawings: a drawing drawn with a stylus (its pressure, through
+  `GtkGestureStylus`), a mouse or a finger, kept as an attachment and shown in the note where it
+  is linked (as Xournal++, OneNote and Obsidian's Excalidraw plugin); see
+  [Open questions](#open-questions-and-risks).
+- Audio notes: a recording made in the app, kept as an attachment and played from the note,
+  with its transcription as the note's text, editable (as Joplin's and OneNote's recordings,
+  Nextcloud Talk's transcripts); see [Open questions](#open-questions-and-risks).
 - A rendered Markdown preview next to the editor.
 - A three-way merge of a note changed here and on the server, from the text as of the last
   sync (`notes.base`), instead of a conflict copy.
@@ -144,6 +153,19 @@ Later (v2):
   already brings, or a crate (justified as `AGENTS.md` asks).
 - **Attachments**: Nextcloud Notes keeps them in `.attachments.<fileid>/` next to the note,
   Obsidian in a folder of its own.
+- **Drawings' format**: SVG (strokes as paths) opens in any app and in Nextcloud's previews, and
+  Markdown links it as an image; Xournal++'s `.xopp` or Excalidraw's JSON keep more (layers,
+  shapes to edit again) but only their apps open them. Drawn into the text view, or in a
+  canvas of its own opened from the note.
+- **Audio notes**: recording needs GStreamer (`gstreamer-rs`, a new dependency, as `AGENTS.md`
+  asks), Opus in Ogg for size. Transcription either on the server, through Nextcloud
+  Assistant's speech-to-text (the TaskProcessing API, `core:audio2text`; only where an admin
+  installed a provider app), or on the device with whisper.cpp (models of hundreds of MB,
+  downloaded on first use; slow without a GPU).
+- **Notebooks**: what they add over folders, which Notav already has: Nextcloud Notes'
+  categories are its folders (its `category` is the folder's path). Either top-level folders
+  shown one at a time (a notebook picked above the tree, as Joplin), several notes folders per
+  account, each a notebook, or categories as tags (see Tags). Decide before building any.
 - **ETags are times**: Nextcloud derives a file's ETag from its modification time in whole
   seconds, so a same-size edit made in the same second by another client (the Nextcloud Notes
   web app, say) can go unnoticed until the next change (see `Dav::put`).

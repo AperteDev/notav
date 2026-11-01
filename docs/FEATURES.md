@@ -79,3 +79,5 @@ What Notav can do, in short. The details of each release are in the
 - An editor toolbar; Markdown marks hidden outside the line being edited.
 - Links to Todav's tasks.
 - Changes from other devices within seconds (Nextcloud's Client Push).
+- Notebooks, grouping folders.
+- Later: handwritten notes and drawings; audio notes, transcribed.

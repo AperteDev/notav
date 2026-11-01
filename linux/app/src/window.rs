@@ -1400,6 +1400,26 @@ fn refresh_tree(ui: &Rc<Ui>) {
         Default::default()
     };
     let items = tree(&accounts, &notes, &ui.expanded.borrow());
+    // The row with the focus (as a clicked folder's), to keep it: removed, GTK would move the
+    // focus to the first row, scrolling the tree to the top.
+    let focused = gtk::prelude::RootExt::focus(&ui.window)
+        .filter(|w| w.is_ancestor(&ui.tree))
+        .and_then(|_| ui.tree.focus_child().and_downcast::<gtk::ListBoxRow>())
+        .map(|r| r.index() as usize);
+    let focused = focused.map(|i| {
+        let item = ui.items.borrow().get(i).cloned();
+        let same = |it: &Item| match (it, &item) {
+            (Item::Note(a), Some(Item::Note(b))) => a.id == b.id,
+            (it, Some(b)) => it == b,
+            _ => false,
+        };
+        // The same account, folder or note, else the row now in its place.
+        items
+            .iter()
+            .position(|(_, it)| same(it))
+            .unwrap_or(i.min(items.len().saturating_sub(1)))
+    });
+    let top = ui.tree_scroll.vadjustment().value();
     ui.tree.remove_all();
     ui.rows.borrow_mut().clear();
     let current = ui.current.borrow().as_ref().map(|n| n.id);
@@ -1455,6 +1475,11 @@ fn refresh_tree(ui: &Rc<Ui>) {
             ui.tree.select_row(Some(&row));
         }
         ui.rows.borrow_mut().push(row);
+    }
+    if let Some(row) = focused.and_then(|i| ui.rows.borrow().get(i).cloned()) {
+        row.grab_focus();
+        // Not laid out yet, the row is taken to be at the top, and the list scrolls there.
+        ui.tree_scroll.vadjustment().set_value(top);
     }
     ui.tree_stack
         .set_visible_child_name(if items.is_empty() { "empty" } else { "tree" });

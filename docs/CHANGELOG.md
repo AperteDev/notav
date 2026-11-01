@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Back from the Notes Folder step of adding an account (on the welcome page too): the account
   just connected goes, to connect another
 
+### Fixed
+
+- Opening or closing a folder in the tree no longer scrolls it to the top; the folder keeps
+  the keyboard focus
+
 ## [0.2.0] - 2026-10-30
 
 ### Added

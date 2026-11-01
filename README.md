@@ -7,7 +7,11 @@
 <p align="center">Notes and a journal for GNOME, kept in your Nextcloud.</p>
 
 <p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="License: GPL-3.0-or-later"></a>
   <a href="https://github.com/AperteDev/notav/actions/workflows/ci.yml"><img src="https://github.com/AperteDev/notav/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/AperteDev/notav/releases/latest"><img src="https://img.shields.io/github/v/release/AperteDev/notav" alt="Latest release"></a>
+  <a href="https://aur.archlinux.org/packages/notav-bin"><img src="https://img.shields.io/aur/version/notav-bin" alt="AUR version"></a>
+  <a href="https://copr.fedorainfracloud.org/coprs/selfref/notav/"><img src="https://copr.fedorainfracloud.org/coprs/selfref/notav/package/notav/status_image/last_build.png" alt="COPR build status"></a>
 </p>
 
 Notav is a notes app for the GNOME desktop, with an Obsidian-style journal planned. Your notes
@@ -23,9 +27,11 @@ and links to Todav's tasks are next (see the [roadmap](docs/ROADMAP.md)).
 Notav is developed in my free time. If it keeps your notes in order, you can support its
 development:
 
-[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/N5E229GJPZ)
-[![Sponsor on GitHub](https://img.shields.io/badge/Sponsor-EA4AAA?style=for-the-badge&logo=githubsponsors&logoColor=white)](https://github.com/sponsors/SelfRef)
-[![Donate using Liberapay](https://liberapay.com/assets/widgets/donate.svg)](https://liberapay.com/SelfRef/donate)
+<p align="center">
+  <a href="https://ko-fi.com/N5E229GJPZ"><img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support me on Ko-fi"></a>
+  <a href="https://github.com/sponsors/SelfRef"><img src="https://img.shields.io/badge/Sponsor-EA4AAA?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="Sponsor on GitHub"></a>
+  <a href="https://liberapay.com/SelfRef/donate"><img src="https://liberapay.com/assets/widgets/donate.svg" alt="Donate using Liberapay"></a>
+</p>
 
 ## Features
 
@@ -47,7 +53,11 @@ All of what Notav does, and what it will, is listed in [FEATURES.md](docs/FEATUR
 ## Getting started
 
 Notav needs GNOME 49 or newer. Download a package from the
-[latest release](https://github.com/AperteDev/notav/releases/latest), once there is one:
+[latest release](https://github.com/AperteDev/notav/releases/latest):
+
+<p align="center">
+  <a href="https://github.com/AperteDev/notav/releases/latest"><img src="https://raw.githubusercontent.com/Kunzisoft/Github-badge/main/get-it-on-github.png" alt="Get it on GitHub" height="60"></a>
+</p>
 
 ```sh
 # Flatpak, on any distribution (the GNOME runtime comes from Flathub)

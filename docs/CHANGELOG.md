@@ -29,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the keyboard focus
 - The outline says "No Headings" for a note without headings, instead of staying blank once
   a note was open
+- A server whose certificate comes from a certificate authority added to the system (a
+  self-hosted Nextcloud's own CA) connects, instead of failing with "invalid peer certificate:
+  UnknownIssuer": Notav trusts the system's certificate authorities, not only its built-in list
 
 ## [0.2.0] - 2026-10-30
 

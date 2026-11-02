@@ -5,6 +5,7 @@ pub mod journal;
 pub mod json;
 mod login;
 pub mod markdown;
+mod net;
 mod notes;
 mod settings;
 pub mod store;

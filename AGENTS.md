@@ -38,11 +38,11 @@
   | Update while running, Restart banner | `linux/app/src/update.rs`, `update_banners` in `window.rs` | No restart in the background (no service): only the banner, quitting as closing the window does |
   | Build, packaging, release | `build.rs`, `linux/Makefile`, Flatpak manifest, `scripts/`, `.github/workflows/`, `po/its/`, RPM spec, `.copr/Makefile` | No GNOME extension, D-Bus service or autostart; GtkSourceView |
   | Polish translations | `po/pl.po` | Shared strings merged |
-
+  | HTTPS trusting the system's certificate authorities (Todav after 2.4.0) | `core/src/net.rs` | Without Android's `set_roots` |
 ## Dependencies
 
 - Standard library and platform SDKs first; a third-party crate only where it replaces real
-  work, with the reason in its commit. Now: `ureq` (rustls), `rusqlite`, `quick-xml`,
+  work, with the reason in its commit. Now: `ureq` (rustls, with the platform verifier), `rusqlite`, `quick-xml`,
   `pulldown-cmark` (Markdown for Editor mode, without its HTML writer), `gtk4`, `libadwaita`,
   `sourceview5`, `libsecret`, `libc`.
 - `rusqlite` stays within 0.38 to 0.40 on the system SQLite, not bundled: distributions

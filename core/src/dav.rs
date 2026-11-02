@@ -237,6 +237,7 @@ impl Dav {
         };
         let origin = url.splitn(4, '/').take(3).collect::<Vec<_>>().join("/");
         let agent = ureq::Agent::config_builder()
+            .tls_config(crate::net::tls())
             .allow_non_standard_methods(true)
             .user_agent("Notav")
             .http_status_as_error(false)

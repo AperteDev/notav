@@ -39,6 +39,7 @@
   | Build, packaging, release | `build.rs`, `linux/Makefile`, Flatpak manifest, `scripts/`, `.github/workflows/`, `po/its/`, RPM spec, `.copr/Makefile` | No GNOME extension, D-Bus service or autostart; GtkSourceView |
   | Polish translations | `po/pl.po` | Shared strings merged |
   | HTTPS trusting the system's certificate authorities (Todav after 2.4.0) | `core/src/net.rs` | Without Android's `set_roots` |
+  | Error pages' text in HTTP errors (Todav after 2.4.0) | `html_text` in `core/src/lib.rs` | As is |
 ## Dependencies
 
 - Standard library and platform SDKs first; a third-party crate only where it replaces real

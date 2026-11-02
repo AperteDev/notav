@@ -32,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A server whose certificate comes from a certificate authority added to the system (a
   self-hosted Nextcloud's own CA) connects, instead of failing with "invalid peer certificate:
   UnknownIssuer": Notav trusts the system's certificate authorities, not only its built-in list
+- An error page from the server or a proxy shows as its text in error messages, not as its
+  HTML
 
 ## [0.2.0] - 2026-10-30
 

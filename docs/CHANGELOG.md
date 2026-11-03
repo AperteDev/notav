@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- GitHub's alerts in Editor mode: a quote starting with `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`,
+  `[!WARNING]` or `[!CAUTION]` is a box tinted in its colour (blue, green, purple, yellow, red),
+  its `[!NOTE]` and `>` bold in that colour; light and dark
+- Enter in a quote (an alert too) starts the next line with its `>`; on an empty quote line it
+  leaves the quote, with a blank line after it
 - Find and replace in the open note: Ctrl+F (or the Find in Note button) opens a bar above it
   that highlights the matches and counts them ("2 of 11"), Enter and Shift+Enter (or Ctrl+G
   and Ctrl+Shift+G) go through them; Ctrl+H adds a row to replace one or all. Escape goes back

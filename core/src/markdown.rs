@@ -2,7 +2,9 @@
 //! front matter) parsed into styled ranges. Nothing here knows GTK: a front-end turns each
 //! style into its own text attributes.
 
-use pulldown_cmark::{CodeBlockKind, Event, HeadingLevel, LinkType, Options, Parser, Tag, TagEnd};
+use pulldown_cmark::{
+    BlockQuoteKind, CodeBlockKind, Event, HeadingLevel, LinkType, Options, Parser, Tag, TagEnd,
+};
 use std::ops::Range;
 
 /// What a range of a note is.
@@ -19,6 +21,10 @@ pub enum Style {
     CodeBlock,
     /// A quote's lines.
     Quote,
+    /// A GitHub alert's lines (`> [!NOTE]` and the rest of its quote, a Quote too).
+    Alert(Alert),
+    /// An alert's marks, in its colour: its `[!NOTE]` and its quote's `>`.
+    AlertMark(Alert),
     /// A link's or image's text, an autolink, a bare URL, a footnote reference.
     Link,
     /// A list item's bullet or number.
@@ -32,6 +38,16 @@ pub enum Style {
     /// Markdown's own syntax, shown dimmed: `**`, `#`, `>`, a link's target, fences, a table's
     /// pipes, HTML, rules, front matter.
     Mark,
+}
+
+/// The kinds of GitHub's alerts, as GitHub colours them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Alert {
+    Note,
+    Tip,
+    Important,
+    Warning,
+    Caution,
 }
 
 /// `style` from character `start` to `end` (character offsets, as GTK's text buffer counts).
@@ -127,9 +143,27 @@ pub fn spans(text: &str) -> Vec<Span> {
                         out.push((whole_lines(text, &range), Style::CodeBlock));
                         matches!(kind, CodeBlockKind::Fenced(_))
                     }
-                    Tag::BlockQuote(_) => {
+                    Tag::BlockQuote(kind) => {
+                        let alert = kind.map(|k| match k {
+                            BlockQuoteKind::Note => Alert::Note,
+                            BlockQuoteKind::Tip => Alert::Tip,
+                            BlockQuoteKind::Important => Alert::Important,
+                            BlockQuoteKind::Warning => Alert::Warning,
+                            BlockQuoteKind::Caution => Alert::Caution,
+                        });
                         out.push((whole_lines(text, &range), Style::Quote));
-                        quote_marks(text, &range, &mut out);
+                        if let Some(a) = alert {
+                            out.push((whole_lines(text, &range), Style::Alert(a)));
+                            // Its `[!NOTE]`, in no event of the parser's.
+                            let first = &text[range.start..line_end(text, range.start)];
+                            if let Some(s) = first.find("[!")
+                                && let Some(e) = first[s..].find(']')
+                            {
+                                let s = range.start + s;
+                                out.push((s..s + e + 1, Style::AlertMark(a)));
+                            }
+                        }
+                        quote_marks(text, &range, alert, &mut out);
                         false
                     }
                     Tag::Table(_) => {
@@ -357,7 +391,9 @@ pub fn heading_at(text: &str, heading: &str) -> Option<usize> {
 /// What Enter at character `at` does in a list item, in the order of the text (none: a plain
 /// new line). In an item's text it starts the next item: the same bullet, the next number (the
 /// numbers after it moved up while they count on), an open task after a task. In an empty
-/// item it ends the list: the line keeps only a quote's `>`.
+/// item it ends the list: the line keeps only a quote's `>`. In a quote (an alert too) the next
+/// line starts with its `>`s; on an empty quote line, its last `>` goes: out of that quote, a
+/// blank line (a bare `>` in an outer quote) after it, or the next line would be in it still.
 pub fn enter(text: &str, at: usize) -> Vec<Edit> {
     let Some(byte) = text
         .char_indices()
@@ -371,7 +407,7 @@ pub fn enter(text: &str, at: usize) -> Vec<Edit> {
     let end = line_end(text, byte);
     let line = &text[start..end];
     let Some(item) = ListItem::parse(line) else {
-        return Vec::new();
+        return quote_enter(text, start..end, byte, at);
     };
     if byte < start + item.content {
         return Vec::new();
@@ -426,6 +462,40 @@ pub fn enter(text: &str, at: usize) -> Vec<Edit> {
         }
     }
     edits
+}
+
+/// Enter at byte `byte` (character `at`) of the quote's line `line` (bytes of `text`), past
+/// its `>`s: see `enter`.
+fn quote_enter(text: &str, line: Range<usize>, byte: usize, at: usize) -> Vec<Edit> {
+    let s = &text[line.clone()];
+    let prefix = &s[..s.len() - s.trim_start_matches([' ', '\t', '>']).len()];
+    let Some(last) = prefix.rfind('>') else {
+        return Vec::new();
+    };
+    // The parser decides what is a quote (not a code block's `>`).
+    let first = line.start + prefix.find('>').unwrap_or(0);
+    let quoted = Parser::new_ext(text, options())
+        .into_offset_iter()
+        .any(|(e, r)| matches!(e, Event::Start(Tag::BlockQuote(_))) && r.contains(&first));
+    if byte < line.start + prefix.len() || !quoted {
+        return Vec::new();
+    }
+    let chars = |b: usize| text[..b].chars().count();
+    if s[prefix.len()..].trim().is_empty() {
+        let keep = Some(&prefix[..last]).filter(|k| k.contains('>'));
+        let keep = keep.unwrap_or_default();
+        return vec![Edit {
+            start: chars(line.start),
+            end: chars(line.end),
+            text: format!("{}\n{keep}", keep.trim_end()),
+        }];
+    }
+    let space = if prefix.ends_with('>') { " " } else { "" };
+    vec![Edit {
+        start: at,
+        end: at,
+        text: format!("\n{prefix}{space}"),
+    }]
 }
 
 /// A line that starts like a list item.
@@ -532,8 +602,14 @@ fn gaps(range: &Range<usize>, mut children: Vec<Range<usize>>) -> Vec<Range<usiz
     out
 }
 
-/// The `>` at the start of each line of a quote, with the space after each.
-fn quote_marks(text: &str, range: &Range<usize>, out: &mut Vec<(Range<usize>, Style)>) {
+/// The `>` at the start of each line of a quote, with the space after each; in an alert's
+/// colour too, for an alert.
+fn quote_marks(
+    text: &str,
+    range: &Range<usize>,
+    alert: Option<Alert>,
+    out: &mut Vec<(Range<usize>, Style)>,
+) {
     let bytes = text.as_bytes();
     let mut line = range.start;
     while line < range.end {
@@ -551,6 +627,9 @@ fn quote_marks(text: &str, range: &Range<usize>, out: &mut Vec<(Range<usize>, St
                 i + 1
             };
             out.push((i..end.min(range.end), Style::Mark));
+            if let Some(a) = alert {
+                out.push((i..end.min(range.end), Style::AlertMark(a)));
+            }
             i = end;
         }
         line = line_end(text, line) + 1;
@@ -844,6 +923,46 @@ mod tests {
     }
 
     #[test]
+    fn enter_continues_a_quote_and_leaves_it_on_an_empty_line() {
+        assert_eq!(after_enter("> a|"), "> a\n> |");
+        assert_eq!(after_enter("> [!NOTE]|\n"), "> [!NOTE]\n> |\n");
+        assert_eq!(after_enter(">a|b"), ">a\n> |b");
+        assert_eq!(after_enter("> > ą|"), "> > ą\n> > |");
+        // Left with a blank line after it: a line right after a quote is in it still.
+        assert_eq!(after_enter("> a\n> |"), "> a\n\n|");
+        assert_eq!(after_enter("> a\n> > b\n> > |"), "> a\n> > b\n>\n> |");
+        // Before its `>`, in code, or not a quote: a plain new line.
+        for t in ["|> a", ">| a", "```\n> a|\n```", "a > b|"] {
+            assert_eq!(after_enter(t), t.replace('|', "\n|"), "{t:?}");
+        }
+    }
+
+    #[test]
+    fn alerts_take_their_kind_and_colour_their_marks() {
+        let t = "> [!NOTE]\n> Read this.\n\n> [!caution]\n> > nested\n\n> [!NOPE]\n> quote\n";
+        assert_eq!(
+            of(t, Style::Alert(Alert::Note)),
+            ["> [!NOTE]\n> Read this.\n"]
+        );
+        assert_eq!(
+            of(t, Style::AlertMark(Alert::Note)),
+            ["> ", "[!NOTE]", "> "]
+        );
+        assert_eq!(
+            of(t, Style::Alert(Alert::Caution)),
+            ["> [!caution]\n> > nested\n"]
+        );
+        assert_eq!(
+            of(t, Style::AlertMark(Alert::Caution)),
+            ["> ", "[!caution]", "> ", "> "]
+        );
+        // Not a kind GitHub has: a quote.
+        assert!(!of(t, Style::Quote).is_empty());
+        let others = [Alert::Tip, Alert::Important, Alert::Warning];
+        assert!(others.iter().all(|&a| of(t, Style::Alert(a)).is_empty()));
+    }
+
+    #[test]
     fn enter_elsewhere_is_a_new_line() {
         for t in [
             "|- a",
@@ -873,6 +992,12 @@ mod tests {
             Style::Code,
             Style::CodeBlock,
             Style::Quote,
+            Style::Alert(Alert::Note),
+            Style::Alert(Alert::Tip),
+            Style::Alert(Alert::Important),
+            Style::Alert(Alert::Warning),
+            Style::Alert(Alert::Caution),
+            Style::AlertMark(Alert::Caution),
             Style::Link,
             Style::ListMark,
             Style::Task(true),

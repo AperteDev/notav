@@ -40,7 +40,9 @@ What Notav can do, in short. The details of each release are in the
 - Find and replace in the open note (Ctrl+F, Ctrl+H), the matches highlighted and counted.
 - Editor mode: Markdown styled as it reads (headings, emphasis, code, quotes, lists, tasks,
   tables, links, footnotes, front matter), the marks dimmed. Source mode: plain Markdown.
-- Click a task's box to tick it; Enter continues a list.
+- GitHub's alerts (`> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`) as
+  tinted boxes in their colours.
+- Click a task's box to tick it; Enter continues a list or a quote.
 - Ctrl+click opens a link (Alt+Enter the one at the cursor).
 - Links between notes: Markdown links and `[[wiki links]]`, to a heading too; a missing note is
   made when its link is followed.
@@ -76,7 +78,7 @@ What Notav can do, in short. The details of each release are in the
 - `[[` suggesting notes as you type; links updated when a note is renamed or moved.
 - Paste a URL over selected text to link it; wrap a selection in `*`, `_`, `` ` `` and the like
   by typing it.
-- Ctrl+Enter ticks a task; Enter continues quotes and closes code fences.
+- Ctrl+Enter ticks a task; Enter closes code fences; Insert Alert in the right-click menu.
 - Tags, outgoing links and unlinked mentions in the side panel.
 - Tabs, templates, sorting the tree, a journal calendar.
 - Focus mode and word count.

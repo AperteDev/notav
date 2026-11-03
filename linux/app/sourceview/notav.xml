@@ -31,6 +31,17 @@
   <style name="notav-editor:code"             background="#EDEDEB"/>
   <style name="notav-editor:code-block"       line-background="#F6F5F4"/>
   <style name="notav-editor:quote"            foreground="#5E5C64"/>
+  <!-- GitHub's alerts in GNOME's colours: a tinted box, the marks bold in its colour. -->
+  <style name="notav-editor:alert-note"            line-background="#EDF4FC"/>
+  <style name="notav-editor:alert-tip"             line-background="#EDF5F0"/>
+  <style name="notav-editor:alert-important"       line-background="#F6F0F8"/>
+  <style name="notav-editor:alert-warning"         line-background="#F7F3EB"/>
+  <style name="notav-editor:alert-caution"         line-background="#FAEDEE"/>
+  <style name="notav-editor:alert-note-mark"       foreground="#1C71D8" bold="true"/>
+  <style name="notav-editor:alert-tip-mark"        foreground="#1B8553" bold="true"/>
+  <style name="notav-editor:alert-important-mark"  foreground="#9141AC" bold="true"/>
+  <style name="notav-editor:alert-warning-mark"    foreground="#9C6E03" bold="true"/>
+  <style name="notav-editor:alert-caution-mark"    foreground="#C01C28" bold="true"/>
   <style name="notav-editor:link"             foreground="#1C71D8" underline="single"/>
   <style name="notav-editor:list-mark"        foreground="#9A9996" bold="true"/>
   <style name="notav-editor:task"             foreground="#1C71D8" bold="true"/>

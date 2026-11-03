@@ -93,8 +93,30 @@ Not a URL: example.com, ftp://example.com.
 > - A list in a quote
 > - [ ] And a task
 
+GitHub's alerts:
+
 > [!NOTE]
-> A GitHub alert.
+> Useful information, even when skimming.
+
+> [!TIP]
+> Helpful advice, with `code` and **strong** text.
+
+> [!IMPORTANT]
+> Key information:
+> - a list in an alert
+
+> [!WARNING]
+> Urgent information that needs attention.
+
+> [!CAUTION]
+> Risks or negative outcomes.
+>
+> ```
+> A code block in an alert.
+> ```
+
+> [!NOPE]
+> Not an alert: a quote.
 
 ## Code
 

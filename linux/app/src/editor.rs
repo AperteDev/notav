@@ -5,7 +5,7 @@
 use crate::i18n::gettext;
 use gtk::prelude::*;
 use gtk::{gio, glib};
-use notav_core::markdown::{self, Style};
+use notav_core::markdown::{self, Alert, Style};
 use notav_core::table::{self, Align, Op};
 use sourceview5::prelude::*;
 use std::cmp::Ordering;
@@ -54,6 +54,12 @@ const TAGS: &[(&str, &str)] = &[
     ("md-table-header", "notav-editor:table-header"),
     ("md-quote", "notav-editor:quote"),
     ("md-code-block", "notav-editor:code-block"),
+    // Over a code block's background: the alert's box goes on through its code.
+    ("md-alert-note", "notav-editor:alert-note"),
+    ("md-alert-tip", "notav-editor:alert-tip"),
+    ("md-alert-important", "notav-editor:alert-important"),
+    ("md-alert-warning", "notav-editor:alert-warning"),
+    ("md-alert-caution", "notav-editor:alert-caution"),
     ("md-strong", "notav-editor:strong"),
     ("md-emphasis", "notav-editor:emphasis"),
     ("md-strikethrough", "notav-editor:strikethrough"),
@@ -62,6 +68,15 @@ const TAGS: &[(&str, &str)] = &[
     ("md-list-mark", "notav-editor:list-mark"),
     ("md-task", "notav-editor:task"),
     ("md-mark", "notav-editor:mark"),
+    // Over the dimmed marks.
+    ("md-alert-note-mark", "notav-editor:alert-note-mark"),
+    ("md-alert-tip-mark", "notav-editor:alert-tip-mark"),
+    (
+        "md-alert-important-mark",
+        "notav-editor:alert-important-mark",
+    ),
+    ("md-alert-warning-mark", "notav-editor:alert-warning-mark"),
+    ("md-alert-caution-mark", "notav-editor:alert-caution-mark"),
 ];
 
 fn tag(style: Style) -> &'static str {
@@ -78,6 +93,20 @@ fn tag(style: Style) -> &'static str {
         Style::Code => "md-code",
         Style::CodeBlock => "md-code-block",
         Style::Quote => "md-quote",
+        Style::Alert(a) => match a {
+            Alert::Note => "md-alert-note",
+            Alert::Tip => "md-alert-tip",
+            Alert::Important => "md-alert-important",
+            Alert::Warning => "md-alert-warning",
+            Alert::Caution => "md-alert-caution",
+        },
+        Style::AlertMark(a) => match a {
+            Alert::Note => "md-alert-note-mark",
+            Alert::Tip => "md-alert-tip-mark",
+            Alert::Important => "md-alert-important-mark",
+            Alert::Warning => "md-alert-warning-mark",
+            Alert::Caution => "md-alert-caution-mark",
+        },
         Style::Link => "md-link",
         Style::ListMark => "md-list-mark",
         Style::Task(_) => "md-task",

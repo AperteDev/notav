@@ -31,6 +31,16 @@
   <style name="notav-editor:code"             background="#38383D"/>
   <style name="notav-editor:code-block"       line-background="#2A2A2E"/>
   <style name="notav-editor:quote"            foreground="#C0BFBC"/>
+  <style name="notav-editor:alert-note"            line-background="#2C333E"/>
+  <style name="notav-editor:alert-tip"             line-background="#2F3B35"/>
+  <style name="notav-editor:alert-important"       line-background="#382E3C"/>
+  <style name="notav-editor:alert-warning"         line-background="#3C392C"/>
+  <style name="notav-editor:alert-caution"         line-background="#3D2D2D"/>
+  <style name="notav-editor:alert-note-mark"       foreground="#78AEED" bold="true"/>
+  <style name="notav-editor:alert-tip-mark"        foreground="#8FF0A4" bold="true"/>
+  <style name="notav-editor:alert-important-mark"  foreground="#DC8ADD" bold="true"/>
+  <style name="notav-editor:alert-warning-mark"    foreground="#F8E45C" bold="true"/>
+  <style name="notav-editor:alert-caution-mark"    foreground="#FF7B63" bold="true"/>
   <style name="notav-editor:link"             foreground="#62A0EA" underline="single"/>
   <style name="notav-editor:list-mark"        foreground="#77767B" bold="true"/>
   <style name="notav-editor:task"             foreground="#62A0EA" bold="true"/>

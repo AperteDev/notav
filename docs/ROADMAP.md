@@ -22,8 +22,9 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
      Obsidian do), which covers most of Ctrl+B and Ctrl+I without learning them.
    - Ctrl+Enter ticks or unticks the task on the cursor's line, and makes a list item a task
      (as Obsidian and Logseq do).
-   - Enter in a quote continues its `> `; Enter after a code fence's opening ` ``` ` adds the
-     closing one (as Typora and Obsidian do), next to the lists' and tables' Enter.
+   - Enter after a code fence's opening ` ``` ` adds the closing one (as Typora and Obsidian
+     do), next to the lists', quotes' and tables' Enter.
+   - "Insert Alert" in the right-click menu, next to Insert Table, with GitHub's five kinds.
    - Spell checking with libspelling (as Iotas, Apostrophe and GNOME Text Editor have it):
      underlined words, suggestions in the right-click menu (see
      [Open questions](#open-questions-and-risks)).
@@ -34,10 +35,12 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
    in Source mode.
 3. **Hiding the marks**, later, as Obsidian's Live Preview: `**`, `_`, backticks, `#`, `>` and
    link targets hidden except in the element (or the heading's line) the cursor is in; drawn
-   bullets, quote bars, rules and table grids; images below their line. Blocked for now (see
+   bullets, quote bars, rules and table grids; images below their line; an alert's `[!NOTE]`
+   shown as its icon and title, as GitHub draws it. Blocked for now (see
    [Open questions](#open-questions-and-risks)).
-4. **More Markdown**, maybe: math and callouts as Obsidian has them (GitHub's `> [!NOTE]` alerts
-   are only quotes now), each only where the files stay readable elsewhere.
+4. **More Markdown**, maybe: math, and callouts as Obsidian has them beyond GitHub's five alerts
+   (more kinds, a title of their own, folding), each only where the files stay readable
+   elsewhere.
 5. **Faster styling** if long notes need it: each change parses and styles the whole note again
    (about 45 ms per keystroke for 120 KB in a debug build, a few for a normal note; above
    300,000 characters it stops). Restyling only the blocks around a change would cut that.

@@ -75,9 +75,9 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
   above the tree (device-only); buttons to fold and unfold every folder.
 - **Search**: filters as Obsidian's (`path:`, `file:`, `tag:`, `"exact phrase"`, `-word`) over
   today's word-prefix match on FTS5, and the results with the matched line; a result opens at
-  its first match, highlighted (as Obsidian and Joplin). Ctrl+F finds (and replaces) in the open
-  note, GtkSourceView's search, and Ctrl+Shift+F searches all notes, as Obsidian and VS Code
-  (Iotas searches both ways too).
+  its first match, highlighted (as Obsidian and Joplin), with the find bar's text filled in.
+  Find and replace in the note with case, whole words and regular expressions, as GNOME Text
+  Editor's options.
 - **Trash and versions**, more: "Delete All" in the Trash (each note, not the whole trash bin,
   which holds other files too); a version's changes against the note's text rather than the
   whole text.

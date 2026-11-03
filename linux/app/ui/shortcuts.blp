@@ -17,7 +17,7 @@ Adw.ShortcutsDialog dialog {
     }
 
     Adw.ShortcutsItem {
-      title: _("Search");
+      title: _("Search Notes");
       action-name: "win.search";
     }
 
@@ -63,6 +63,26 @@ Adw.ShortcutsDialog dialog {
     Adw.ShortcutsItem {
       title: _("Redo");
       accelerator: "<Shift><Control>z";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Find");
+      action-name: "win.find";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Find and Replace");
+      action-name: "win.find-replace";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Next Match");
+      action-name: "win.find-next";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Previous Match");
+      action-name: "win.find-previous";
     }
 
     Adw.ShortcutsItem {

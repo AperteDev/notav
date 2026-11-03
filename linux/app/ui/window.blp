@@ -191,7 +191,7 @@ Adw.ApplicationWindow window {
                 [end]
                 Gtk.ToggleButton search_button {
                   icon-name: "system-search-symbolic";
-                  tooltip-text: _("Search (Ctrl+F)");
+                  tooltip-text: _("Search Notes (Ctrl+Shift+F)");
                 }
               }
 
@@ -215,6 +215,81 @@ Adw.ApplicationWindow window {
                   Gtk.SearchEntry search {
                     placeholder-text: _("Search notes");
                     hexpand: true;
+                  }
+                }
+              }
+
+              // Find and replace in the open note, GtkSourceView's search (src/window.rs
+              // `connect_find`).
+              [top]
+              Gtk.SearchBar find_bar {
+                Adw.Clamp {
+                  maximum-size: 860;
+                  hexpand: true;
+
+                  Gtk.Box {
+                    orientation: vertical;
+                    spacing: 6;
+
+                    Gtk.Box {
+                      spacing: 6;
+
+                      Gtk.SearchEntry find {
+                        placeholder-text: _("Find in note");
+                        hexpand: true;
+                      }
+
+                      Gtk.Label find_count {
+                        styles ["dim-label", "numeric"]
+                      }
+
+                      Gtk.Box {
+                        styles ["linked"]
+
+                        Gtk.Button {
+                          icon-name: "go-up-symbolic";
+                          tooltip-text: _("Previous Match (Ctrl+Shift+G)");
+                          action-name: "win.find-previous";
+                        }
+
+                        Gtk.Button {
+                          icon-name: "go-down-symbolic";
+                          tooltip-text: _("Next Match (Ctrl+G)");
+                          action-name: "win.find-next";
+                        }
+                      }
+
+                      Gtk.ToggleButton replace_button {
+                        icon-name: "edit-find-replace-symbolic";
+                        tooltip-text: _("Replace (Ctrl+H)");
+                      }
+                    }
+
+                    Gtk.Box {
+                      spacing: 6;
+                      visible: bind replace_button.active;
+
+                      Gtk.Entry replace {
+                        placeholder-text: _("Replace with");
+                        hexpand: true;
+
+                        accessibility {
+                          label: _("Replace with");
+                        }
+                      }
+
+                      Gtk.Button {
+                        label: _("_Replace");
+                        use-underline: true;
+                        action-name: "win.replace";
+                      }
+
+                      Gtk.Button {
+                        label: _("Replace _All");
+                        use-underline: true;
+                        action-name: "win.replace-all";
+                      }
+                    }
                   }
                 }
               }

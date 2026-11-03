@@ -29,13 +29,14 @@ What Notav can do, in short. The details of each release are in the
 - Undo deleting, moving and renaming (the toast's Undo, or Ctrl+Z).
 - Trash: restore deleted notes from Nextcloud's trash bin, or delete them for good.
 - Versions of a note, from Nextcloud's file versions, to look at and restore.
-- Search through titles and text, ignoring case and accents.
+- Search through titles and text, ignoring case and accents (Ctrl+Shift+F).
 - Journal: Today's Note (Ctrl+T), made from a template note, in a folder and name format of your
   choice.
 
 **Editing**
 
 - Saves as you type; the title is the file name.
+- Find and replace in the open note (Ctrl+F, Ctrl+H), the matches highlighted and counted.
 - Editor mode: Markdown styled as it reads (headings, emphasis, code, quotes, lists, tasks,
   tables, links, footnotes, front matter), the marks dimmed. Source mode: plain Markdown.
 - Click a task's box to tick it; Enter continues a list.
@@ -69,7 +70,8 @@ What Notav can do, in short. The details of each release are in the
 - Notes in GNOME Shell's search.
 - Emptying the Trash of notes at once; a version's changes shown against the note.
 - Spell checking.
-- Find and replace in a note (Ctrl+F); search filters, results opening at the match.
+- Search filters, results opening at the match; find options (case, whole words, regular
+  expressions).
 - `[[` suggesting notes as you type; links updated when a note is renamed or moved.
 - Paste a URL over selected text to link it; wrap a selection in `*`, `_`, `` ` `` and the like
   by typing it.

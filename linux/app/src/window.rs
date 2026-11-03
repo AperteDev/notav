@@ -112,6 +112,13 @@ struct Ui {
     results: gtk::ListBox,
     results_stack: gtk::Stack,
     found: RefCell<Vec<Note>>,
+    /// Find and replace in the open note (`connect_find`), over `find_ctx`.
+    find_bar: gtk::SearchBar,
+    find: gtk::SearchEntry,
+    find_count: gtk::Label,
+    replace_button: gtk::ToggleButton,
+    replace: gtk::Entry,
+    find_ctx: sourceview5::SearchContext,
     tree: gtk::ListBox,
     tree_stack: gtk::Stack,
     tree_scroll: gtk::ScrolledWindow,
@@ -231,7 +238,11 @@ pub fn setup_actions(app: &adw::Application) {
     app.set_accels_for_action("win.preferences", &["<Control>comma"]);
     app.set_accels_for_action("win.new-note", &["<Control>n"]);
     app.set_accels_for_action("win.daily-note", &["<Control>t"]);
-    app.set_accels_for_action("win.search", &["<Control>f"]);
+    app.set_accels_for_action("win.find", &["<Control>f"]);
+    app.set_accels_for_action("win.find-replace", &["<Control>h"]);
+    app.set_accels_for_action("win.find-next", &["<Control>g"]);
+    app.set_accels_for_action("win.find-previous", &["<Control><Shift>g"]);
+    app.set_accels_for_action("win.search", &["<Control><Shift>f"]);
     app.set_accels_for_action("win.undo", &["<Control>z"]);
     app.set_accels_for_action(
         "win.zoom-in",
@@ -701,6 +712,13 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         results: get(&b, "results"),
         results_stack: get(&b, "results_stack"),
         found: RefCell::new(Vec::new()),
+        find_bar: get(&b, "find_bar"),
+        find: get(&b, "find"),
+        find_count: get(&b, "find_count"),
+        replace_button: get(&b, "replace_button"),
+        replace: get(&b, "replace"),
+        // After Editor mode's tags, so its highlight is drawn over theirs.
+        find_ctx: sourceview5::SearchContext::new(&buffer, None::<&sourceview5::SearchSettings>),
         tree: get(&b, "tree"),
         tree_stack: get(&b, "tree_stack"),
         tree_scroll: get(&b, "tree_scroll"),
@@ -1035,10 +1053,19 @@ fn connect(ui: &Rc<Ui>) {
     add("preferences", |ui| crate::settings::present(&ui.window));
     let new = add("new-note", new_note);
     let daily = add("daily-note", daily_note);
-    let search = add("search", |ui| {
-        ui.search_button.set_active(true);
-        ui.search.grab_focus();
-    });
+    let search = add("search", search_notes);
+    let find = [
+        add("find", |ui| open_find(ui, false)),
+        add("find-replace", |ui| open_find(ui, true)),
+        add("find-next", |ui| find_next(ui, true)),
+        add("find-previous", |ui| find_next(ui, false)),
+        add("replace", replace_match),
+        add("replace-all", |ui| {
+            if let Err(e) = ui.find_ctx.replace_all(&ui.replace.text()) {
+                toast(e.message());
+            }
+        }),
+    ];
     // From a note's menu in the tree, with the note's id.
     let delete = gio::SimpleAction::new("delete-note", Some(glib::VariantTy::INT64));
     let weak = Rc::downgrade(ui);
@@ -1202,6 +1229,9 @@ fn connect(ui: &Rc<Ui>) {
             new.set_enabled(main);
             daily.set_enabled(main);
             search.set_enabled(main);
+            for a in &find {
+                a.set_enabled(main);
+            }
             undo_last.set_enabled(main);
         }
     };
@@ -1261,11 +1291,15 @@ fn connect(ui: &Rc<Ui>) {
         }
     });
     let weak = Rc::downgrade(ui);
-    ui.search_button.connect_active_notify(move |_| {
+    ui.search_button.connect_active_notify(move |b| {
         if let Some(ui) = weak.upgrade() {
+            if b.is_active() {
+                ui.find_bar.set_search_mode(false);
+            }
             refresh_results(&ui);
         }
     });
+    connect_find(ui);
     let weak = Rc::downgrade(ui);
     ui.results.connect_row_activated(move |_, row| {
         let Some(ui) = weak.upgrade() else { return };
@@ -1733,6 +1767,202 @@ fn reveal(ui: &Ui, account: i64, folder: &str) {
     if changed {
         save_expanded(ui);
     }
+}
+
+fn search_notes(ui: &Rc<Ui>) {
+    ui.search_button.set_active(true);
+    ui.search.grab_focus();
+}
+
+/// The find bar of the open note (with its replace row: `replace`), the selection on one line
+/// as what to find; with no note shown, the search of all notes.
+fn open_find(ui: &Rc<Ui>, replace: bool) {
+    if ui.note_stack.visible_child_name().as_deref() != Some("note") {
+        search_notes(ui);
+        return;
+    }
+    if let Some((s, e)) = ui.buffer.selection_bounds()
+        && s.line() == e.line()
+    {
+        ui.find.set_text(&ui.buffer.text(&s, &e, false));
+    }
+    if replace {
+        ui.replace_button.set_active(true);
+    }
+    ui.find_bar.set_search_mode(true);
+    ui.find.grab_focus();
+}
+
+/// Select the next match after the selection (or the cursor), or the previous one before it,
+/// going round the note; with nothing to find, the find bar.
+fn find_next(ui: &Rc<Ui>, forward: bool) {
+    if ui.find.text().is_empty() {
+        open_find(ui, false);
+        return;
+    }
+    set_find_text(ui);
+    let (start, end) = selection(ui);
+    let found = if forward {
+        ui.find_ctx.forward(&end)
+    } else {
+        ui.find_ctx.backward(&start)
+    };
+    select_match(ui, found);
+}
+
+/// What the find entry holds, searched for: Enter right after typing comes before the entry's
+/// own (delayed) change.
+fn set_find_text(ui: &Ui) {
+    let text = ui.find.text();
+    let settings = ui.find_ctx.settings();
+    if settings.search_text().unwrap_or_default() != text {
+        settings.set_search_text(Some(text.as_str()).filter(|t| !t.is_empty()));
+    }
+}
+
+/// The selection's bounds, or the cursor's place twice.
+fn selection(ui: &Ui) -> (gtk::TextIter, gtk::TextIter) {
+    ui.buffer.selection_bounds().unwrap_or_else(|| {
+        let c = ui.buffer.iter_at_mark(&ui.buffer.get_insert());
+        (c, c)
+    })
+}
+
+fn select_match(ui: &Rc<Ui>, found: Option<(gtk::TextIter, gtk::TextIter, bool)>) {
+    if let Some((start, end, _)) = found {
+        ui.buffer.select_range(&start, &end);
+        follow_cursor(ui, false);
+    }
+}
+
+/// Replace the selected match and select the next one; with none selected, select it first.
+fn replace_match(ui: &Rc<Ui>) {
+    if let Some((mut s, mut e)) = ui.buffer.selection_bounds()
+        && ui.find_ctx.occurrence_position(&s, &e) > 0
+    {
+        if let Err(err) = ui.find_ctx.replace(&mut s, &mut e, &ui.replace.text()) {
+            toast(err.message());
+            return;
+        }
+        ui.buffer.place_cursor(&e);
+    }
+    find_next(ui, true);
+}
+
+/// "3 of 12" beside what is found, or how many matches there are while none is selected.
+fn show_find_count(ui: &Ui) {
+    let count = ui.find_ctx.occurrences_count();
+    let label = if ui.find.text().is_empty() || count < 0 {
+        String::new()
+    } else {
+        let (s, e) = selection(ui);
+        match ui.find_ctx.occurrence_position(&s, &e) {
+            at if at > 0 => gettext("{at} of {count}")
+                .replace("{at}", &at.to_string())
+                .replace("{count}", &count.to_string()),
+            _ => ngettext("{count} match", "{count} matches", count as u64)
+                .replace("{count}", &count.to_string()),
+        }
+    };
+    ui.find_count.set_label(&label);
+    if count == 0 && !ui.find.text().is_empty() {
+        ui.find.add_css_class("error");
+    } else {
+        ui.find.remove_css_class("error");
+    }
+}
+
+/// Find and replace in the open note: typing finds from where the selection starts, Enter and
+/// Shift+Enter go to the next and previous match (Enter in the replace row replaces), Escape
+/// closes the bar back to the note; the matches are highlighted while it is open.
+fn connect_find(ui: &Rc<Ui>) {
+    ui.find_bar.connect_entry(&ui.find);
+    ui.find_ctx.settings().set_wrap_around(true);
+    ui.find_ctx.set_highlight(false);
+    let weak = Rc::downgrade(ui);
+    ui.find.connect_search_changed(move |e| {
+        let Some(ui) = weak.upgrade() else { return };
+        set_find_text(&ui);
+        if !e.text().is_empty() {
+            let found = ui.find_ctx.forward(&selection(&ui).0);
+            select_match(&ui, found);
+        }
+        show_find_count(&ui);
+    });
+    for (signal, forward) in [
+        ("activate", true),
+        ("next-match", true),
+        ("previous-match", false),
+    ] {
+        let weak = Rc::downgrade(ui);
+        ui.find.connect_local(signal, false, move |_| {
+            if let Some(ui) = weak.upgrade() {
+                find_next(&ui, forward);
+            }
+            None
+        });
+    }
+    let keys = gtk::EventControllerKey::new();
+    keys.set_propagation_phase(gtk::PropagationPhase::Capture);
+    let weak = Rc::downgrade(ui);
+    keys.connect_key_pressed(move |_, key, _, state| {
+        use gtk::gdk::{Key, ModifierType};
+        let mods = state & gtk::accelerator_get_default_mod_mask();
+        match weak.upgrade() {
+            Some(ui)
+                if matches!(key, Key::Return | Key::KP_Enter)
+                    && mods == ModifierType::SHIFT_MASK =>
+            {
+                find_next(&ui, false);
+                glib::Propagation::Stop
+            }
+            _ => glib::Propagation::Proceed,
+        }
+    });
+    ui.find.add_controller(keys);
+    let weak = Rc::downgrade(ui);
+    ui.replace.connect_activate(move |_| {
+        if let Some(ui) = weak.upgrade() {
+            replace_match(&ui);
+        }
+    });
+    // Escape in the replace row too (the find entry's own closes the bar).
+    let escape = gtk::ShortcutController::new();
+    escape.add_shortcut(gtk::Shortcut::new(
+        gtk::ShortcutTrigger::parse_string("Escape"),
+        Some(gtk::CallbackAction::new(|bar, _| {
+            if let Some(b) = bar.downcast_ref::<gtk::SearchBar>() {
+                b.set_search_mode(false);
+            }
+            glib::Propagation::Stop
+        })),
+    ));
+    ui.find_bar.add_controller(escape);
+    let weak = Rc::downgrade(ui);
+    ui.find_bar.connect_search_mode_enabled_notify(move |bar| {
+        let Some(ui) = weak.upgrade() else { return };
+        let on = bar.is_search_mode();
+        ui.find_ctx.set_highlight(on);
+        if on {
+            ui.search_button.set_active(false);
+        } else if gtk::prelude::RootExt::focus(&ui.window).is_some_and(|f| f.is_ancestor(bar)) {
+            ui.editor.grab_focus();
+        }
+    });
+    let weak = Rc::downgrade(ui);
+    ui.find_ctx.connect_occurrences_count_notify(move |_| {
+        if let Some(ui) = weak.upgrade() {
+            show_find_count(&ui);
+        }
+    });
+    let weak = Rc::downgrade(ui);
+    ui.buffer.connect_cursor_position_notify(move |_| {
+        if let Some(ui) = weak.upgrade()
+            && ui.find_bar.is_search_mode()
+        {
+            show_find_count(&ui);
+        }
+    });
 }
 
 /// The notes matching the search in the editor's place, while something is typed.

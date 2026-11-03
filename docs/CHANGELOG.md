@@ -34,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The sidebar, as in Todav: the Toggle Sidebar button (F9) hides and shows it; on a narrow
+  window it hides by itself and shows over the note, going once a note is picked
 - Searching all notes is in the sidebar, with its button at the top, and Ctrl+Shift+F (Ctrl+F
   finds in the open note; with no note open it still searches all notes). The notes found show
   in the tree's place, in their folders, with how many each folder holds; a click or Enter
@@ -45,6 +47,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A narrow window gives the note all its width: the sidebar never went away there, the outline
+  folding instead
 - A table's handles show as the pointer comes near the table from outside it too: beside a
   row's first pipe (its row grip there), past the last column or under the last row (the bars
   that add one), not only once it has been over the table's text

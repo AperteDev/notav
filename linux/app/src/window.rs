@@ -109,7 +109,7 @@ struct Ui {
     window: adw::ApplicationWindow,
     toasts: adw::ToastOverlay,
     stack: gtk::Stack,
-    split: adw::NavigationSplitView,
+    split: adw::OverlaySplitView,
     /// Welcome page: the steps adding the first account (`add_account`).
     welcome: adw::Bin,
     add_account: RefCell<Option<Rc<crate::add_account::AddAccount>>>,
@@ -258,6 +258,7 @@ pub fn setup_actions(app: &adw::Application) {
     app.set_accels_for_action("win.find-next", &["<Control>g"]);
     app.set_accels_for_action("win.find-previous", &["<Control><Shift>g"]);
     app.set_accels_for_action("win.search", &["<Control><Shift>f"]);
+    app.set_accels_for_action("win.toggle-sidebar", &["F9"]);
     app.set_accels_for_action("win.undo", &["<Control>z"]);
     app.set_accels_for_action(
         "win.zoom-in",
@@ -1102,6 +1103,22 @@ fn connect(ui: &Rc<Ui>) {
     let new = add("new-note", new_note);
     let daily = add("daily-note", daily_note);
     let search = add("search", search_notes);
+    add("toggle-sidebar", |ui| {
+        ui.split.set_show_sidebar(!ui.split.shows_sidebar())
+    });
+    // Hidden, the keys go to the note's text (the split view moves them out of the sidebar to the
+    // header's first button), unless they are in the note or its find bar already.
+    let weak = Rc::downgrade(ui);
+    ui.split.connect_show_sidebar_notify(move |s| {
+        let Some(ui) = weak.upgrade() else { return };
+        if !s.shows_sidebar()
+            && ui.current.borrow().is_some()
+            && gtk::prelude::RootExt::focus(&ui.window)
+                .is_none_or(|f| !f.is_ancestor(&ui.note_stack) && !f.is_ancestor(&ui.find_bar))
+        {
+            ui.editor.grab_focus();
+        }
+    });
     let find = [
         add("find", |ui| open_find(ui, false)),
         add("find-replace", |ui| open_find(ui, true)),
@@ -1289,13 +1306,6 @@ fn connect(ui: &Rc<Ui>) {
     context_menu(ui);
     connect_drop(ui);
 
-    // Shrinking keeps the open note.
-    ui.split.connect_collapsed_notify(|s| {
-        if s.is_collapsed() {
-            s.set_show_content(true);
-        }
-    });
-
     // A folder opens or closes, a note opens; after the click, as that rebuilds the tree.
     let weak = Rc::downgrade(ui);
     ui.tree.connect_row_activated(move |_, row| {
@@ -1305,7 +1315,7 @@ fn connect(ui: &Rc<Ui>) {
         glib::idle_add_local_once(move || {
             if let Some(Item::Note(n)) = item {
                 open_note(&ui, &n);
-                ui.split.set_show_content(true);
+                show_content(&ui);
             }
         });
     });
@@ -1350,7 +1360,7 @@ fn connect(ui: &Rc<Ui>) {
             return;
         };
         open_note_in(&ui, &n, true);
-        ui.split.set_show_content(true);
+        show_content(&ui);
     });
     ui.window.add_action(&open_in_tab);
 
@@ -1405,7 +1415,7 @@ fn connect(ui: &Rc<Ui>) {
         let item = ui.found.borrow().get(row.index() as usize).cloned();
         if let Some(Item::Note(n)) = item {
             open_note(&ui, &n);
-            ui.split.set_show_content(true);
+            show_content(&ui);
         }
     });
     // Escape among the results too (the entry's own closes the search), back to the note first:
@@ -1434,7 +1444,7 @@ fn connect(ui: &Rc<Ui>) {
         });
         if let Some(n) = first {
             open_note(&ui, &n);
-            ui.split.set_show_content(true);
+            show_content(&ui);
         }
     });
 
@@ -1929,9 +1939,17 @@ fn reveal(ui: &Ui, account: i64, folder: &str) {
     }
 }
 
-/// The search of all notes, in the sidebar (shown in its place when the window is narrow).
+/// The note after picking one in the sidebar: over it on a narrow window, the sidebar hides
+/// (as Todav's `show_content`).
+fn show_content(ui: &Ui) {
+    if ui.split.is_collapsed() {
+        ui.split.set_show_sidebar(false);
+    }
+}
+
+/// The search of all notes, in the sidebar (shown if hidden).
 fn search_notes(ui: &Rc<Ui>) {
-    ui.split.set_show_content(false);
+    ui.split.set_show_sidebar(true);
     ui.search_button.set_active(true);
     ui.search.grab_focus();
 }
@@ -2595,7 +2613,7 @@ fn daily_note(ui: &Rc<Ui>) {
         Ok(n) => {
             ui.search_button.set_active(false);
             open_note(ui, &n);
-            ui.split.set_show_content(true);
+            show_content(ui);
             request_sync();
         }
         Err(e) => toast(&e.to_string()),
@@ -2616,7 +2634,7 @@ fn new_note_in(ui: &Rc<Ui>, (account, folder): (i64, String)) {
         Ok(n) => {
             ui.search_button.set_active(false);
             open_note(ui, &n);
-            ui.split.set_show_content(true);
+            show_content(ui);
             // Once its page is shown: selecting earlier does not stick.
             let title = ui.title.clone();
             glib::idle_add_local_once(move || {
@@ -2876,7 +2894,7 @@ fn connect_new_tab(ui: &Rc<Ui>, row: &gtk::ListBoxRow, n: &Note) {
         // After the click, as that rebuilds the tree.
         glib::idle_add_local_once(move || {
             open_note_in(&ui, &n, true);
-            ui.split.set_show_content(true);
+            show_content(&ui);
         });
     });
     row.add_controller(click);

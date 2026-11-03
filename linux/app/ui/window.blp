@@ -21,18 +21,21 @@ Adw.ApplicationWindow window {
       Gtk.StackPage {
         name: "main";
 
-        child: Adw.NavigationSplitView split {
+        // As Todav's: the sidebar hidden with its button (F9), and by itself on a narrow window,
+        // where it then shows over the note.
+        child: Adw.OverlaySplitView split {
           min-sidebar-width: 260;
           max-sidebar-width: 340;
 
           // The notes as a tree of folders and files, as Obsidian shows them (src/window.rs
           // `refresh_tree`).
-          sidebar: Adw.NavigationPage {
-            title: "Notav";
-
-            child: Adw.ToolbarView {
+          sidebar: Adw.ToolbarView {
               [top]
               Adw.HeaderBar {
+                title-widget: Adw.WindowTitle {
+                  title: "Notav";
+                };
+
                 [end]
                 Gtk.MenuButton {
                   icon-name: "open-menu-symbolic";
@@ -105,16 +108,19 @@ Adw.ApplicationWindow window {
                   };
                 }
               };
-            };
           };
 
-          content: Adw.NavigationPage {
-            title: _("Note");
-
-            child: Adw.ToolbarView {
+          content: Adw.ToolbarView {
               [top]
               Adw.HeaderBar {
                 title-widget: Adw.WindowTitle note_title {};
+
+                [start]
+                Gtk.ToggleButton {
+                  icon-name: "sidebar-show-symbolic";
+                  tooltip-text: _("Toggle Sidebar (F9)");
+                  active: bind split.show-sidebar bidirectional;
+                }
 
                 [start]
                 Gtk.Button {
@@ -443,18 +449,12 @@ Adw.ApplicationWindow window {
               };
             };
           };
-        };
       }
     }
   };
 
-  Adw.Breakpoint {
-    condition ("max-width: 640sp")
-
-    setters {
-      split.collapsed: true;
-    }
-  }
+  // One breakpoint applies at a time, the last that matches: the narrower last, with the wider
+  // one's setters too.
 
   // Narrower, the outline covers the note instead of taking its room.
   Adw.Breakpoint {
@@ -462,6 +462,17 @@ Adw.ApplicationWindow window {
 
     setters {
       outline_split.collapsed: true;
+    }
+  }
+
+  // As Todav's: narrower still, the sidebar hides too (collapsing hides it, widening shows it
+  // again), and shows over the note.
+  Adw.Breakpoint {
+    condition ("max-width: 700sp")
+
+    setters {
+      outline_split.collapsed: true;
+      split.collapsed: true;
     }
   }
 }

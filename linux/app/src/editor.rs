@@ -49,6 +49,8 @@ const TAGS: &[(&str, &str)] = &[
     ("md-heading5", "notav-markdown:heading5"),
     ("md-heading6", "notav-markdown:heading6"),
     ("md-table", ""),
+    // A table's last line with text right under it: room for the bar that adds a row.
+    ("md-table-end", ""),
     ("md-table-header", "notav-editor:table-header"),
     ("md-quote", "notav-editor:quote"),
     ("md-code-block", "notav-editor:code-block"),
@@ -99,6 +101,9 @@ pub fn setup(buffer: &sourceview5::Buffer) {
     }
     if let Some(t) = table.lookup("md-quote") {
         t.set_left_margin(16);
+    }
+    if let Some(t) = table.lookup("md-table-end") {
+        t.set_pixels_below_lines(TABLE_SPACE);
     }
 }
 
@@ -345,6 +350,8 @@ fn tables(view: &sourceview5::View) {
 const HANDLES_REACH: i32 = 28;
 const BAR: i32 = 16;
 const BAR_GAP: i32 = 4;
+/// The room under a table with text right after it, for the bar that adds a row (`md-table-end`).
+const TABLE_SPACE: i32 = BAR + 2 * BAR_GAP;
 
 /// The handles of the table under the pointer, as Obsidian has them: a grip on the delimiter
 /// row in the column and on the left edge of the row the pointer is on (a click opens its
@@ -402,6 +409,14 @@ impl Shown {
             .iter()
             .map(|&r| view.line_yrange(&at(r)))
             .collect();
+        // The last row without the room left under it.
+        let end = buffer.tag_table().lookup("md-table-end");
+        let last = at(*self.layout.rows.last().unwrap());
+        if let (Some(end), Some(row)) = (end, self.rows.last_mut())
+            && last.has_tag(&end)
+        {
+            row.1 -= TABLE_SPACE;
+        }
         let mut delimiter = at(self.layout.rows[0]);
         delimiter.forward_line();
         self.delimiter = view.line_yrange(&delimiter);
@@ -1169,5 +1184,24 @@ pub fn restyle(buffer: &sourceview5::Buffer, source: bool) {
             &buffer.iter_at_offset(s.start as i32),
             &buffer.iter_at_offset(s.end as i32),
         );
+        if s.style == Style::Table {
+            space_below(buffer, s.end);
+        }
     }
+}
+
+/// Room under a table ending at `end` (the next line's start) for the bar that adds a row,
+/// where a line with text follows: a blank line has room for it already.
+fn space_below(buffer: &sourceview5::Buffer, end: usize) {
+    let next = buffer.iter_at_offset(end as i32);
+    let mut next_end = next;
+    if !next_end.ends_line() {
+        next_end.forward_to_line_end();
+    }
+    if next.is_end() || buffer.text(&next, &next_end, false).trim().is_empty() {
+        return;
+    }
+    let mut last = next;
+    last.backward_line();
+    buffer.apply_tag_by_name("md-table-end", &last, &next);
 }

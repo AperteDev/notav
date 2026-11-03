@@ -44,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that add one), not only once it has been over the table's text
 - The bar that adds a row no longer covers the line under a table: with text right after the
   table, Editor mode leaves room under it
+- A task's empty box `[ ]` is as wide as a ticked one `[x]`, in monospace in Editor mode
 - Opening or closing a folder in the tree no longer scrolls it to the top; the folder keeps
   the keyboard focus
 - The outline says "No Headings" for a note without headings, instead of staying blank once

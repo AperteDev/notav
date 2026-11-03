@@ -122,8 +122,9 @@ pub fn setup(buffer: &sourceview5::Buffer) {
     for (name, _) in TAGS {
         table.add(&gtk::TextTag::new(Some(name)));
     }
-    // What a style scheme cannot say. Tables in monospace, so their columns line up.
-    for name in ["md-code", "md-code-block", "md-table"] {
+    // What a style scheme cannot say. Tables in monospace, so their columns line up, and a
+    // task's box, so `[ ]` is as wide as `[x]`.
+    for name in ["md-code", "md-code-block", "md-table", "md-task"] {
         if let Some(t) = table.lookup(name) {
             t.set_family(Some("monospace"));
         }

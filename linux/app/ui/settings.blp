@@ -67,6 +67,16 @@ Adw.PreferencesDialog dialog {
         }
       }
     }
+
+    // Kept on this device only.
+    Adw.PreferencesGroup {
+      title: _("Session");
+
+      Adw.SwitchRow restore_session {
+        title: _("Restore session");
+        subtitle: _("Reopen the notes left open in tabs when Notav starts");
+      }
+    }
   }
 
   Adw.PreferencesPage {

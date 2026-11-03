@@ -72,9 +72,8 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
     mode) and read the notes as Tags does.
   - **Tags**: every tag with its count of notes, nested tags (`#a/b`) as a tree; a click lists
     the notes with it (a `tag:` search).
-- **Tabs**: the open tabs kept for the next launch (device-only); each tab's undo history
-  kept while another is shown (the one editor loads the selected tab's note, so switching
-  starts it anew).
+- **Tabs**: each tab's undo history kept while another is shown (the one editor loads the
+  selected tab's note, so switching starts it anew); a restored tab at its cursor and scroll.
 - **Notes' tree**: sorting by name (now), modified or created time, either way, from a menu
   above the tree (device-only); buttons to fold and unfold every folder.
 - **Search**: filters as Obsidian's (`path:`, `file:`, `tag:`, `"exact phrase"`, `-word`) over

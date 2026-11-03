@@ -343,6 +343,7 @@ pub fn present(app: &adw::Application) {
     if crate::ready() {
         ui.stack.set_visible_child_name("main");
         refresh(&ui);
+        restore_tabs(&ui);
     } else if ui.add_account.borrow().is_none() {
         welcome(&ui);
     }
@@ -1309,6 +1310,7 @@ fn connect(ui: &Rc<Ui>) {
     ui.tabs.connect_selected_page_notify(move |_| {
         if let Some(ui) = weak.upgrade() {
             show_tab(&ui);
+            save_tabs(&ui);
         }
     });
     let weak = Rc::downgrade(ui);
@@ -1316,6 +1318,14 @@ fn connect(ui: &Rc<Ui>) {
         let Some(ui) = weak.upgrade() else { return };
         ui.tab_notes.borrow_mut().retain(|t| t.page != *page);
         show_tab(&ui);
+        save_tabs(&ui);
+    });
+    // Dragged to another place in the bar.
+    let weak = Rc::downgrade(ui);
+    ui.tabs.connect_page_reordered(move |_, _, _| {
+        if let Some(ui) = weak.upgrade() {
+            save_tabs(&ui);
+        }
     });
     // Ctrl+W closes the tab, or the window once there is none.
     add("close-tab", |ui| match ui.tabs.selected_page() {
@@ -2247,6 +2257,7 @@ fn open_note_in(ui: &Rc<Ui>, n: &Note, new_tab: bool) {
     } else {
         ui.tabs.set_selected_page(&page);
     }
+    save_tabs(ui);
 }
 
 /// The selected tab's note in the editor, at the cursor it had there; none without tabs.
@@ -2275,6 +2286,66 @@ fn show_tab(ui: &Rc<Ui>) {
     match tab.and_then(|(id, cursor)| Some((core().note(id)?, cursor))) {
         Some((n, cursor)) => load_note(ui, &n, cursor),
         None => clear_note(ui),
+    }
+}
+
+/// The device-only `restore_session` setting (on unless "false"): the tabs open when Notav last
+/// closed come back as it starts (`restore_tabs`).
+pub fn restore_session() -> bool {
+    core().setting("restore_session".into()).as_deref() != Some("false")
+}
+
+/// Keep the open tabs, in their order, for the next start: the device-only `open_tabs`, their
+/// notes' ids (this device's), the selected one's after a `*`; nothing while Restore Session is
+/// off. Not while the window is hidden: closing it takes the tabs away, not the user.
+fn save_tabs(ui: &Ui) {
+    if !ui.window.is_visible() {
+        return;
+    }
+    let mut ids = Vec::new();
+    if restore_session() {
+        let (tabs, selected) = (ui.tab_notes.borrow(), ui.tabs.selected_page());
+        for page in (0..ui.tabs.n_pages()).map(|i| ui.tabs.nth_page(i)) {
+            if let Some(t) = tabs.iter().find(|t| t.page == page) {
+                let star = if Some(&page) == selected.as_ref() {
+                    "*"
+                } else {
+                    ""
+                };
+                ids.push(format!("{star}{}", t.id));
+            }
+        }
+    }
+    let _ = core().set_setting("open_tabs".into(), ids.join(","));
+}
+
+/// Restore Session was switched on or off (in Preferences).
+pub fn save_tabs_now() {
+    if let Some(ui) = ui() {
+        save_tabs(&ui);
+    }
+}
+
+/// The tabs open when Notav last closed (`save_tabs`), while Restore Session is on and none
+/// is open yet; those of notes gone since are left out.
+fn restore_tabs(ui: &Rc<Ui>) {
+    if !restore_session() || !ui.tab_notes.borrow().is_empty() {
+        return;
+    }
+    let saved = core().setting("open_tabs".into()).unwrap_or_default();
+    let mut selected = None;
+    for id in saved.split(',') {
+        let (star, id) = id.strip_prefix('*').map_or((false, id), |id| (true, id));
+        let Some(n) = id.parse().ok().and_then(|id| core().note(id)) else {
+            continue;
+        };
+        open_note_in(ui, &n, true);
+        if star {
+            selected = ui.tabs.selected_page();
+        }
+    }
+    if let Some(page) = selected {
+        ui.tabs.set_selected_page(&page);
     }
 }
 

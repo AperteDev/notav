@@ -22,7 +22,9 @@ pub const DEVICE_ONLY: &[&str] = &[
     "text_zoom",
     "full_width",
     "wrap_lines",
-    // UI state.
+    // UI state, and whether the tabs open (`open_tabs`, note ids: this device's) come back.
+    "restore_session",
+    "open_tabs",
     "last_note",
     "expanded_folders",
     "show_outline",

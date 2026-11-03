@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   click (or "Open in New Tab" in its menu) in a new one; the tabs show above the note once
   there are two. Each keeps where its cursor was; Ctrl+Page Down and Ctrl+Page Up go through
   them, Ctrl+W closes one (the window once none is left)
+- Restore Session, on by default (Preferences, General): the tabs open when Notav closed, and
+  the one selected, open again as it starts; kept for each device
 - GitHub's alerts in Editor mode: a quote starting with `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`,
   `[!WARNING]` or `[!CAUTION]` is a box tinted in its colour (blue, green, purple, yellow, red),
   its `[!NOTE]` and `>` bold in that colour; light and dark

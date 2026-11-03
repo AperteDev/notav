@@ -58,6 +58,12 @@ pub fn present(parent: &impl IsA<gtk::Widget>) {
         let _ = core().set_setting("tree_icons".into(), name);
         crate::window::apply_tree_look();
     });
+    let session: adw::SwitchRow = get(&b, "restore_session");
+    session.set_active(crate::window::restore_session());
+    session.connect_active_notify(|s| {
+        let _ = core().set_setting("restore_session".into(), s.is_active().to_string());
+        crate::window::save_tabs_now();
+    });
     connect_journal(&b, &dialog);
     connect_font(&b, "editor_font");
     connect_font(&b, "source_font");

@@ -29,7 +29,8 @@ What Notav can do, in short. The details of each release are in the
 - Undo deleting, moving and renaming (the toast's Undo, or Ctrl+Z).
 - Trash: restore deleted notes from Nextcloud's trash bin, or delete them for good.
 - Versions of a note, from Nextcloud's file versions, to look at and restore.
-- Search through titles and text, ignoring case and accents (Ctrl+Shift+F).
+- Search through titles and text, ignoring case and accents (Ctrl+Shift+F), the notes found
+  shown in their folders in the sidebar.
 - Journal: Today's Note (Ctrl+T), made from a template note, in a folder and name format of your
   choice.
 

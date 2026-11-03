@@ -40,6 +40,24 @@ Adw.ApplicationWindow window {
                   tooltip-text: _("Main Menu");
                   primary: true;
                 }
+
+                [end]
+                Gtk.ToggleButton search_button {
+                  icon-name: "notav-folder-search-symbolic";
+                  tooltip-text: _("Search Notes (Ctrl+Shift+F)");
+                }
+              }
+
+              // While something is typed, the matching notes take the tree's place, as a tree of
+              // their own (src/window.rs `refresh_results`): the notes' tree stays as it was.
+              [top]
+              Gtk.SearchBar search_bar {
+                search-mode-enabled: bind search_button.active bidirectional;
+
+                Gtk.SearchEntry search {
+                  placeholder-text: _("Search notes");
+                  hexpand: true;
+                }
               }
 
               content: Gtk.Stack tree_stack {
@@ -62,6 +80,27 @@ Adw.ApplicationWindow window {
                     icon-name: "folder-documents-symbolic";
                     title: _("No Notes");
                     description: _("Add one with Ctrl+N");
+                    styles ["compact"]
+                  };
+                }
+
+                Gtk.StackPage {
+                  name: "results";
+                  child: Gtk.ScrolledWindow {
+                    vexpand: true;
+                    hscrollbar-policy: never;
+
+                    Gtk.ListBox results {
+                      styles ["navigation-sidebar"]
+                    }
+                  };
+                }
+
+                Gtk.StackPage {
+                  name: "no-results";
+                  child: Adw.StatusPage {
+                    icon-name: "system-search-symbolic";
+                    title: _("No Results");
                     styles ["compact"]
                   };
                 }
@@ -188,10 +227,11 @@ Adw.ApplicationWindow window {
                   }
                 }
 
+                // Only while a note is open (src/window.rs `show_page`).
                 [end]
-                Gtk.ToggleButton search_button {
+                Gtk.ToggleButton find_button {
                   icon-name: "system-search-symbolic";
-                  tooltip-text: _("Search Notes (Ctrl+Shift+F)");
+                  tooltip-text: _("Find in Note (Ctrl+F)");
                 }
               }
 
@@ -203,26 +243,11 @@ Adw.ApplicationWindow window {
                 action-name: "app.restart";
               }
 
-              // While something is typed, the matching notes take the editor's place.
-              [top]
-              Gtk.SearchBar search_bar {
-                search-mode-enabled: bind search_button.active bidirectional;
-
-                Adw.Clamp {
-                  maximum-size: 860;
-                  hexpand: true;
-
-                  Gtk.SearchEntry search {
-                    placeholder-text: _("Search notes");
-                    hexpand: true;
-                  }
-                }
-              }
-
               // Find and replace in the open note, GtkSourceView's search (src/window.rs
               // `connect_find`).
               [top]
               Gtk.SearchBar find_bar {
+                search-mode-enabled: bind find_button.active bidirectional;
                 Adw.Clamp {
                   maximum-size: 860;
                   hexpand: true;
@@ -327,40 +352,6 @@ Adw.ApplicationWindow window {
                       icon-name: "dev.aperte.Notav-symbolic";
                       title: _("No Note Selected");
                       description: _("Pick a note or add one with Ctrl+N");
-                    };
-                  }
-
-                  Gtk.StackPage {
-                    name: "results";
-                    child: Gtk.Stack results_stack {
-                      Gtk.StackPage {
-                        name: "list";
-                        child: Gtk.ScrolledWindow {
-                          vexpand: true;
-
-                          Adw.Clamp {
-                            maximum-size: 860;
-
-                            Gtk.ListBox results {
-                              selection-mode: none;
-                              valign: start;
-                              margin-top: 12;
-                              margin-bottom: 24;
-                              margin-start: 12;
-                              margin-end: 12;
-                              styles ["boxed-list"]
-                            }
-                          }
-                        };
-                      }
-
-                      Gtk.StackPage {
-                        name: "none";
-                        child: Adw.StatusPage {
-                          icon-name: "system-search-symbolic";
-                          title: _("No Results");
-                        };
-                      }
                     };
                   }
 

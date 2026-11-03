@@ -74,7 +74,8 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
 - **Notes' tree**: sorting by name (now), modified or created time, either way, from a menu
   above the tree (device-only); buttons to fold and unfold every folder.
 - **Search**: filters as Obsidian's (`path:`, `file:`, `tag:`, `"exact phrase"`, `-word`) over
-  today's word-prefix match on FTS5, and the results with the matched line; a result opens at
+  today's word-prefix match on FTS5, and each result in the sidebar's tree with its matched
+  line under it; folders there closing (all open now, and not kept); a result opens at
   its first match, highlighted (as Obsidian and Joplin), with the find bar's text filled in.
   Find and replace in the note with case, whole words and regular expressions, as GNOME Text
   Editor's options.

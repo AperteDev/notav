@@ -106,14 +106,18 @@ struct Ui {
     welcome: adw::Bin,
     add_account: RefCell<Option<Rc<crate::add_account::AddAccount>>>,
     sync_state: gtk::Stack,
+    /// The search of all notes, in the sidebar: what it finds is a tree of its own, `results`
+    /// with its rows' items in `found`, so the notes' tree keeps its folders and scroll.
     search_button: gtk::ToggleButton,
+    search_bar: gtk::SearchBar,
     search: gtk::SearchEntry,
-    /// The notes matching the search, in the editor's place.
     results: gtk::ListBox,
-    results_stack: gtk::Stack,
-    found: RefCell<Vec<Note>>,
+    found: RefCell<Vec<Item>>,
+    /// Where the notes' tree was scrolled when the results took its place.
+    tree_top: Cell<f64>,
     /// Find and replace in the open note (`connect_find`), over `find_ctx`.
     find_bar: gtk::SearchBar,
+    find_button: gtk::ToggleButton,
     find: gtk::SearchEntry,
     find_count: gtk::Label,
     replace_button: gtk::ToggleButton,
@@ -708,11 +712,13 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         add_account: RefCell::new(None),
         sync_state: get(&b, "sync_state"),
         search_button: get(&b, "search_button"),
+        search_bar: get(&b, "search_bar"),
         search: get(&b, "search"),
         results: get(&b, "results"),
-        results_stack: get(&b, "results_stack"),
         found: RefCell::new(Vec::new()),
+        tree_top: Cell::new(0.0),
         find_bar: get(&b, "find_bar"),
+        find_button: get(&b, "find_button"),
         find: get(&b, "find"),
         find_count: get(&b, "find_count"),
         replace_button: get(&b, "replace_button"),
@@ -1256,7 +1262,6 @@ fn connect(ui: &Rc<Ui>) {
         // Account and folder rows are not activatable: they have their own keys and clicks.
         glib::idle_add_local_once(move || {
             if let Some(Item::Note(n)) = item {
-                ui.search_button.set_active(false);
                 open_note(&ui, &n);
                 ui.split.set_show_content(true);
             }
@@ -1290,23 +1295,60 @@ fn connect(ui: &Rc<Ui>) {
             refresh_results(&ui);
         }
     });
+    // Opened, the search takes the keys; closed (Escape), the note does if one is open.
+    ui.search_bar.connect_entry(&ui.search);
     let weak = Rc::downgrade(ui);
     ui.search_button.connect_active_notify(move |b| {
-        if let Some(ui) = weak.upgrade() {
-            if b.is_active() {
-                ui.find_bar.set_search_mode(false);
-            }
-            refresh_results(&ui);
+        let Some(ui) = weak.upgrade() else { return };
+        if b.is_active() {
+            ui.search.grab_focus();
+        } else if gtk::prelude::RootExt::focus(&ui.window)
+            .is_some_and(|f| f.is_ancestor(&ui.search_bar) || f.is_ancestor(&ui.results))
+            && ui.current.borrow().is_some()
+        {
+            ui.editor.grab_focus();
         }
+        refresh_results(&ui);
     });
     connect_find(ui);
+    // A found note opens with the search left as it is, to go on to the next one; Enter in the
+    // search opens the first.
     let weak = Rc::downgrade(ui);
     ui.results.connect_row_activated(move |_, row| {
         let Some(ui) = weak.upgrade() else { return };
-        let n = ui.found.borrow().get(row.index() as usize).cloned();
-        if let Some(n) = n {
-            ui.search_button.set_active(false);
+        let item = ui.found.borrow().get(row.index() as usize).cloned();
+        if let Some(Item::Note(n)) = item {
             open_note(&ui, &n);
+            ui.split.set_show_content(true);
+        }
+    });
+    // Escape among the results too (the entry's own closes the search), back to the note first:
+    // closing empties the search, and the results go with the focus.
+    let escape = gtk::ShortcutController::new();
+    let weak = Rc::downgrade(ui);
+    escape.add_shortcut(gtk::Shortcut::new(
+        gtk::ShortcutTrigger::parse_string("Escape"),
+        Some(gtk::CallbackAction::new(move |_, _| {
+            if let Some(ui) = weak.upgrade() {
+                if ui.current.borrow().is_some() {
+                    ui.editor.grab_focus();
+                }
+                ui.search_button.set_active(false);
+            }
+            glib::Propagation::Stop
+        })),
+    ));
+    ui.results.add_controller(escape);
+    let weak = Rc::downgrade(ui);
+    ui.search.connect_activate(move |_| {
+        let Some(ui) = weak.upgrade() else { return };
+        let first = ui.found.borrow().iter().find_map(|i| match i {
+            Item::Note(n) => Some(n.clone()),
+            _ => None,
+        });
+        if let Some(n) = first {
+            open_note(&ui, &n);
+            ui.split.set_show_content(true);
         }
     });
 
@@ -1563,9 +1605,38 @@ fn refresh_tree(ui: &Rc<Ui>) {
         // Not laid out yet, the row is taken to be at the top, and the list scrolls there.
         ui.tree_scroll.vadjustment().set_value(top);
     }
-    ui.tree_stack
-        .set_visible_child_name(if items.is_empty() { "empty" } else { "tree" });
     *ui.items.borrow_mut() = items.into_iter().map(|(_, i)| i).collect();
+    show_sidebar_page(ui);
+}
+
+/// The search's results while something is typed in it, else the notes' tree (or that there
+/// are none). The tree, hidden, keeps its rows; shown again, it is where it was scrolled.
+fn show_sidebar_page(ui: &Ui) {
+    let page = match () {
+        _ if searching(ui) && ui.found.borrow().is_empty() => "no-results",
+        _ if searching(ui) => "results",
+        _ if ui.items.borrow().is_empty() => "empty",
+        _ => "tree",
+    };
+    let was = ui.tree_stack.visible_child_name();
+    if was.as_deref() == Some(page) {
+        return;
+    }
+    let adj = ui.tree_scroll.vadjustment();
+    if was.as_deref() == Some("tree") {
+        ui.tree_top.set(adj.value());
+    }
+    ui.tree_stack.set_visible_child_name(page);
+    if page == "tree" {
+        // Once laid out again: until then the list may be shorter than where it was.
+        let top = ui.tree_top.get();
+        glib::idle_add_local_once(move || adj.set_value(top));
+    }
+}
+
+/// Something is typed in the open search of all notes.
+fn searching(ui: &Ui) -> bool {
+    ui.search_button.is_active() && !ui.search.text().trim().is_empty()
 }
 
 /// The tree's rows: with more than one account, each account's (open unless closed), then
@@ -1652,10 +1723,10 @@ fn tree_icons() -> (bool, bool) {
     }
 }
 
-/// The tree in the density and with the icons set in Preferences.
+/// The tree (and the search's) in the density and with the icons set in Preferences.
 pub fn apply_tree_look() {
     if let Some(ui) = ui() {
-        refresh_tree(&ui);
+        refresh(&ui);
     }
 }
 
@@ -1769,7 +1840,9 @@ fn reveal(ui: &Ui, account: i64, folder: &str) {
     }
 }
 
+/// The search of all notes, in the sidebar (shown in its place when the window is narrow).
 fn search_notes(ui: &Rc<Ui>) {
+    ui.split.set_show_content(false);
     ui.search_button.set_active(true);
     ui.search.grab_focus();
 }
@@ -1944,7 +2017,8 @@ fn connect_find(ui: &Rc<Ui>) {
         let on = bar.is_search_mode();
         ui.find_ctx.set_highlight(on);
         if on {
-            ui.search_button.set_active(false);
+            // Opened with its button.
+            ui.find.grab_focus();
         } else if gtk::prelude::RootExt::focus(&ui.window).is_some_and(|f| f.is_ancestor(bar)) {
             ui.editor.grab_focus();
         }
@@ -1965,40 +2039,66 @@ fn connect_find(ui: &Rc<Ui>) {
     });
 }
 
-/// The notes matching the search in the editor's place, while something is typed.
+/// The notes matching the search, while something is typed, in the tree's place: a tree of
+/// their own, as the notes' tree orders them, with the folders holding them, all open, and
+/// how many matches each holds.
 fn refresh_results(ui: &Rc<Ui>) {
-    let query = ui.search.text().trim().to_string();
-    let searching = ui.search_button.is_active() && !query.is_empty() && crate::ready();
-    let mut found = if searching {
-        core().search(query)
+    let found = if searching(ui) && crate::ready() {
+        core().search(ui.search.text().trim().to_string())
     } else {
         Vec::new()
     };
-    found.sort_by(|a, b| b.modified.cmp(&a.modified).then(a.path.cmp(&b.path)));
-    ui.results.remove_all();
+    let mut open = HashSet::new();
     for n in &found {
-        let row = adw::ActionRow::builder()
-            .title(&n.title)
-            .subtitle(subtitle(n))
-            .use_markup(false)
-            .activatable(true)
-            .build();
-        ui.results.append(&row);
+        let mut f = n.folder.as_str();
+        while !f.is_empty() {
+            open.insert(folder_key(n.account, f));
+            f = f.rsplit_once('/').map_or("", |(p, _)| p);
+        }
     }
-    ui.results_stack
-        .set_visible_child_name(if found.is_empty() { "none" } else { "list" });
-    *ui.found.borrow_mut() = found;
-    show_page(ui);
+    let accounts: Vec<(i64, Vec<String>)> = shown_accounts()
+        .iter()
+        .filter(|a| found.iter().any(|n| n.account == a.id))
+        .map(|a| {
+            let prefix = folder_key(a.id, "");
+            let folders = open.iter().filter_map(|k| k.strip_prefix(&prefix));
+            (a.id, folders.map(str::to_string).collect())
+        })
+        .collect();
+    let items = tree(&accounts, &found, &open);
+    ui.results.remove_all();
+    if dense_tree() {
+        ui.results.add_css_class("dense");
+    } else {
+        ui.results.remove_css_class("dense");
+    }
+    let (icons, current) = (tree_icons(), ui.current.borrow().as_ref().map(|n| n.id));
+    for (depth, item) in &items {
+        let count = match item {
+            Item::Account(a) => found.iter().filter(|n| n.account == *a).count(),
+            Item::Folder(a, f) => notes_in(&found, *a, f),
+            Item::Note(_) => 0,
+        };
+        let row = tree_row(*depth, item, true, icons, count);
+        row.set_activatable(matches!(item, Item::Note(_)));
+        ui.results.append(&row);
+        if matches!(item, Item::Note(n) if Some(n.id) == current) {
+            ui.results.select_row(Some(&row));
+        }
+    }
+    *ui.found.borrow_mut() = items.into_iter().map(|(_, i)| i).collect();
+    show_sidebar_page(ui);
 }
 
-/// The search results while searching, else the open note (or that none is).
+/// The open note, or that none is; finding in it only while it is open.
 fn show_page(ui: &Ui) {
-    let searching = ui.search_button.is_active() && !ui.search.text().trim().is_empty();
-    ui.note_stack.set_visible_child_name(match () {
-        _ if searching => "results",
-        _ if ui.current.borrow().is_some() => "note",
-        _ => "none",
-    });
+    let open = ui.current.borrow().is_some();
+    ui.note_stack
+        .set_visible_child_name(if open { "note" } else { "none" });
+    ui.find_button.set_sensitive(open);
+    if !open {
+        ui.find_bar.set_search_mode(false);
+    }
     show_side_scroll(ui);
 }
 
@@ -2011,25 +2111,6 @@ fn show_side_scroll(ui: &Ui) {
             && ui.note_stack.visible_child_name().as_deref() == Some("note")
             && adj.upper() > adj.page_size() + 1.0,
     );
-}
-
-/// "Folder · date" under a note's title (the date in the locale's format).
-fn subtitle(n: &Note) -> String {
-    let date = glib::DateTime::from_unix_local(n.modified)
-        .and_then(|d| d.format("%x"))
-        .map(|d| d.to_string())
-        .unwrap_or_default();
-    // With more than one account shown, which one it is in.
-    let account = core()
-        .account(n.account)
-        .filter(|_| shown_accounts().len() > 1)
-        .map(|a| crate::account_name(&a));
-    account
-        .into_iter()
-        .chain(Some(n.folder.clone()).filter(|f| !f.is_empty()))
-        .chain([date])
-        .collect::<Vec<_>>()
-        .join(" · ")
 }
 
 /// Open the note a link in the open note names (`markdown::Link::Note`), made if there is none,
@@ -2068,8 +2149,20 @@ fn open_note(ui: &Rc<Ui>, n: &Note) {
     show_page(ui);
     show_backlinks(ui);
     *ui.target_folder.borrow_mut() = (n.account, n.folder.clone());
-    reveal(ui, n.account, &n.folder);
+    // While searching, the tree stays as it was left: the note is selected among the results.
+    if !searching(ui) {
+        reveal(ui, n.account, &n.folder);
+    }
     refresh_tree(ui);
+    let found = ui.found.borrow();
+    let i = found
+        .iter()
+        .position(|it| matches!(it, Item::Note(m) if m.id == n.id));
+    match i.and_then(|i| ui.results.row_at_index(i as i32)) {
+        Some(row) => ui.results.select_row(Some(&row)),
+        None => ui.results.unselect_all(),
+    }
+    drop(found);
     let _ = core().set_setting("last_note".into(), n.path.clone());
 }
 
@@ -2134,6 +2227,7 @@ fn close_note(ui: &Rc<Ui>) {
     show_page(ui);
     show_backlinks(ui);
     ui.tree.unselect_all();
+    ui.results.unselect_all();
 }
 
 /// Replace the editor's text without saving it back; `keep_cursor`: where it was, as far as

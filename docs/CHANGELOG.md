@@ -9,9 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Find and replace in the open note: Ctrl+F opens a bar above it that highlights the matches
-  and counts them ("2 of 11"), Enter and Shift+Enter (or Ctrl+G and Ctrl+Shift+G) go through
-  them; Ctrl+H adds a row to replace one or all. Escape goes back to the note
+- Find and replace in the open note: Ctrl+F (or the Find in Note button) opens a bar above it
+  that highlights the matches and counts them ("2 of 11"), Enter and Shift+Enter (or Ctrl+G
+  and Ctrl+Shift+G) go through them; Ctrl+H adds a row to replace one or all. Escape goes back
+  to the note
 - Back from the Notes Folder step of adding an account (on the welcome page too): the account
   just connected goes, to connect another
 - The outline shows by itself for a note with two headings or more, and hides for others,
@@ -22,8 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Searching all notes is Ctrl+Shift+F (Ctrl+F finds in the open note; with no note open it
-  still searches all notes)
+- Searching all notes is in the sidebar, with its button at the top, and Ctrl+Shift+F (Ctrl+F
+  finds in the open note; with no note open it still searches all notes). The notes found show
+  in the tree's place, in their folders, with how many each folder holds; a click or Enter
+  opens one with the search left open for the next. Closed, the tree is as it was left, its
+  folders and scroll unchanged
 - Syncing is faster when many notes changed on the server: they download six at a time, and
   the first sync lists the notes folder in one request. A first sync of 277 notes in 61
   folders takes 5 s instead of 27

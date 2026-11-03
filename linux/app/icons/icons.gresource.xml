@@ -10,6 +10,7 @@
     <file>notav-editor-mode-symbolic.svg</file>
     <file>notav-source-mode-symbolic.svg</file>
     <file>notav-drag-handle-horizontal-symbolic.svg</file>
+    <file>notav-folder-search-symbolic.svg</file>
   </gresource>
   <!-- What the About dialog shows (Adw.AboutDialog.new_from_appdata): the metainfo with its
        translations, as build.rs writes it to OUT_DIR. -->

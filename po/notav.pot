@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notav\n"
 "Report-Msgid-Bugs-To: https://github.com/AperteDev/notav/issues\n"
-"POT-Creation-Date: 2026-11-03 10:28+0100\n"
+"POT-Creation-Date: 2026-11-03 11:18+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -53,8 +53,8 @@ msgid "Sign in to your Nextcloud; Notav gets an app password of its own"
 msgstr ""
 
 #: linux/app/src/add_account.rs:325 linux/app/src/settings.rs:136
-#: linux/app/src/settings.rs:378 linux/app/src/window.rs:2320
-#: linux/app/src/window.rs:2352
+#: linux/app/src/settings.rs:378 linux/app/src/window.rs:2414
+#: linux/app/src/window.rs:2446
 msgid "Not a folder name"
 msgstr ""
 
@@ -189,14 +189,14 @@ msgid "“{title}” cannot be restored afterwards"
 msgstr ""
 
 #: linux/app/src/files.rs:192 linux/app/src/settings.rs:351
-#: linux/app/src/settings.rs:976 linux/app/src/window.rs:600
+#: linux/app/src/settings.rs:976 linux/app/src/window.rs:604
 #: linux/app/ui/account.blp:34 linux/app/ui/add-account.blp:185
 #: linux/app/ui/new-folder.blp:11 linux/app/ui/password-login.blp:19
 msgid "Cancel"
 msgstr ""
 
-#: linux/app/src/files.rs:193 linux/app/src/window.rs:2457
-#: linux/app/src/window.rs:2465
+#: linux/app/src/files.rs:193 linux/app/src/window.rs:2551
+#: linux/app/src/window.rs:2559
 msgid "Delete"
 msgstr ""
 
@@ -465,39 +465,39 @@ msgstr ""
 msgid "Donate on Liberapay"
 msgstr ""
 
-#: linux/app/src/window.rs:261
+#: linux/app/src/window.rs:265
 msgid ""
 "Notav is developed in my free time. If it keeps your notes in order, you can "
 "support its development."
 msgstr ""
 
 #. Translators: the About row that opens the page with the donation links.
-#: linux/app/src/window.rs:291
+#: linux/app/src/window.rs:295
 msgid "_Support"
 msgstr ""
 
 #. Translators: title of About's page with the donation links.
-#: linux/app/src/window.rs:293
+#: linux/app/src/window.rs:297
 msgid "Support"
 msgstr ""
 
-#: linux/app/src/window.rs:470 linux/app/ui/shortcuts.blp:59
+#: linux/app/src/window.rs:474 linux/app/ui/shortcuts.blp:59
 msgid "Undo"
 msgstr ""
 
-#: linux/app/src/window.rs:516
+#: linux/app/src/window.rs:520
 #, rust-format
 msgid "Sync failed: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:538
+#: linux/app/src/window.rs:542
 #, rust-format
 msgid ""
 "“{title}” was changed elsewhere too: your version is kept next to it as a "
 "copy"
 msgstr ""
 
-#: linux/app/src/window.rs:542
+#: linux/app/src/window.rs:546
 #, rust-format
 msgid ""
 "{n} note was changed elsewhere too: your version is kept next to it as a copy"
@@ -507,186 +507,186 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: linux/app/src/window.rs:568
+#: linux/app/src/window.rs:572
 #, rust-format
 msgid "Something in “{title}” is locked on the server"
 msgstr ""
 
-#: linux/app/src/window.rs:570
+#: linux/app/src/window.rs:574
 #, rust-format
 msgid "“{title}” is locked on the server by {owner} since {time}"
 msgstr ""
 
-#: linux/app/src/window.rs:572
+#: linux/app/src/window.rs:576
 #, rust-format
 msgid "“{title}” is locked on the server by {owner}"
 msgstr ""
 
-#: linux/app/src/window.rs:573
+#: linux/app/src/window.rs:577
 #, rust-format
 msgid "“{title}” is locked on the server"
 msgstr ""
 
-#: linux/app/src/window.rs:581
+#: linux/app/src/window.rs:585
 msgid "Unlock…"
 msgstr ""
 
-#: linux/app/src/window.rs:594
+#: linux/app/src/window.rs:598
 #, rust-format
 msgid "Unlock “{title}”?"
 msgstr ""
 
-#: linux/app/src/window.rs:596
+#: linux/app/src/window.rs:600
 msgid ""
 "Your change to it waits for the lock. If it is still open in an editor, what "
 "is saved there afterwards may be lost: unlock it only if nobody is editing "
 "it."
 msgstr ""
 
-#: linux/app/src/window.rs:601
+#: linux/app/src/window.rs:605
 msgid "Unlock"
 msgstr ""
 
-#: linux/app/src/window.rs:615
+#: linux/app/src/window.rs:619
 #, rust-format
 msgid "Cannot unlock “{title}”: {error}"
 msgstr ""
 
 #. Translators: the note's text size in the view menu, as "100%".
-#: linux/app/src/window.rs:838
+#: linux/app/src/window.rs:844
 #, rust-format
 msgid "{percent}%"
 msgstr ""
 
-#: linux/app/src/window.rs:1183
+#: linux/app/src/window.rs:1189
 msgid "No Headings"
 msgstr ""
 
-#: linux/app/src/window.rs:1726
+#: linux/app/src/window.rs:1797
 msgid "Favorite"
 msgstr ""
 
-#: linux/app/src/window.rs:1860
+#: linux/app/src/window.rs:1933
 #, rust-format
 msgid "{at} of {count}"
 msgstr ""
 
-#: linux/app/src/window.rs:1863
+#: linux/app/src/window.rs:1936
 #, rust-format
 msgid "{count} match"
 msgid_plural "{count} matches"
 msgstr[0] ""
 msgstr[1] ""
 
-#: linux/app/src/window.rs:2111
+#: linux/app/src/window.rs:2204
 #, rust-format
 msgid "Linked from {count} note"
 msgid_plural "Linked from {count} notes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: linux/app/src/window.rs:2172
+#: linux/app/src/window.rs:2266
 #, rust-format
 msgid "Cannot save the note: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:2223
+#: linux/app/src/window.rs:2317
 msgid "A note with this name exists already"
 msgstr ""
 
-#: linux/app/src/window.rs:2274
+#: linux/app/src/window.rs:2368
 msgid "Untitled"
 msgstr ""
 
-#: linux/app/src/window.rs:2310 linux/app/src/window.rs:2350
+#: linux/app/src/window.rs:2404 linux/app/src/window.rs:2444
 msgid "A folder with this name exists already"
 msgstr ""
 
-#: linux/app/src/window.rs:2331
+#: linux/app/src/window.rs:2425
 msgid "Rename Folder"
 msgstr ""
 
-#: linux/app/src/window.rs:2332
+#: linux/app/src/window.rs:2426
 msgid "Rename"
 msgstr ""
 
-#: linux/app/src/window.rs:2368 linux/app/src/window.rs:2387
+#: linux/app/src/window.rs:2462 linux/app/src/window.rs:2481
 #, rust-format
 msgid "“{title}” deleted"
 msgstr ""
 
-#: linux/app/src/window.rs:2434 linux/app/ui/shortcuts.blp:10
+#: linux/app/src/window.rs:2528 linux/app/ui/shortcuts.blp:10
 msgid "New Note"
 msgstr ""
 
-#: linux/app/src/window.rs:2436 linux/app/ui/new-folder.blp:6
+#: linux/app/src/window.rs:2530 linux/app/ui/new-folder.blp:6
 msgid "New Folder"
 msgstr ""
 
-#: linux/app/src/window.rs:2446
+#: linux/app/src/window.rs:2540
 msgid "Remove from Favorites"
 msgstr ""
 
-#: linux/app/src/window.rs:2448
+#: linux/app/src/window.rs:2542
 msgid "Add to Favorites"
 msgstr ""
 
-#: linux/app/src/window.rs:2455
+#: linux/app/src/window.rs:2549
 msgid "Versions…"
 msgstr ""
 
-#: linux/app/src/window.rs:2464
+#: linux/app/src/window.rs:2558
 msgid "Rename…"
 msgstr ""
 
-#: linux/app/src/window.rs:2616
+#: linux/app/src/window.rs:2710
 msgid "A note with this name exists in that folder already"
 msgstr ""
 
-#: linux/app/src/window.rs:2619
+#: linux/app/src/window.rs:2713
 msgid "A folder with this name exists in that folder already"
 msgstr ""
 
-#: linux/app/src/window.rs:2723
+#: linux/app/src/window.rs:2817
 msgid "Enter the Nextcloud server first"
 msgstr ""
 
-#: linux/app/src/window.rs:2758
+#: linux/app/src/window.rs:2852
 msgid "Cannot start login"
 msgstr ""
 
-#: linux/app/src/window.rs:2759
+#: linux/app/src/window.rs:2853
 #, rust-format
 msgid "Cannot start login: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:2767
+#: linux/app/src/window.rs:2861
 msgid "Login link copied to clipboard"
 msgstr ""
 
-#: linux/app/src/window.rs:2787
+#: linux/app/src/window.rs:2881
 #, rust-format
 msgid "Login failed: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:2789
+#: linux/app/src/window.rs:2883
 msgid "Login failed"
 msgstr ""
 
-#: linux/app/src/window.rs:2792
+#: linux/app/src/window.rs:2886
 msgid "Login timed out"
 msgstr ""
 
-#: linux/app/src/window.rs:2841
+#: linux/app/src/window.rs:2935
 msgid "Wrong login name or password"
 msgstr ""
 
-#: linux/app/src/window.rs:2842
+#: linux/app/src/window.rs:2936
 #, rust-format
 msgid "Sign-in failed: {error}"
 msgstr ""
 
-#: linux/app/src/window.rs:2843
+#: linux/app/src/window.rs:2937
 msgid "Sign-in failed"
 msgstr ""
 
@@ -933,7 +933,7 @@ msgid ""
 "cells"
 msgstr ""
 
-#: linux/app/ui/settings.blp:139 linux/app/ui/window.blp:100
+#: linux/app/ui/settings.blp:139 linux/app/ui/window.blp:139
 msgid "Outline"
 msgstr ""
 
@@ -1011,11 +1011,11 @@ msgstr ""
 msgid "Undo Delete or Move"
 msgstr ""
 
-#: linux/app/ui/shortcuts.blp:35 linux/app/ui/window.blp:479
+#: linux/app/ui/shortcuts.blp:35 linux/app/ui/window.blp:470
 msgid "Preferences"
 msgstr ""
 
-#: linux/app/ui/shortcuts.blp:40 linux/app/ui/window.blp:480
+#: linux/app/ui/shortcuts.blp:40 linux/app/ui/window.blp:471
 msgid "Keyboard Shortcuts"
 msgstr ""
 
@@ -1023,7 +1023,7 @@ msgstr ""
 msgid "Close Window"
 msgstr ""
 
-#: linux/app/ui/shortcuts.blp:50 linux/app/ui/window.blp:482
+#: linux/app/ui/shortcuts.blp:50 linux/app/ui/window.blp:473
 msgid "Quit"
 msgstr ""
 
@@ -1075,7 +1075,7 @@ msgstr ""
 msgid "Reset Text Size"
 msgstr ""
 
-#: linux/app/ui/trash.blp:7 linux/app/ui/window.blp:474
+#: linux/app/ui/trash.blp:7 linux/app/ui/window.blp:465
 msgid "Trash"
 msgstr ""
 
@@ -1123,123 +1123,127 @@ msgstr ""
 msgid "Main Menu"
 msgstr ""
 
-#: linux/app/ui/window.blp:63
-msgid "No Notes"
-msgstr ""
-
-#: linux/app/ui/window.blp:64
-msgid "Add one with Ctrl+N"
-msgstr ""
-
-#: linux/app/ui/window.blp:73
-msgid "Note"
-msgstr ""
-
-#: linux/app/ui/window.blp:83
-msgid "New Note (Ctrl+N)"
-msgstr ""
-
-#: linux/app/ui/window.blp:91
-msgid "Today’s Note (Ctrl+T)"
-msgstr ""
-
-#: linux/app/ui/window.blp:107
-msgid "View Options"
-msgstr ""
-
-#: linux/app/ui/window.blp:122
-msgid "Smaller Text (Ctrl+−)"
-msgstr ""
-
-#: linux/app/ui/window.blp:129
-msgid "Reset Text Size (Ctrl+0)"
-msgstr ""
-
-#: linux/app/ui/window.blp:141
-msgid "Larger Text (Ctrl++)"
-msgstr ""
-
-#: linux/app/ui/window.blp:157
-msgid "Editor Mode"
-msgstr ""
-
-#: linux/app/ui/window.blp:163
-msgid "Source Mode"
-msgstr ""
-
-#: linux/app/ui/window.blp:170
-msgid "Sync (F5)"
-msgstr ""
-
-#: linux/app/ui/window.blp:194
+#: linux/app/ui/window.blp:47
 msgid "Search Notes (Ctrl+Shift+F)"
 msgstr ""
 
-#: linux/app/ui/window.blp:201
-msgid "Notav was updated: restart it to use the new version"
-msgstr ""
-
-#: linux/app/ui/window.blp:202
-msgid "Restart"
-msgstr ""
-
-#: linux/app/ui/window.blp:216
+#: linux/app/ui/window.blp:58
 msgid "Search notes"
 msgstr ""
 
-#: linux/app/ui/window.blp:238
-msgid "Find in note"
+#: linux/app/ui/window.blp:81
+msgid "No Notes"
 msgstr ""
 
-#: linux/app/ui/window.blp:251
-msgid "Previous Match (Ctrl+Shift+G)"
+#: linux/app/ui/window.blp:82
+msgid "Add one with Ctrl+N"
 msgstr ""
 
-#: linux/app/ui/window.blp:257
-msgid "Next Match (Ctrl+G)"
-msgstr ""
-
-#: linux/app/ui/window.blp:264
-msgid "Replace (Ctrl+H)"
-msgstr ""
-
-#: linux/app/ui/window.blp:273 linux/app/ui/window.blp:277
-msgid "Replace with"
-msgstr ""
-
-#: linux/app/ui/window.blp:282
-msgid "_Replace"
-msgstr ""
-
-#: linux/app/ui/window.blp:288
-msgid "Replace _All"
-msgstr ""
-
-#: linux/app/ui/window.blp:328
-msgid "No Note Selected"
-msgstr ""
-
-#: linux/app/ui/window.blp:329
-msgid "Pick a note or add one with Ctrl+N"
-msgstr ""
-
-#: linux/app/ui/window.blp:361
+#: linux/app/ui/window.blp:103
 msgid "No Results"
 msgstr ""
 
-#: linux/app/ui/window.blp:395
+#: linux/app/ui/window.blp:112
+msgid "Note"
+msgstr ""
+
+#: linux/app/ui/window.blp:122
+msgid "New Note (Ctrl+N)"
+msgstr ""
+
+#: linux/app/ui/window.blp:130
+msgid "Today’s Note (Ctrl+T)"
+msgstr ""
+
+#: linux/app/ui/window.blp:146
+msgid "View Options"
+msgstr ""
+
+#: linux/app/ui/window.blp:161
+msgid "Smaller Text (Ctrl+−)"
+msgstr ""
+
+#: linux/app/ui/window.blp:168
+msgid "Reset Text Size (Ctrl+0)"
+msgstr ""
+
+#: linux/app/ui/window.blp:180
+msgid "Larger Text (Ctrl++)"
+msgstr ""
+
+#: linux/app/ui/window.blp:196
+msgid "Editor Mode"
+msgstr ""
+
+#: linux/app/ui/window.blp:202
+msgid "Source Mode"
+msgstr ""
+
+#: linux/app/ui/window.blp:209
+msgid "Sync (F5)"
+msgstr ""
+
+#: linux/app/ui/window.blp:234
+msgid "Find in Note (Ctrl+F)"
+msgstr ""
+
+#: linux/app/ui/window.blp:241
+msgid "Notav was updated: restart it to use the new version"
+msgstr ""
+
+#: linux/app/ui/window.blp:242
+msgid "Restart"
+msgstr ""
+
+#: linux/app/ui/window.blp:263
+msgid "Find in note"
+msgstr ""
+
+#: linux/app/ui/window.blp:276
+msgid "Previous Match (Ctrl+Shift+G)"
+msgstr ""
+
+#: linux/app/ui/window.blp:282
+msgid "Next Match (Ctrl+G)"
+msgstr ""
+
+#: linux/app/ui/window.blp:289
+msgid "Replace (Ctrl+H)"
+msgstr ""
+
+#: linux/app/ui/window.blp:298 linux/app/ui/window.blp:302
+msgid "Replace with"
+msgstr ""
+
+#: linux/app/ui/window.blp:307
+msgid "_Replace"
+msgstr ""
+
+#: linux/app/ui/window.blp:313
+msgid "Replace _All"
+msgstr ""
+
+#: linux/app/ui/window.blp:353
+msgid "No Note Selected"
+msgstr ""
+
+#: linux/app/ui/window.blp:354
+msgid "Pick a note or add one with Ctrl+N"
+msgstr ""
+
+#: linux/app/ui/window.blp:386
 msgid "Title"
 msgstr ""
 
-#: linux/app/ui/window.blp:466
+#: linux/app/ui/window.blp:457
 msgid "Wrap Lines"
 msgstr ""
 
-#: linux/app/ui/window.blp:467
+#: linux/app/ui/window.blp:458
 msgid "Full Width"
 msgstr ""
 
-#: linux/app/ui/window.blp:481
+#: linux/app/ui/window.blp:472
 msgid "About Notav"
 msgstr ""
 

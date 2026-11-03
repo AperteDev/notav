@@ -850,18 +850,46 @@ fn apply_text_look(ui: &Ui) {
     let percent = gettext("{percent}%");
     ui.zoom_reset
         .set_label(&percent.replace("{percent}", &zoom.to_string()));
-    let full = full_width();
-    // No limit: wider than any window.
-    ui.note_clamp
-        .set_maximum_size(if full { 100_000 } else { 720 });
-    ui.note_clamp
-        .set_tightening_threshold(if full { 100_000 } else { 600 });
     ui.editor.set_wrap_mode(if wrap_lines() {
         gtk::WrapMode::WordChar
     } else {
         gtk::WrapMode::None
     });
+    fit_width(ui);
+    // Again in the new font and size, which the text takes as the next frame is laid out: on
+    // the frame after.
+    let first = Cell::new(true);
+    ui.editor.add_tick_callback(move |_, _| {
+        if first.replace(false) {
+            return glib::ControlFlow::Continue;
+        }
+        if let Some(ui) = self::ui() {
+            fit_width(&ui);
+        }
+        glib::ControlFlow::Break
+    });
     show_side_scroll(ui);
+}
+
+/// The note's width: a line of about 80 characters, or with Full Width all the window's (no
+/// limit: wider than any window). A table or a code block wider than that, which does not wrap,
+/// widens it as far as the window goes; the text scrolls sideways only past that.
+fn fit_width(ui: &Ui) {
+    let (max, tighten) = if full_width() {
+        (100_000, 100_000)
+    } else {
+        // The block's width in the text, with the text's margin after it and the note's box's
+        // margins (12 a side).
+        let block = crate::editor::widest_block(&ui.editor) + ui.editor.right_margin() + 24;
+        // Wider, all of it as far as the window goes: no narrowing from the threshold on.
+        if block > 720 {
+            (block, block)
+        } else {
+            (720, 600)
+        }
+    };
+    ui.note_clamp.set_maximum_size(max);
+    ui.note_clamp.set_tightening_threshold(tighten);
 }
 
 /// A CSS rule giving `selector` `font` (`family` without one, else the inherited one) at its
@@ -923,6 +951,7 @@ fn restyle(ui: &Rc<Ui>) {
             ui.restyle_pending.set(false);
             crate::editor::restyle(&ui.buffer, source_mode());
             refresh_outline(&ui);
+            fit_width(&ui);
         }
         glib::ControlFlow::Break
     });

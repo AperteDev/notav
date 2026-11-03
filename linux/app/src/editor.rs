@@ -132,11 +132,16 @@ pub fn setup(buffer: &sourceview5::Buffer) {
     if let Some(t) = table.lookup("md-quote") {
         t.set_left_margin(16);
     }
-    // A table wider than the text stays in its columns, the text scrolling sideways instead
-    // (window.rs `show_side_scroll`) as far as the bar that adds a column, past its end.
-    if let Some(t) = table.lookup("md-table") {
-        t.set_wrap_mode(gtk::WrapMode::None);
-        t.set_right_margin(BAR + 2 * BAR_GAP);
+    // A table or a code block wider than the text stays as it is: the note widens for it
+    // (window.rs `fit_width`), the text scrolling sideways past the window's width (as far as
+    // the bar that adds a column, past a table's end).
+    for (name, after) in NO_WRAP {
+        if let Some(t) = table.lookup(name) {
+            t.set_wrap_mode(gtk::WrapMode::None);
+            if after > 0 {
+                t.set_right_margin(after);
+            }
+        }
     }
     if let Some(t) = table.lookup("md-table-end") {
         t.set_pixels_below_lines(TABLE_SPACE);
@@ -388,6 +393,39 @@ const BAR: i32 = 16;
 const BAR_GAP: i32 = 4;
 /// The room under a table with text right after it, for the bar that adds a row (`md-table-end`).
 const TABLE_SPACE: i32 = BAR + 2 * BAR_GAP;
+
+/// What never wraps, with the room after its lines' end (a table's for the bar that adds a
+/// column; none: the text's margin).
+const NO_WRAP: [(&str, i32); 2] = [("md-table", BAR + 2 * BAR_GAP), ("md-code-block", 0)];
+
+/// How far the widest line of a table or a code block reaches, with the room after it (pixels,
+/// in the text: its left margin too); 0 without any.
+pub fn widest_block(view: &sourceview5::View) -> i32 {
+    let buffer = view.buffer();
+    let tags: Vec<_> = NO_WRAP
+        .iter()
+        .filter_map(|(name, after)| Some((buffer.tag_table().lookup(name)?, *after)))
+        .collect();
+    let mut widest = 0;
+    for line in 0..buffer.line_count() {
+        let Some(start) = buffer.iter_at_line(line) else {
+            continue;
+        };
+        let mut end = start;
+        if !end.ends_line() {
+            end.forward_to_line_end();
+        }
+        // The line's last character: a table's first may be indentation.
+        let mut last = end;
+        last.backward_char();
+        for (tag, after) in &tags {
+            if start.has_tag(tag) || last.has_tag(tag) {
+                widest = widest.max(view.iter_location(&end).x() + after);
+            }
+        }
+    }
+    widest
+}
 
 /// The handles of the table under the pointer, as Obsidian has them: a grip on the delimiter
 /// row in the column and on the left edge of the row the pointer is on (a click opens its

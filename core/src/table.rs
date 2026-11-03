@@ -376,6 +376,45 @@ pub fn padding_taken(text: &str, at: usize, len: usize) -> Option<Range<usize>> 
     Some(start..start + n)
 }
 
+/// After `deleted` was deleted at character `at` in a table's cell, the padding that keeps the
+/// pipes in place: where it goes (a character) and how many spaces, as wide as what went. At the
+/// cell's end, or at its start in a column aligned right (more room before its text than after,
+/// as `padding_taken` takes it). None out of a cell between two pipes, past a pipe or a line,
+/// and in the delimiter row, which is not padded with spaces.
+pub fn padding_given(text: &str, at: usize, deleted: &str) -> Option<(usize, usize)> {
+    let n = width(deleted);
+    if n == 0 || deleted.contains(['|', '\n']) {
+        return None;
+    }
+    let from = byte(text, at)?;
+    let line_start = text[..from].rfind('\n').map_or(0, |n| n + 1);
+    let line_end = text[from..].find('\n').map_or(text.len(), |n| from + n);
+    let line = &text[line_start..line_end];
+    let delimiter = line
+        .chars()
+        .all(|c| matches!(c, '|' | ':' | '-' | ' ' | '\t'));
+    if !line.contains('|') || delimiter || Table::find(text, from).is_none() {
+        return None;
+    }
+    let from = from - line_start;
+    let s = cells(line)
+        .into_iter()
+        .map(|c| c.stretch)
+        .find(|s| s.start <= from && from <= s.end)?;
+    let piped = |i: usize| line.as_bytes().get(i) == Some(&b'|');
+    if s.start == 0 || !piped(s.start - 1) || !piped(s.end) {
+        return None;
+    }
+    let cell = &line[s.clone()];
+    let before = cell.len() - cell.trim_start().len();
+    let after = cell.len() - cell.trim_end().len();
+    let right = before > 1 && after <= 1 && !cell.trim().is_empty();
+    Some((
+        chars(text, line_start + if right { s.start } else { s.end }),
+        n,
+    ))
+}
+
 /// Whether character `at` is in a table's lines.
 pub fn is_at(text: &str, at: usize) -> bool {
     byte(text, at).and_then(|b| Table::find(text, b)).is_some()
@@ -1047,6 +1086,45 @@ mod tests {
         assert_eq!(
             typed("a | b\n--|--\n1 | 2[3]   "),
             "a | b\n--|--\n1 | 23   "
+        );
+    }
+
+    #[test]
+    fn deleting_gives_the_padding_back() {
+        // `text` with `deleted` just deleted at `‸`, after the padding given back is in.
+        let deleted = |text: &str, deleted: &str| {
+            let at = text[..text.find('‸').unwrap()].chars().count();
+            let mut chars: Vec<char> = text.replace('‸', "").chars().collect();
+            if let Some((at, n)) = padding_given(&chars.iter().collect::<String>(), at, deleted) {
+                chars.splice(at..at, std::iter::repeat_n(' ', n));
+            }
+            chars.into_iter().collect::<String>()
+        };
+        let table = |row: &str| format!("| a     | b |\n| ----- | - |\n{row}");
+        assert_eq!(
+            deleted(&table("| xy‸   | 1 |"), "z"),
+            table("| xy    | 1 |")
+        );
+        assert_eq!(
+            deleted(&table("| ‸z   | 1 |"), "xy"),
+            table("| z     | 1 |")
+        );
+        assert_eq!(
+            deleted(&table("| x‸    | 1 |"), "界"),
+            table("| x      | 1 |")
+        );
+        // A column aligned right has its padding before the text.
+        let right = |row: &str| format!("| a |     b |\n| - | ----: |\n{row}");
+        assert_eq!(
+            deleted(&right("| 1 |    2‸ |"), "3"),
+            right("| 1 |     2 |")
+        );
+        // Not over a pipe, out of a table or in the delimiter row.
+        assert_eq!(deleted(&table("| x‸ 1 |"), " |"), table("| x 1 |"));
+        assert_eq!(deleted("a b‸ c |", "x"), "a b c |");
+        assert_eq!(
+            deleted("| a | b |\n| -‸ | - |\n", "-"),
+            "| a | b |\n| - | - |\n"
         );
     }
 

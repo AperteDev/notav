@@ -979,11 +979,11 @@ fn tidy_left(buffer: &sourceview5::Buffer) {
     }
 }
 
-/// Text typed in a table's cell takes its padding (`table::padding_taken`), so the pipes stay
-/// in place, if `format_tables`. Done once the text is in, as part of the same step to undo;
-/// not while undoing or redoing, which put back what was there.
+/// Text typed in a table's cell takes its padding (`table::padding_taken`), and text deleted
+/// there gives it back (`table::padding_given`), so the pipes stay in place, if
+/// `format_tables`. Done once the text is in or out, as part of the same step to undo; not while
+/// undoing or redoing, which put back what was there, nor for Editor mode's own edits.
 fn take_padding(buffer: &gtk::TextBuffer) {
-    use glib::translate::ToGlibPtr;
     let undoing = Rc::new(std::cell::Cell::new(false));
     for signal in ["undo", "redo"] {
         for after in [false, true] {
@@ -994,10 +994,41 @@ fn take_padding(buffer: &gtk::TextBuffer) {
             });
         }
     }
+    // What a deletion takes away, read before it goes.
+    let deleted = Rc::new(std::cell::RefCell::new(String::new()));
+    let gone = deleted.clone();
+    buffer.connect_local("delete-range", false, move |args| {
+        let start = args[1].get::<gtk::TextIter>().ok()?;
+        let end = args[2].get::<gtk::TextIter>().ok()?;
+        *gone.borrow_mut() = start.slice(&end).to_string();
+        None
+    });
+    let undid = undoing.clone();
+    buffer.connect_local("delete-range", true, move |args| {
+        let buffer = args[0].get::<sourceview5::Buffer>().ok()?;
+        let gone = deleted.take();
+        if undid.get() || OWN_EDIT.get() || !editor_mode(&buffer) || !format_tables() {
+            return None;
+        }
+        let at = args[1].get::<gtk::TextIter>().ok()?.offset() as usize;
+        let (start, stop) = buffer.bounds();
+        let text = buffer.text(&start, &stop, true);
+        let (pad, n) = table::padding_given(&text, at, &gone)?;
+        own_edit(|| buffer.insert(&mut buffer.iter_at_offset(pad as i32), &" ".repeat(n)));
+        // Where the text went, after the padding put before it (a column aligned right).
+        let at = buffer.iter_at_offset((if pad < at { at + n } else { at }) as i32);
+        revalidate(&args[1], &at);
+        revalidate(&args[2], &at);
+        None
+    });
     buffer.connect_local("insert-text", true, move |args| {
         let buffer = args[0].get::<sourceview5::Buffer>().ok()?;
         let typed = args[2].get::<String>().ok()?;
-        if undoing.get() || typed.contains(['|', '\n']) || !editor_mode(&buffer) || !format_tables()
+        if undoing.get()
+            || OWN_EDIT.get()
+            || typed.contains(['|', '\n'])
+            || !editor_mode(&buffer)
+            || !format_tables()
         {
             return None;
         }
@@ -1011,24 +1042,29 @@ fn take_padding(buffer: &gtk::TextBuffer) {
             buffer.iter_at_offset(taken.start as i32),
             buffer.iter_at_offset(taken.end as i32),
         );
-        buffer.delete(&mut from, &mut to);
+        own_edit(|| buffer.delete(&mut from, &mut to));
         let end = if taken.start < end {
             end - taken.len()
         } else {
             end
         };
-        // The caller's iterator, out of date after the change, put back at the typed text's end
-        // (GTK asks handlers that change the buffer to).
-        let iter = buffer.iter_at_offset(end as i32);
-        // SAFETY: the signal's second argument is the caller's `GtkTextIter`, boxed; it is
-        // written while the emission holds it.
-        unsafe {
-            let ptr = glib::gobject_ffi::g_value_get_boxed(args[1].to_glib_none().0)
-                as *mut gtk::ffi::GtkTextIter;
-            *ptr = *iter.to_glib_none().0;
-        }
+        // The caller's iterator, out of date after the change, put back at the typed text's end.
+        revalidate(&args[1], &buffer.iter_at_offset(end as i32));
         None
     });
+}
+
+/// Point a signal's text iterator argument, the caller's, out of date after a handler changed
+/// the buffer, at `iter` (GTK asks handlers that change the buffer to).
+fn revalidate(arg: &glib::Value, iter: &gtk::TextIter) {
+    use glib::translate::ToGlibPtr;
+    // SAFETY: the argument is the caller's `GtkTextIter`, boxed; it is written while the
+    // emission holds it.
+    unsafe {
+        let ptr = glib::gobject_ffi::g_value_get_boxed(arg.to_glib_none().0)
+            as *mut gtk::ffi::GtkTextIter;
+        *ptr = *iter.to_glib_none().0;
+    }
 }
 
 /// The view's buffer, its text and the cursor's offset.
@@ -1164,15 +1200,30 @@ fn editor_mode(buffer: &sourceview5::Buffer) -> bool {
 /// at the first, after what it inserts.
 fn apply(buffer: &sourceview5::Buffer, edits: &[markdown::Edit]) {
     buffer.begin_user_action();
-    for e in edits.iter().rev() {
-        let (mut start, mut end) = (
-            buffer.iter_at_offset(e.start as i32),
-            buffer.iter_at_offset(e.end as i32),
-        );
-        buffer.delete(&mut start, &mut end);
-        buffer.insert(&mut start, &e.text);
-    }
+    own_edit(|| {
+        for e in edits.iter().rev() {
+            let (mut start, mut end) = (
+                buffer.iter_at_offset(e.start as i32),
+                buffer.iter_at_offset(e.end as i32),
+            );
+            buffer.delete(&mut start, &mut end);
+            buffer.insert(&mut start, &e.text);
+        }
+    });
     buffer.end_user_action();
+}
+
+thread_local! {
+    /// Set while Editor mode changes the text itself, not as typed or deleted: a table's cells
+    /// keep their padding as it says (`take_padding`).
+    static OWN_EDIT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Run `f`, which changes the text, as Editor mode's own edit (`OWN_EDIT`).
+fn own_edit(f: impl FnOnce()) {
+    let was = OWN_EDIT.replace(true);
+    f();
+    OWN_EDIT.set(was);
 }
 
 /// The text under the widget's point `x`, `y`.
@@ -1245,8 +1296,10 @@ fn toggle_task(view: &sourceview5::View, x: f64, y: f64) -> bool {
         " "
     };
     buffer.begin_user_action();
-    buffer.delete(&mut start, &mut end);
-    buffer.insert(&mut start, mark);
+    own_edit(|| {
+        buffer.delete(&mut start, &mut end);
+        buffer.insert(&mut start, mark);
+    });
     buffer.end_user_action();
     true
 }

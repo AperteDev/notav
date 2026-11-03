@@ -53,6 +53,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   past that the text scrolls sideways (its scrollbar under the note, as without Wrap Lines); a
   table's handles stay on it
 - The note's text no longer moves sideways a little as a table's handles show
+- Deleting in a table's cell (Backspace, Delete) no longer pulls the pipes after it to the
+  left: what goes is given back as the cell's padding, as typing takes it
 - A task's empty box `[ ]` is as wide as a ticked one `[x]`, in monospace in Editor mode
 - Opening or closing a folder in the tree no longer scrolls it to the top; the folder keeps
   the keyboard focus

@@ -37,6 +37,7 @@ What Notav can do, in short. The details of each release are in the
 **Editing**
 
 - Saves as you type; the title is the file name.
+- Tabs, as in Obsidian: Ctrl+click or a middle click opens a note in a new one.
 - Find and replace in the open note (Ctrl+F, Ctrl+H), the matches highlighted and counted.
 - Editor mode: Markdown styled as it reads (headings, emphasis, code, quotes, lists, tasks,
   tables, links, footnotes, front matter), the marks dimmed. Source mode: plain Markdown.
@@ -80,7 +81,7 @@ What Notav can do, in short. The details of each release are in the
   by typing it.
 - Ctrl+Enter ticks a task; Enter closes code fences; Insert Alert in the right-click menu.
 - Tags, outgoing links and unlinked mentions in the side panel.
-- Tabs, templates, sorting the tree, a journal calendar.
+- Open tabs kept for the next launch; templates, sorting the tree, a journal calendar.
 - Focus mode and word count.
 - An editor toolbar; Markdown marks hidden outside the line being edited.
 - Links to Todav's tasks.

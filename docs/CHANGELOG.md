@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Tabs, as in Obsidian: a click on a note opens it in the selected tab, Ctrl+click or a middle
+  click (or "Open in New Tab" in its menu) in a new one; the tabs show above the note once
+  there are two. Each keeps where its cursor was; Ctrl+Page Down and Ctrl+Page Up go through
+  them, Ctrl+W closes one (the window once none is left)
 - GitHub's alerts in Editor mode: a quote starting with `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`,
   `[!WARNING]` or `[!CAUTION]` is a box tinted in its colour (blue, green, purple, yellow, red),
   its `[!NOTE]` and `>` bold in that colour; light and dark

@@ -42,13 +42,38 @@ Adw.ShortcutsDialog dialog {
     }
 
     Adw.ShortcutsItem {
-      title: _("Close Window");
-      action-name: "window.close";
+      title: _("Quit");
+      action-name: "app.quit";
+    }
+  }
+
+  // AdwTabView's own keys, but for Ctrl+W.
+  Adw.ShortcutsSection {
+    title: _("Tabs");
+
+    Adw.ShortcutsItem {
+      title: _("Next Tab");
+      accelerator: "<Control>Page_Down";
     }
 
     Adw.ShortcutsItem {
-      title: _("Quit");
-      action-name: "app.quit";
+      title: _("Previous Tab");
+      accelerator: "<Control>Page_Up";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Move Tab Right");
+      accelerator: "<Shift><Control>Page_Down";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Move Tab Left");
+      accelerator: "<Shift><Control>Page_Up";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Close Tab");
+      action-name: "win.close-tab";
     }
   }
 

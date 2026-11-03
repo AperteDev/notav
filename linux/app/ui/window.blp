@@ -235,6 +235,18 @@ Adw.ApplicationWindow window {
                 }
               }
 
+              // The open notes, as Obsidian's tabs (src/window.rs `open_note_in`); shown with two
+              // or more. Their view shows nothing itself (its pages are empty, so it takes no
+              // room): the one editor below shows the selected tab's note. Not hidden, as hidden
+              // it takes no keys (Ctrl+Page Down and the like).
+              [top]
+              Adw.TabBar {
+                view: tabs;
+              }
+
+              [top]
+              Adw.TabView tabs {}
+
               // A newer version installed (src/update.rs, src/window.rs `update_banner`).
               [top]
               Adw.Banner update_banner {

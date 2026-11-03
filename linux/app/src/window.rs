@@ -72,6 +72,14 @@ impl Item {
     }
 }
 
+/// An open tab: its page in the tab bar, its note, and where the cursor was in it while
+/// another tab was shown.
+struct Tab {
+    page: adw::TabPage,
+    id: i64,
+    cursor: i32,
+}
+
 /// A folder's key among the open ones (`expanded_folders`): the account's id, ":", its path.
 /// An account's is its id and ":", there while it is closed: accounts start open.
 fn folder_key(account: i64, folder: &str) -> String {
@@ -140,6 +148,9 @@ struct Ui {
     /// note's.
     target_folder: RefCell<(i64, String)>,
     note_title: adw::WindowTitle,
+    /// The open tabs, each with its note (`tab_notes`); the editor shows the selected one's.
+    tabs: adw::TabView,
+    tab_notes: RefCell<Vec<Tab>>,
     /// Offers to restart into a newer version (`update_banner`).
     update_banner: adw::Banner,
     note_stack: gtk::Stack,
@@ -238,7 +249,7 @@ pub fn setup_actions(app: &adw::Application) {
     app.set_accels_for_action("app.sync", &["F5"]);
     app.set_accels_for_action("app.quit", &["<Control>q"]);
     app.set_accels_for_action("app.shortcuts", &["<Control>question"]);
-    app.set_accels_for_action("window.close", &["<Control>w"]);
+    app.set_accels_for_action("win.close-tab", &["<Control>w"]);
     app.set_accels_for_action("win.preferences", &["<Control>comma"]);
     app.set_accels_for_action("win.new-note", &["<Control>n"]);
     app.set_accels_for_action("win.daily-note", &["<Control>t"]);
@@ -362,7 +373,7 @@ fn welcome(ui: &Rc<Ui>) {
 /// No account left: back to the welcome page.
 pub fn show_welcome() {
     if let Some(ui) = ui() {
-        close_note(&ui);
+        refresh_tabs(&ui); // closes them all
         refresh(&ui); // empties the tree
         welcome(&ui);
     }
@@ -372,14 +383,7 @@ pub fn show_welcome() {
 /// them as they are now; one added is shown open.
 pub fn account_changed() {
     if let Some(ui) = ui() {
-        if ui
-            .current
-            .borrow()
-            .as_ref()
-            .is_some_and(|n| core().note(n.id).is_none())
-        {
-            close_note(&ui);
-        }
+        refresh_tabs(&ui); // the notes of an account gone close
         if crate::ready() {
             ui.stack.set_visible_child_name("main");
         }
@@ -734,6 +738,8 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         expanded: RefCell::new(expanded_folders()),
         target_folder: RefCell::new((0, String::new())),
         note_title: get(&b, "note_title"),
+        tabs: get(&b, "tabs"),
+        tab_notes: RefCell::new(Vec::new()),
         update_banner: get(&b, "update_banner"),
         note_stack: get(&b, "note_stack"),
         title: get(&b, "title"),
@@ -773,7 +779,7 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         gtk::STYLE_PROVIDER_PRIORITY_APPLICATION + 1,
     );
     apply_text_look(&ui);
-    close_note(&ui);
+    clear_note(&ui);
     connect(&ui);
     ui.update_banner.set_revealed(crate::update::updated());
     ui
@@ -1268,6 +1274,41 @@ fn connect(ui: &Rc<Ui>) {
         });
     });
 
+    // A tab clicked, or closed (its close button, a middle click, Ctrl+W): its note, or the next
+    // one's.
+    let weak = Rc::downgrade(ui);
+    ui.tabs.connect_selected_page_notify(move |_| {
+        if let Some(ui) = weak.upgrade() {
+            show_tab(&ui);
+        }
+    });
+    let weak = Rc::downgrade(ui);
+    ui.tabs.connect_page_detached(move |_, page, _| {
+        let Some(ui) = weak.upgrade() else { return };
+        ui.tab_notes.borrow_mut().retain(|t| t.page != *page);
+        show_tab(&ui);
+    });
+    // Ctrl+W closes the tab, or the window once there is none.
+    add("close-tab", |ui| match ui.tabs.selected_page() {
+        Some(_) => close_note(ui),
+        None => ui.window.close(),
+    });
+    // From a note's menu in the tree, with its id.
+    let open_in_tab = gio::SimpleAction::new("open-in-tab", Some(glib::VariantTy::INT64));
+    let weak = Rc::downgrade(ui);
+    open_in_tab.connect_activate(move |_, id| {
+        let (Some(ui), Some(n)) = (
+            weak.upgrade(),
+            id.and_then(|i| i.get::<i64>())
+                .and_then(|id| core().note(id)),
+        ) else {
+            return;
+        };
+        open_note_in(&ui, &n, true);
+        ui.split.set_show_content(true);
+    });
+    ui.window.add_action(&open_in_tab);
+
     // Enter or Space on an account or folder opens or closes it.
     let keys = gtk::EventControllerKey::new();
     let weak = Rc::downgrade(ui);
@@ -1592,7 +1633,10 @@ fn refresh_tree(ui: &Rc<Ui>) {
                     connect_drag(ui, &row, Dragged::Folder(*a, f.clone()), name);
                 }
             }
-            Item::Note(n) => connect_drag(ui, &row, Dragged::Note(n.clone()), &n.title),
+            Item::Note(n) => {
+                connect_drag(ui, &row, Dragged::Note(n.clone()), &n.title);
+                connect_new_tab(ui, &row, n);
+            }
         }
         ui.tree.append(&row);
         if matches!(item, Item::Note(n) if Some(n.id) == current) {
@@ -2081,6 +2125,9 @@ fn refresh_results(ui: &Rc<Ui>) {
         };
         let row = tree_row(*depth, item, true, icons, count);
         row.set_activatable(matches!(item, Item::Note(_)));
+        if let Item::Note(n) = item {
+            connect_new_tab(ui, &row, n);
+        }
         ui.results.append(&row);
         if matches!(item, Item::Note(n) if Some(n.id) == current) {
             ui.results.select_row(Some(&row));
@@ -2134,16 +2181,101 @@ pub fn follow_link(target: String, heading: Option<String>, wiki: bool) {
     }
 }
 
+/// Open `n` in the selected tab, in place of its note.
 fn open_note(ui: &Rc<Ui>, n: &Note) {
-    if ui.current.borrow().as_ref().map(|c| c.id) == Some(n.id) {
+    open_note_in(ui, n, false);
+}
+
+/// Open `n` as Obsidian does: in the selected tab (the first one if there is none), or with
+/// `new_tab` in a tab of its own after it; a note open in a tab already is shown there.
+fn open_note_in(ui: &Rc<Ui>, n: &Note, new_tab: bool) {
+    let open = ui
+        .tab_notes
+        .borrow()
+        .iter()
+        .find(|t| t.id == n.id)
+        .map(|t| t.page.clone());
+    if let Some(page) = open {
+        ui.tabs.set_selected_page(&page); // shown by `show_tab`
+        return;
+    }
+    let selected = ui.tabs.selected_page();
+    let page = match selected.clone().filter(|_| !new_tab) {
+        Some(page) => page,
+        None => ui.tabs.add_page(&gtk::Box::default(), selected.as_ref()),
+    };
+    page.set_title(&n.title);
+    {
+        let mut tabs = ui.tab_notes.borrow_mut();
+        tabs.retain(|t| t.page != page);
+        tabs.push(Tab {
+            page: page.clone(),
+            id: n.id,
+            cursor: 0,
+        });
+    }
+    if ui.tabs.selected_page().as_ref() == Some(&page) {
+        show_tab(ui);
+    } else {
+        ui.tabs.set_selected_page(&page);
+    }
+}
+
+/// The selected tab's note in the editor, at the cursor it had there; none without tabs.
+fn show_tab(ui: &Rc<Ui>) {
+    let page = ui.tabs.selected_page();
+    let tab = ui
+        .tab_notes
+        .borrow()
+        .iter()
+        .find(|t| Some(&t.page) == page.as_ref())
+        .map(|t| (t.id, t.cursor));
+    let current = ui.current.borrow().as_ref().map(|n| n.id);
+    if tab.map(|t| t.0) == current {
         return;
     }
     save_now(ui);
+    let cursor = ui.buffer.cursor_position();
+    if let Some(t) = ui
+        .tab_notes
+        .borrow_mut()
+        .iter_mut()
+        .find(|t| Some(t.id) == current)
+    {
+        t.cursor = cursor;
+    }
+    match tab.and_then(|(id, cursor)| Some((core().note(id)?, cursor))) {
+        Some((n, cursor)) => load_note(ui, &n, cursor),
+        None => clear_note(ui),
+    }
+}
+
+/// Tabs as their notes are now: renamed, or closed with their note deleted.
+fn refresh_tabs(ui: &Rc<Ui>) {
+    let tabs: Vec<_> = ui
+        .tab_notes
+        .borrow()
+        .iter()
+        .map(|t| (t.page.clone(), t.id))
+        .collect();
+    for (page, id) in tabs {
+        match core().note(id) {
+            Some(n) => page.set_title(&n.title),
+            None => ui.tabs.close_page(&page),
+        }
+    }
+}
+
+/// Show `n` in the editor, the cursor at character `cursor`.
+fn load_note(ui: &Rc<Ui>, n: &Note, cursor: i32) {
     let text = core().note_text(n.id).unwrap_or_default();
     *ui.current.borrow_mut() = Some(n.clone());
     ui.title.set_text(&n.title);
     set_text(ui, &text, false);
-    ui.buffer.place_cursor(&ui.buffer.start_iter());
+    ui.buffer.place_cursor(&ui.buffer.iter_at_offset(cursor));
+    if cursor > 0 {
+        follow_cursor(ui, false);
+    }
     show_outline(ui, &text);
     show_heading(ui, n);
     show_page(ui);
@@ -2190,6 +2322,7 @@ fn show_backlinks(ui: &Rc<Ui>) {
                 .activatable(true)
                 .build();
             row.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
+            connect_new_tab(&ui, row.upcast_ref(), n);
             let (weak, n) = (Rc::downgrade(&ui), n.clone());
             row.connect_activated(move |_| {
                 if let Some(ui) = weak.upgrade() {
@@ -2216,7 +2349,16 @@ fn show_heading(ui: &Ui, n: &Note) {
     ui.note_title.set_subtitle(&n.folder);
 }
 
+/// Close the selected tab: the next one's note shows, or none.
 fn close_note(ui: &Rc<Ui>) {
+    match ui.tabs.selected_page() {
+        Some(page) => ui.tabs.close_page(&page), // `show_tab` once it is gone
+        None => clear_note(ui),
+    }
+}
+
+/// No note in the editor.
+fn clear_note(ui: &Rc<Ui>) {
     save_now(ui);
     ui.current.take();
     set_text(ui, "", false);
@@ -2271,12 +2413,12 @@ fn save_now(ui: &Ui) {
 /// After a sync or another change: the open note as it is now. Its text is replaced only
 /// while the editor has nothing unsaved (a sync never overwrites a note changed here).
 fn reload_current(ui: &Rc<Ui>) {
+    refresh_tabs(ui); // a note deleted, here or elsewhere, closes its tab
     let Some(id) = ui.current.borrow().as_ref().map(|n| n.id) else {
         return;
     };
     let Some(n) = core().note(id) else {
-        // Deleted, here or elsewhere.
-        close_note(ui);
+        clear_note(ui);
         return;
     };
     show_backlinks(ui); // other notes may have changed
@@ -2535,6 +2677,8 @@ fn context_menu(ui: &Rc<Ui>) {
                 let favorite = gio::Action::print_detailed_name("win.favorite-note", id.as_ref());
                 let delete = gio::Action::print_detailed_name("win.delete-note", id.as_ref());
                 let note = gio::Menu::new();
+                let tab = gio::Action::print_detailed_name("win.open-in-tab", id.as_ref());
+                note.append(Some(&gettext("Open in New Tab")), Some(&tab));
                 note.append(
                     Some(&if n.favorite {
                         gettext("Remove from Favorites")
@@ -2604,6 +2748,33 @@ fn context_menu(ui: &Rc<Ui>) {
         }
     });
     ui.tree_stack.add_controller(hold);
+}
+
+/// Ctrl+click or a middle click on a note's row opens it in a new tab (as in Obsidian); a click
+/// opens it in the selected one (the list's activation).
+fn connect_new_tab(ui: &Rc<Ui>, row: &gtk::ListBoxRow, n: &Note) {
+    let click = gtk::GestureClick::builder().button(0).build();
+    let (weak, n) = (Rc::downgrade(ui), n.clone());
+    click.connect_pressed(move |g, _, _, _| {
+        let ctrl = g
+            .current_event_state()
+            .contains(gtk::gdk::ModifierType::CONTROL_MASK);
+        let button = g.current_button();
+        if button != gtk::gdk::BUTTON_MIDDLE && !(ctrl && button == gtk::gdk::BUTTON_PRIMARY) {
+            return;
+        }
+        // Before the list's own, which would open it in the selected tab.
+        g.set_state(gtk::EventSequenceState::Claimed);
+        let (Some(ui), n) = (weak.upgrade(), n.clone()) else {
+            return;
+        };
+        // After the click, as that rebuilds the tree.
+        glib::idle_add_local_once(move || {
+            open_note_in(&ui, &n, true);
+            ui.split.set_show_content(true);
+        });
+    });
+    row.add_controller(click);
 }
 
 /// A row drags its note or folder, shown as a card with its name.

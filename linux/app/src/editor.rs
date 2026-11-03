@@ -132,6 +132,12 @@ pub fn setup(buffer: &sourceview5::Buffer) {
     if let Some(t) = table.lookup("md-quote") {
         t.set_left_margin(16);
     }
+    // A table wider than the text stays in its columns, the text scrolling sideways instead
+    // (window.rs `show_side_scroll`) as far as the bar that adds a column, past its end.
+    if let Some(t) = table.lookup("md-table") {
+        t.set_wrap_mode(gtk::WrapMode::None);
+        t.set_right_margin(BAR + 2 * BAR_GAP);
+    }
     if let Some(t) = table.lookup("md-table-end") {
         t.set_pixels_below_lines(TABLE_SPACE);
     }
@@ -630,7 +636,7 @@ fn handles(view: &sourceview5::View, update: impl Fn(&sourceview5::View) + 'stat
             hh.hide();
         }
     });
-    view.ancestor(gtk::ScrolledWindow::static_type())
+    view.ancestor(gtk::Viewport::static_type())
         .unwrap_or_else(|| view.clone().upcast())
         .add_controller(motion);
     // Typing moves the table: its handles go until the pointer moves.
@@ -690,6 +696,10 @@ impl Handles {
         if (s.top()..s.bottom()).contains(&y) {
             s.row = s.row_at(y);
         }
+        // Of the columns shown only: past the view's edge (the pointer in the margin beside a
+        // table scrolled sideways) is the column at the edge, not one hidden beyond it.
+        let shown = view.visible_rect();
+        let x = x.clamp(shown.x(), shown.x() + shown.width() - 1);
         if (s.left()..s.right()).contains(&x) {
             s.column = s.column_at(x);
         }
@@ -704,23 +714,41 @@ impl Handles {
         }
         self.row.set_visible(s.row != 0);
         let (top, height) = s.delimiter;
-        let middle = (s.edges[s.column] + s.edges[s.column + 1]) / 2;
-        center(view, &self.column, middle, top + height / 2);
+        // In the middle of the part of the column shown, of a table past the view's edge.
+        let shown = view.visible_rect();
+        let left = s.edges[s.column].max(shown.x());
+        let right = s.edges[s.column + 1].min(shown.x() + shown.width());
+        center(view, &self.column, (left + right) / 2, top + height / 2);
         let (top, height) = s.rows[s.row];
         center(view, &self.row, s.left(), top + height / 2);
         self.add_column.set_size_request(BAR, s.bottom() - s.top());
         view.move_overlay(&self.add_column, s.right() + BAR_GAP, s.top());
-        self.add_row.set_size_request(s.right() - s.left(), BAR);
-        view.move_overlay(&self.add_row, s.left(), s.bottom() + BAR_GAP);
+        let (left, width) = in_view(view, s.left(), s.right());
+        self.add_row.set_size_request(width, BAR);
+        view.move_overlay(&self.add_row, left, s.bottom() + BAR_GAP);
     }
 }
 
-/// Put `w`, a child of `view`, with its middle at buffer coordinates `x`, `y` (not past the
-/// view's left edge).
+/// Buffer x `left` to `right`, cut to the part of `view` shown (without its margins): its left
+/// and width. A wider child would widen the view (GtkTextView's size holds its children's), as a
+/// table wider than the text, which does not wrap, would make the row's bar.
+fn in_view(view: &sourceview5::View, left: i32, right: i32) -> (i32, i32) {
+    let shown = view.visible_rect();
+    let left = left.max(shown.x());
+    let right = right.min(shown.x() + shown.width() - view.left_margin() - view.right_margin());
+    (left, (right - left).max(1))
+}
+
+/// Put `w`, a child of `view`, with its middle at buffer coordinates `x`, `y`, within the part
+/// of the view shown (scrolled sideways, the row grip stays at its left edge).
 fn center(view: &sourceview5::View, w: &impl IsA<gtk::Widget>, x: i32, y: i32) {
     let width = w.measure(gtk::Orientation::Horizontal, -1).1;
     let height = w.measure(gtk::Orientation::Vertical, -1).1;
-    view.move_overlay(w, (x - width / 2).max(0), y - height / 2);
+    let shown = view.visible_rect();
+    let x = (x - width / 2)
+        .min(shown.x() + shown.width() - width)
+        .max(shown.x());
+    view.move_overlay(w, x, y - height / 2);
 }
 
 /// How far the pointer goes from where a grip was pressed before it is a drag, not a click.
@@ -796,8 +824,9 @@ fn drag(h: &Rc<Handles>, grip: &gtk::MenuButton, rows: bool) {
                 Ordering::Greater => top + height,
             };
             if target != source {
-                h.drop.set_size_request(s.right() - s.left(), 2);
-                view.move_overlay(&h.drop, s.left(), y - 1);
+                let (left, width) = in_view(&view, s.left(), s.right());
+                h.drop.set_size_request(width, 2);
+                view.move_overlay(&h.drop, left, y - 1);
             }
             center(&view, &grip, s.left(), y);
         } else {

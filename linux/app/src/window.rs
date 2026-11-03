@@ -2149,13 +2149,12 @@ fn show_page(ui: &Ui) {
     show_side_scroll(ui);
 }
 
-/// The note's sideways scrollbar, while its text is shown, does not wrap and has a line longer
-/// than the view.
+/// The note's sideways scrollbar, while its text is shown and has a line longer than the view
+/// (without Wrap Lines, or a wide table, which never wraps).
 fn show_side_scroll(ui: &Ui) {
     let adj = ui.side_scroll.adjustment();
     ui.side_scroll.set_visible(
-        !wrap_lines()
-            && ui.note_stack.visible_child_name().as_deref() == Some("note")
+        ui.note_stack.visible_child_name().as_deref() == Some("note")
             && adj.upper() > adj.page_size() + 1.0,
     );
 }

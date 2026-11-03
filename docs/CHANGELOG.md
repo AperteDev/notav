@@ -48,6 +48,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that add one), not only once it has been over the table's text
 - The bar that adds a row no longer covers the line under a table: with text right after the
   table, Editor mode leaves room under it
+- A table wider than the note no longer wraps out of its columns in Editor mode: its rows stay
+  whole, and the text scrolls sideways (its scrollbar under the note, as without Wrap Lines);
+  its handles stay on it
+- The note's text no longer moves sideways a little as a table's handles show
 - A task's empty box `[ ]` is as wide as a ticked one `[x]`, in monospace in Editor mode
 - Opening or closing a folder in the tree no longer scrolls it to the top; the folder keeps
   the keyboard focus

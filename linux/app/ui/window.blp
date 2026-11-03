@@ -399,14 +399,22 @@ Adw.ApplicationWindow window {
                               styles ["flat", "note-title"]
                             }
 
-                            GtkSource.View editor {
+                            // Its own scrolling sideways only (the side scrollbar, shown at the
+                            // bottom instead), so the text's width does not follow what it holds:
+                            // a table's handles, as wide as the table, would widen the note.
+                            Gtk.ScrolledWindow {
+                              hscrollbar-policy: external;
+                              vscrollbar-policy: never;
                               vexpand: true;
-                              wrap-mode: word_char;
-                              top-margin: 6;
-                              bottom-margin: 48;
-                              left-margin: 6;
-                              right-margin: 6;
-                              styles ["note-text"]
+
+                              GtkSource.View editor {
+                                wrap-mode: word_char;
+                                top-margin: 6;
+                                bottom-margin: 48;
+                                left-margin: 6;
+                                right-margin: 6;
+                                styles ["note-text"]
+                              }
                             }
 
                             // The notes linking to this one, under its text (`show_backlinks`).

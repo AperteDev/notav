@@ -139,10 +139,9 @@ Later (v2):
   from the common wide ranges (CJK, Hangul, emoji; `width` in `core/src/table.rs`). A script
   that still lines up wrong needs Unicode's whole East Asian Width table (the `unicode-width`
   crate) or measuring with Pango, and fallback fonts may not be exactly two columns wide anyway.
-  Tables wider than the text column wrap and lose the alignment (and their handles, placed from
-  the header's pipes, land off the columns); scrolling them sideways would need them out of the
-  text view. Tidying changes the file's text, which other devices and apps
-  see.
+  Tables wider than the text column do not wrap: the whole text scrolls sideways with them;
+  scrolling only the table, as Obsidian does, would need it out of the text view. Tidying
+  changes the file's text, which other devices and apps see.
 
 - **Notes on this device as files**: the local account keeps its notes in the database only,
   as Todav's local lists; Markdown files in a folder on disk would let other apps (Obsidian)

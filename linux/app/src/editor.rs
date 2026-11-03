@@ -566,11 +566,17 @@ fn handles(view: &sourceview5::View, update: impl Fn(&sourceview5::View) + 'stat
         });
     }
 
+    // Over the note's whole scrolled area, not only the text: the handles stick out of the
+    // table, and the pointer comes to them from the margins too.
     let motion = gtk::EventControllerMotion::new();
     let hh = h.clone();
     motion.connect_motion(move |m, x, y| {
-        if let Some(view) = m.widget().and_downcast() {
-            hh.hover(&view, x, y);
+        let (Some(area), Some(view)) = (m.widget(), hh.view.upgrade()) else {
+            return;
+        };
+        let point = gtk::graphene::Point::new(x as f32, y as f32);
+        if let Some(p) = area.compute_point(&view, &point) {
+            hh.hover(&view, p.x() as f64, p.y() as f64);
         }
     });
     let hh = h.clone();
@@ -579,7 +585,9 @@ fn handles(view: &sourceview5::View, update: impl Fn(&sourceview5::View) + 'stat
             hh.hide();
         }
     });
-    view.add_controller(motion);
+    view.ancestor(gtk::ScrolledWindow::static_type())
+        .unwrap_or_else(|| view.clone().upcast())
+        .add_controller(motion);
     // Typing moves the table: its handles go until the pointer moves.
     view.buffer().connect_changed(move |_| {
         if !h.busy() {
@@ -623,15 +631,21 @@ impl Handles {
                 && (s.top() - HANDLES_REACH..s.bottom() + HANDLES_REACH).contains(&y)
         };
         if !shown.as_ref().is_some_and(near) {
-            *shown = table_under(view, x, y).map(|layout| Shown::new(view, layout));
+            *shown = table_near(view, y)
+                .map(|layout| Shown::new(view, layout))
+                .filter(near);
         }
         let Some(s) = shown.as_mut() else {
             drop(shown);
             self.hide();
             return;
         };
-        if (s.left()..s.right()).contains(&x) && (s.top()..s.bottom()).contains(&y) {
+        // Each grip follows the pointer along the table: beside a row, its row's; over or under
+        // a column, its column's.
+        if (s.top()..s.bottom()).contains(&y) {
             s.row = s.row_at(y);
+        }
+        if (s.left()..s.right()).contains(&x) {
             s.column = s.column_at(x);
         }
         // Shown first: a hidden widget keeps the size it was measured at. No row grip on the
@@ -793,21 +807,34 @@ fn drag(h: &Rc<Handles>, grip: &gtk::MenuButton, rows: bool) {
     grip.add_controller(gesture);
 }
 
-/// The layout of the table at buffer coordinates `x`, `y`, in Editor mode.
-fn table_under(view: &sourceview5::View, x: i32, y: i32) -> Option<table::Layout> {
+/// The layout of the table on the line at buffer coordinate `y` or near it, in Editor mode.
+fn table_near(view: &sourceview5::View, y: i32) -> Option<table::Layout> {
     let buffer = view.buffer().downcast::<sourceview5::Buffer>().ok()?;
-    let at = view.iter_at_location(x, y)?;
-    // Parsing the note on each move only where it may be.
-    let mut end = at;
-    if !end.ends_line() {
-        end.forward_to_line_end();
-    }
-    let start = buffer.iter_at_line(at.line())?;
-    if !editor_mode(&buffer) || !buffer.text(&start, &end, false).contains('|') {
+    if !editor_mode(&buffer) {
         return None;
     }
-    let (start, end) = buffer.bounds();
-    table::layout(&buffer.text(&start, &end, true), at.offset() as usize)
+    let mut text = None;
+    // The line at `y`, then those within reach above and below: past the table's last row or
+    // above its header.
+    for dy in [0, -HANDLES_REACH, HANDLES_REACH] {
+        let (start, _) = view.line_at_y(y + dy);
+        let mut end = start;
+        if !end.ends_line() {
+            end.forward_to_line_end();
+        }
+        // Parsing the note on each move only where it may be.
+        if !buffer.text(&start, &end, false).contains('|') {
+            continue;
+        }
+        let text = text.get_or_insert_with(|| {
+            let (start, end) = buffer.bounds();
+            buffer.text(&start, &end, true)
+        });
+        if let Some(layout) = table::layout(text, start.offset() as usize) {
+            return Some(layout);
+        }
+    }
+    None
 }
 
 /// The synced `format_tables` setting (on unless "false"): tables tidied by themselves.

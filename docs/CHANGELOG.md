@@ -34,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A table's handles show as the pointer comes near the table from outside it too: beside a
+  row's first pipe (its row grip there), past the last column or under the last row (the bars
+  that add one), not only once it has been over the table's text
 - Opening or closing a folder in the tree no longer scrolls it to the top; the folder keeps
   the keyboard focus
 - The outline says "No Headings" for a note without headings, instead of staying blank once

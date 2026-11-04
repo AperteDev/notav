@@ -39,6 +39,8 @@ row.drop-below { box-shadow: inset 0 -2px 0 0 var(--accent-bg-color); }
 .table-add:hover { background-color: alpha(currentColor, 0.12); }
 .table-grip image, .table-add image { -gtk-icon-size: 12px; }
 .table-drop { background-color: var(--accent-bg-color); }
+.block-strip > undershoot { background: none; box-shadow: none; }
+.block-scrollbar { background: none; }
 ";
 
 /// How far each folder level is indented in the tree, and the width of a folder's arrow.
@@ -156,6 +158,8 @@ struct Ui {
     note_stack: gtk::Stack,
     title: gtk::Entry,
     note_scroll: gtk::ScrolledWindow,
+    /// Wide tables and code blocks, each scrolled sideways on its own (with Wrap Lines).
+    strips: Rc<crate::strips::Strips>,
     side_scroll: gtk::Scrollbar,
     note_clamp: adw::Clamp,
     note_mode: adw::ToggleGroup,
@@ -752,6 +756,7 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         note_stack: get(&b, "note_stack"),
         title: get(&b, "title"),
         note_scroll: get(&b, "note_scroll"),
+        strips: crate::strips::Strips::new(&editor, &get(&b, "note_scroll")),
         side_scroll: get(&b, "side_scroll"),
         note_clamp: get(&b, "note_clamp"),
         note_mode: get(&b, "note_mode"),
@@ -864,6 +869,7 @@ fn apply_text_look(ui: &Ui) {
         gtk::WrapMode::None
     });
     fit_width(ui);
+    show_strips(ui);
     // Again in the new font and size, which the text takes as the next frame is laid out: on
     // the frame after.
     let first = Cell::new(true);
@@ -880,11 +886,14 @@ fn apply_text_look(ui: &Ui) {
 }
 
 /// The note's width: a line of about 80 characters, or with Full Width all the window's (no
-/// limit: wider than any window). A table or a code block wider than that, which does not wrap,
-/// widens it as far as the window goes; the text scrolls sideways only past that.
+/// limit: wider than any window). With Wrap Lines a table or a code block wider than that
+/// scrolls sideways on its own (`show_strips`); without, it widens the note as far as the
+/// window goes, and the text scrolls sideways only past that.
 fn fit_width(ui: &Ui) {
     let (max, tighten) = if full_width() {
         (100_000, 100_000)
+    } else if wrap_lines() {
+        (720, 600)
     } else {
         // The block's width in the text, with the text's margin after it and the note's box's
         // margins (12 a side).
@@ -898,6 +907,12 @@ fn fit_width(ui: &Ui) {
     };
     ui.note_clamp.set_maximum_size(max);
     ui.note_clamp.set_tightening_threshold(tighten);
+}
+
+/// Wide tables and code blocks scrolled sideways each on its own: in Editor mode with Wrap
+/// Lines (without, the whole text scrolls; Source mode wraps them).
+fn show_strips(ui: &Ui) {
+    ui.strips.update(wrap_lines() && !source_mode());
 }
 
 /// A CSS rule giving `selector` `font` (`family` without one, else the inherited one) at its
@@ -960,6 +975,7 @@ fn restyle(ui: &Rc<Ui>) {
             crate::editor::restyle(&ui.buffer, source_mode());
             refresh_outline(&ui);
             fit_width(&ui);
+            show_strips(&ui);
         }
         glib::ControlFlow::Break
     });
@@ -1502,7 +1518,8 @@ fn connect(ui: &Rc<Ui>) {
         });
         let scroll = gtk::EventControllerScroll::new(gtk::EventControllerScrollFlags::HORIZONTAL);
         scroll.connect_scroll(move |c, dx, _| {
-            if dx == 0.0 || side.upper() <= side.page_size() {
+            // With Wrap Lines the text itself never scrolls sideways (wide blocks do, `strips`).
+            if dx == 0.0 || side.upper() <= side.page_size() || wrap_lines() {
                 return glib::Propagation::Proceed;
             }
             // A wheel's step as GTK's scrolled windows take it.
@@ -2212,12 +2229,13 @@ fn show_page(ui: &Ui) {
     show_side_scroll(ui);
 }
 
-/// The note's sideways scrollbar, while its text is shown and has a line longer than the view
-/// (without Wrap Lines, or a wide table, which never wraps).
+/// The note's sideways scrollbar, while its text is shown and has a line longer than the view:
+/// without Wrap Lines only (with it, wide tables and code blocks scroll on their own).
 fn show_side_scroll(ui: &Ui) {
     let adj = ui.side_scroll.adjustment();
     ui.side_scroll.set_visible(
         ui.note_stack.visible_child_name().as_deref() == Some("note")
+            && !wrap_lines()
             && adj.upper() > adj.page_size() + 1.0,
     );
 }

@@ -147,6 +147,11 @@
 - What Editor mode changes by itself (a table tidied as the cursor leaves it) gets a switch in
   Preferences, Editor → Markdown: a synced setting, on by default, read where the change is made
   (`editor::format_tables`). What the user asks for (a menu item, a click) needs none.
+- The note's text has more than one view: each wide table or code block is a second view of the
+  buffer over its lines (`strips.rs`). What a view does (keys, clicks, menus, the table handles)
+  goes in `editor::connect`, run for each; what the buffer does (tidying, marks), in
+  `editor::setup`, run once. A text view's overlays cannot be taken off it: strips are hidden
+  and used again.
 
 ## Android
 

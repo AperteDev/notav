@@ -48,6 +48,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Tables and code blocks wider than the note scroll sideways each on its own, the note keeping
+  its width (it widened for them, and the whole text scrolled sideways): edited in place, they
+  follow the cursor; their scrollbar stays at the bottom of the window while they go on below
+  it, and a touchpad's sideways move or Shift and the wheel over them scrolls them too. Without
+  Wrap Lines the whole text still scrolls
 - The sidebar, as in Todav: the Toggle Sidebar button (F9) hides and shows it; on a narrow
   window it hides by itself and shows over the note, going once a note is picked
 - Searching all notes is in the sidebar, with its button at the top, and Ctrl+Shift+F (Ctrl+F

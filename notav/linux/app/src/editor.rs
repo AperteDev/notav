@@ -146,6 +146,30 @@ pub fn setup(buffer: &sourceview5::Buffer) {
     if let Some(t) = table.lookup("md-table-end") {
         t.set_pixels_below_lines(TABLE_SPACE);
     }
+
+    // Once per buffer, whichever of its views (the note's, a wide block's strip) changes it.
+    take_padding(buffer.upcast_ref());
+    // A table is tidied once the cursor leaves the row changed in it; a change that took the
+    // cursor off the changed row (Enter) does not move it.
+    buffer.connect_end_user_action(|b| {
+        let at = b.iter_at_mark(&b.get_insert());
+        match b.mark(EDITED) {
+            Some(m) if b.iter_at_mark(&m).line() != at.line() => {
+                let b = b.downcast_ref::<sourceview5::Buffer>().unwrap().clone();
+                glib::idle_add_local_once(move || tidy_left(&b));
+            }
+            Some(m) => b.move_mark(&m, &at),
+            None => {
+                b.create_mark(Some(EDITED), &at, true);
+            }
+        }
+    });
+    buffer.connect_mark_set(|b, _, mark| {
+        if *mark == b.get_insert() {
+            let b = b.downcast_ref::<sourceview5::Buffer>().unwrap().clone();
+            glib::idle_add_local_once(move || tidy_left(&b));
+        }
+    });
 }
 
 /// What a click and keys do in Editor mode: a click ticks a task, Ctrl+click opens a link (Alt+
@@ -337,29 +361,6 @@ fn tables(view: &sourceview5::View) {
     });
     view.add_controller(keys);
 
-    let buffer = view.buffer();
-    take_padding(&buffer);
-    // A change that took the cursor off the changed row (Enter) does not move it.
-    buffer.connect_end_user_action(|b| {
-        let at = b.iter_at_mark(&b.get_insert());
-        match b.mark(EDITED) {
-            Some(m) if b.iter_at_mark(&m).line() != at.line() => {
-                let b = b.downcast_ref::<sourceview5::Buffer>().unwrap().clone();
-                glib::idle_add_local_once(move || tidy_left(&b));
-            }
-            Some(m) => b.move_mark(&m, &at),
-            None => {
-                b.create_mark(Some(EDITED), &at, true);
-            }
-        }
-    });
-    buffer.connect_mark_set(|b, _, mark| {
-        if *mark == b.get_insert() {
-            let b = b.downcast_ref::<sourceview5::Buffer>().unwrap().clone();
-            glib::idle_add_local_once(move || tidy_left(&b));
-        }
-    });
-
     view.connect_paste_clipboard(|view| {
         if !editor_mode(&view.buffer().downcast().unwrap()) {
             return;
@@ -425,6 +426,61 @@ pub fn widest_block(view: &sourceview5::View) -> i32 {
         }
     }
     widest
+}
+
+/// A table or a code block: its first and last line, and how far its widest line reaches with
+/// the room after it (pixels, in the text: its left margin too).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Block {
+    pub first: i32,
+    pub last: i32,
+    pub width: i32,
+}
+
+/// The tables and code blocks of `view`'s text, in order.
+pub fn blocks(view: &sourceview5::View) -> Vec<Block> {
+    let buffer = view.buffer();
+    let tags: Vec<_> = NO_WRAP
+        .iter()
+        .filter_map(|(name, after)| Some((buffer.tag_table().lookup(name)?, *after)))
+        .collect();
+    let mut found: Vec<(usize, Block)> = Vec::new();
+    for line in 0..buffer.line_count() {
+        let Some(start) = buffer.iter_at_line(line) else {
+            continue;
+        };
+        let mut end = start;
+        if !end.ends_line() {
+            end.forward_to_line_end();
+        }
+        // The line's last character: a table's first may be indentation.
+        let mut last = end;
+        last.backward_char();
+        let Some((kind, after)) = tags
+            .iter()
+            .enumerate()
+            .find(|(_, (tag, _))| start.has_tag(tag) || last.has_tag(tag))
+            .map(|(i, (_, after))| (i, *after))
+        else {
+            continue;
+        };
+        let width = view.iter_location(&end).x() + after;
+        match found.last_mut() {
+            Some((k, b)) if *k == kind && b.last == line - 1 => {
+                b.last = line;
+                b.width = b.width.max(width);
+            }
+            _ => found.push((
+                kind,
+                Block {
+                    first: line,
+                    last: line,
+                    width,
+                },
+            )),
+        }
+    }
+    found.into_iter().map(|(_, b)| b).collect()
 }
 
 /// The handles of the table under the pointer, as Obsidian has them: a grip on the delimiter

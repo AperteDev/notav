@@ -7,6 +7,7 @@ mod files;
 mod goa;
 mod i18n;
 mod settings;
+mod strips;
 mod update;
 mod window;
 

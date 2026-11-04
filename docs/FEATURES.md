@@ -60,6 +60,8 @@ What Notav can do, in short. The details of each release are in the
 - Rows and columns added, moved, duplicated, deleted, aligned and sorted from the right-click
   menu or with handles, as in Obsidian.
 - Rows copied from a spreadsheet are pasted as a table.
+- Tables and code blocks wider than the note scroll sideways each on its own, edited in place:
+  their scrollbar stays in sight, and they follow the cursor.
 
 **Look and app**
 
@@ -92,7 +94,7 @@ What Notav can do, in short. The details of each release are in the
 ## Planned
 
 - On Android: widgets.
-- On Linux: wide tables and code blocks scrolled sideways each on its own, as on Android.
+- On Android: a wide table or code block edited unwrapped, as on Linux.
 - Notes moved between accounts; the journal in an account of your choice.
 - Notes in GNOME Shell's search.
 - Emptying the Trash of notes at once; a version's changes shown against the note.

@@ -25,9 +25,6 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
    - Enter after a code fence's opening ` ``` ` adds the closing one (as Typora and Obsidian
      do), next to the lists', quotes' and tables' Enter.
    - "Insert Alert" in the right-click menu, next to Insert Table, with GitHub's five kinds.
-   - Tables and code blocks wider than the note scrolled sideways each on its own, as on
-     Android, instead of the whole text: out of the cursor, their text shrunk to one line per
-     line in the view and a scrolled strip showing them over it (`TextView::add_overlay`).
    - Spell checking with libspelling (as Iotas, Apostrophe and GNOME Text Editor have it):
      underlined words, suggestions in the right-click menu (see
      [Open questions](#open-questions-and-risks)).
@@ -127,6 +124,9 @@ The Android app (`notav/android`) still lacks, next:
 - Release on F-Droid (after three months of history, from about 2027-01-24; a recipe as
   Todav's, its build matching our signed APK) and Google Play, as Todav; screenshots in the
   fastlane metadata.
+- A wide table or code block edited unwrapped, scrolled to the cursor, as on Linux: with the
+  cursor in one it wraps now, the strip over it showing it only. Its strip would be a text field
+  of its own, its changes put into the note's.
 
 Later: signing in through the Nextcloud app's accounts (as Todav), dragging notes and folders
 in the tree (a long press opens their menu now, with Move…), table handles and menus, a
@@ -165,10 +165,10 @@ size, widgets, a Quick Settings tile.
   from the common wide ranges (CJK, Hangul, emoji; `width` in `notav/core/src/table.rs`). A script
   that still lines up wrong needs Unicode's whole East Asian Width table (the `unicode-width`
   crate) or measuring with Pango, and fallback fonts may not be exactly two columns wide anyway.
-  Tables (and code blocks) wider than the text column do not wrap: the note widens for them,
-  and past the window's width the whole text scrolls sideways with them; scrolling only the
-  table, as Obsidian and the Android app do, is planned (see Editor mode). Tidying
-  changes the file's text, which other devices and apps see.
+  Tables (and code blocks) wider than the text column do not wrap: each scrolls sideways on
+  its own, in a second view of the note's text over its lines (`strips.rs`), which costs a
+  layout of the whole note per wide block on screen. Without Wrap Lines the whole text scrolls
+  instead. Tidying changes the file's text, which other devices and apps see.
 
 - **Notes on this device as files**: the local account keeps its notes in the database only,
   as Todav's local lists; Markdown files in a folder on disk would let other apps (Obsidian)

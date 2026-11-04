@@ -129,8 +129,9 @@ pub fn setup(buffer: &sourceview5::Buffer) {
             t.set_family(Some("monospace"));
         }
     }
+    // In place of the text's left margin (18, `window.blp`), not added to it.
     if let Some(t) = table.lookup("md-quote") {
-        t.set_left_margin(16);
+        t.set_left_margin(28);
     }
     // A table or a code block wider than the text stays as it is: the note widens for it
     // (window.rs `fit_width`), the text scrolling sideways past the window's width (as far as
@@ -269,6 +270,7 @@ pub fn connect(view: &sourceview5::View) {
     });
     view.add_controller(motion);
     tables(view);
+    list_grip(view);
 }
 
 /// Forget where text was changed: the buffer holds another note (or the same, reloaded).
@@ -889,19 +891,9 @@ fn drag(h: &Rc<Handles>, grip: &gtk::MenuButton, rows: bool) {
                 w.set_visible(false);
             }
         }
-        // The pointer, from the event: not moving with the grip.
-        let (Some(native), Some((px, py))) =
-            (view.native(), g.current_event().and_then(|e| e.position()))
-        else {
+        let Some((x, y)) = pointer(&view, g) else {
             return;
         };
-        let (tx, ty) = native.surface_transform();
-        let point = gtk::graphene::Point::new((px - tx) as f32, (py - ty) as f32);
-        let Some(p) = native.compute_point(&view, &point) else {
-            return;
-        };
-        let (x, y) =
-            view.window_to_buffer_coords(gtk::TextWindowType::Widget, p.x() as i32, p.y() as i32);
         let target = if rows {
             s.row_at(y).max(1)
         } else {
@@ -973,6 +965,215 @@ fn drag(h: &Rc<Handles>, grip: &gtk::MenuButton, rows: bool) {
         }
     });
     grip.add_controller(gesture);
+}
+
+/// The pointer of `g`'s event in `view`'s buffer coordinates: from the event, as the gesture's
+/// offsets are its grip's, which moves once dragged.
+fn pointer(view: &sourceview5::View, g: &gtk::GestureDrag) -> Option<(i32, i32)> {
+    let native = view.native()?;
+    let (px, py) = g.current_event()?.position()?;
+    let (tx, ty) = native.surface_transform();
+    let point = gtk::graphene::Point::new((px - tx) as f32, (py - ty) as f32);
+    let p = native.compute_point(view, &point)?;
+    Some(view.window_to_buffer_coords(gtk::TextWindowType::Widget, p.x() as i32, p.y() as i32))
+}
+
+/// The grip left of the list item under the pointer, as GitHub has it: a drag moves the item
+/// (its sub-items with it) among the items of its list, a line showing where it would go.
+struct ListGrip {
+    view: glib::WeakRef<sourceview5::View>,
+    grip: gtk::Button,
+    drop: gtk::Box,
+    /// The list of the item under the pointer, and the line the pointer was last on.
+    shown: std::cell::RefCell<Option<markdown::List>>,
+    line: std::cell::Cell<Option<i32>>,
+    /// While the grip is pressed: where a drag would take its item.
+    target: std::cell::Cell<Option<usize>>,
+    dragging: std::cell::Cell<bool>,
+}
+
+fn list_grip(view: &sourceview5::View) {
+    let grip = gtk::Button::builder()
+        .icon_name("list-drag-handle-symbolic")
+        .tooltip_text(gettext("Drag to Move"))
+        .can_focus(false)
+        .focus_on_click(false)
+        .visible(false)
+        .css_classes(["list-grip"])
+        .build();
+    grip.set_cursor_from_name(Some("grab"));
+    let h = Rc::new(ListGrip {
+        view: view.downgrade(),
+        grip,
+        drop: gtk::Box::builder()
+            .visible(false)
+            .can_target(false)
+            .css_classes(["table-drop"])
+            .build(),
+        shown: Default::default(),
+        line: Default::default(),
+        target: Default::default(),
+        dragging: Default::default(),
+    });
+    view.add_overlay(&h.drop, 0, 0);
+    view.add_overlay(&h.grip, 0, 0);
+
+    let gesture = gtk::GestureDrag::new();
+    // The press is the grip's alone, not the text's (which would select).
+    gesture.set_propagation_phase(gtk::PropagationPhase::Capture);
+    let hh = h.clone();
+    gesture.connect_drag_begin(move |g, _, _| {
+        g.set_state(gtk::EventSequenceState::Claimed);
+        hh.target.set(hh.shown.borrow().as_ref().map(|l| l.item));
+    });
+    let hh = h.clone();
+    gesture.connect_drag_update(move |g, dx, dy| {
+        let (h, Some(view)) = (&hh, hh.view.upgrade()) else {
+            return;
+        };
+        let shown = h.shown.borrow();
+        let Some(list) = shown.as_ref() else { return };
+        if !h.dragging.get() && dx.hypot(dy) < DRAG_THRESHOLD {
+            return;
+        }
+        h.dragging.set(true);
+        let Some((_, y)) = pointer(&view, g) else {
+            return;
+        };
+        let buffer = view.buffer();
+        let line = |at: usize| view.line_yrange(&buffer.iter_at_offset(at as i32));
+        // Each item's top and bottom.
+        let items: Vec<(i32, i32)> = list
+            .items
+            .iter()
+            .map(|r| (line(r.start).0, line(r.end).0 + line(r.end).1))
+            .collect();
+        let last = items.len() - 1;
+        let target = items.iter().position(|&(_, b)| y < b).unwrap_or(last);
+        h.target.set(Some(target));
+        let (top, bottom) = items[target];
+        let y = match target.cmp(&list.item) {
+            Ordering::Less => top,
+            Ordering::Equal => (top + bottom) / 2,
+            Ordering::Greater => bottom,
+        };
+        h.drop.set_visible(target != list.item);
+        let x = view
+            .iter_location(&buffer.iter_at_offset(list.items[0].start as i32))
+            .x();
+        let (left, width) = in_view(&view, x, i32::MAX);
+        h.drop.set_size_request(width, 2);
+        view.move_overlay(&h.drop, left, y - 1);
+        h.place(&view, list.items[0].start, y);
+    });
+    // Stopped by GTK while pressed (a grab elsewhere): no drag-end follows.
+    let hh = h.clone();
+    gesture.connect_cancel(move |_, _| {
+        if hh.target.take().is_some() {
+            hh.dragging.set(false);
+            hh.hide();
+        }
+    });
+    let hh = h.clone();
+    gesture.connect_drag_end(move |_, _, _| {
+        let Some(target) = hh.target.take() else {
+            return;
+        };
+        hh.drop.set_visible(false);
+        let at = hh.shown.borrow().as_ref().map(|l| l.items[l.item].start);
+        let Some(view) = hh.view.upgrade().filter(|_| hh.dragging.replace(false)) else {
+            return;
+        };
+        let (buffer, text, _) = state(&view);
+        match at.and_then(|at| markdown::move_item(&text, at, target)) {
+            Some(c) => change(&buffer, &c),
+            None => hh.hide(),
+        }
+    });
+    h.grip.add_controller(gesture);
+
+    // Over the note's whole scrolled area, as the table handles: the grip is at the text's edge.
+    let motion = gtk::EventControllerMotion::new();
+    let hh = h.clone();
+    motion.connect_motion(move |m, x, y| {
+        let (Some(area), Some(view)) = (m.widget(), hh.view.upgrade()) else {
+            return;
+        };
+        let point = gtk::graphene::Point::new(x as f32, y as f32);
+        if let Some(p) = area.compute_point(&view, &point) {
+            hh.hover(&view, p.y() as i32);
+        }
+    });
+    let hh = h.clone();
+    motion.connect_leave(move |_| {
+        if hh.target.get().is_none() {
+            hh.hide();
+        }
+    });
+    view.ancestor(gtk::Viewport::static_type())
+        .unwrap_or_else(|| view.clone().upcast())
+        .add_controller(motion);
+    // Typing moves the list: the grip goes until the pointer moves.
+    view.buffer().connect_changed(move |_| {
+        if h.target.get().is_none() {
+            h.hide();
+        }
+    });
+}
+
+impl ListGrip {
+    fn hide(&self) {
+        self.shown.replace(None);
+        self.line.set(None);
+        self.grip.set_visible(false);
+        self.drop.set_visible(false);
+    }
+
+    /// The grip left of the item whose marker is at character `marker` (of its quote's first
+    /// `>`, in one), its middle at buffer `y`, within the view shown.
+    fn place(&self, view: &sourceview5::View, marker: usize, y: i32) {
+        let buffer = view.buffer();
+        let mut at = buffer.iter_at_offset(marker as i32);
+        let mut line = at;
+        line.set_line_offset(0);
+        if let Some(quote) = buffer.text(&line, &at, false).find('>') {
+            at = buffer.iter_at_offset(line.offset() + quote as i32);
+        }
+        let width = self.grip.measure(gtk::Orientation::Horizontal, -1).1;
+        let x = view.iter_location(&at).x();
+        center(view, &self.grip, x - width / 2 - 2, y);
+    }
+
+    /// The pointer at the view's `y`: the grip on the item of the line under it, parsing the
+    /// note again only on another line.
+    fn hover(&self, view: &sourceview5::View, y: i32) {
+        if self.target.get().is_some() {
+            return;
+        }
+        let (_, y) = view.window_to_buffer_coords(gtk::TextWindowType::Widget, 0, y);
+        let (start, top) = view.line_at_y(y);
+        let buffer = view.buffer().downcast::<sourceview5::Buffer>().unwrap();
+        let on_line = (top..top + view.line_yrange(&start).1).contains(&y);
+        let line = on_line.then(|| start.line());
+        if line.is_some() && self.line.get() == line {
+            return;
+        }
+        self.hide();
+        let Some(line) = line.filter(|_| editor_mode(&buffer)) else {
+            return;
+        };
+        self.line.set(Some(line));
+        let (_, text, _) = state(view);
+        let Some(list) = markdown::list_at(&text, start.offset() as usize) else {
+            return;
+        };
+        let marker = buffer.iter_at_offset(list.items[list.item].start as i32);
+        let (top, height) = view.line_yrange(&marker);
+        // Shown first: a hidden widget keeps the size it was measured at.
+        self.grip.set_visible(true);
+        self.place(view, list.items[list.item].start, top + height / 2);
+        self.shown.replace(Some(list));
+    }
 }
 
 /// The layout of the table on the line at buffer coordinate `y` or near it, in Editor mode.

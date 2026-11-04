@@ -575,6 +575,187 @@ fn items_after(text: &str, item: usize) -> Option<Vec<usize>> {
     None
 }
 
+/// The items of a list, for the editor to point at them (characters).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct List {
+    /// Each item's marker and the end of its last line (its sub-items' too).
+    pub items: Vec<Range<usize>>,
+    /// The item holding the line asked for.
+    pub item: usize,
+}
+
+/// A list's items as bytes of `text`: each one's lines (from its line's start to its last
+/// line's end, blank ones after it left out), its marker, and whether the list is ordered.
+struct Items {
+    lines: Vec<Range<usize>>,
+    markers: Vec<usize>,
+    ordered: bool,
+    item: usize,
+}
+
+/// The innermost list with an item on the line starting at byte `line`.
+fn items_at(text: &str, line: usize) -> Option<Items> {
+    let mut lists: Vec<Items> = Vec::new();
+    for (event, range) in Parser::new_ext(text, options()).into_offset_iter() {
+        match event {
+            Event::Start(Tag::List(start)) => lists.push(Items {
+                lines: Vec::new(),
+                markers: Vec::new(),
+                ordered: start.is_some(),
+                item: 0,
+            }),
+            Event::Start(Tag::Item) => {
+                let Some(list) = lists.last_mut() else {
+                    continue;
+                };
+                // Its marker: a sub-item indented with a tab starts at the line before's end
+                // (its quote's `>` after it).
+                let rest = &text[range.start..range.end];
+                let marker =
+                    range.end - rest.trim_start_matches([' ', '\t', '\r', '\n', '>']).len();
+                let first = text[..marker].rfind('\n').map_or(0, |n| n + 1);
+                // A quote's blank `>` lines after it are not its own.
+                let last = text[..range.end].trim_end_matches([' ', '\t', '\r', '\n', '>']);
+                let last = line_end(text, last.len().max(marker));
+                list.lines.push(first..last);
+                list.markers.push(marker);
+            }
+            // The inner lists end first.
+            Event::End(TagEnd::List(_)) => {
+                let mut list = lists.pop()?;
+                // An item indented deeper than the one before goes with it, as it looks: not
+                // its sub-item to the parser, too little indented for that ("10. a" over
+                // "   1. b"), but under it.
+                let indent = |l: &Items, k: usize| l.markers[k] - l.lines[k].start;
+                let mut k = 1;
+                while k < list.lines.len() {
+                    if indent(&list, k) > indent(&list, k - 1) {
+                        list.lines[k - 1].end = list.lines[k].end;
+                        list.lines.remove(k);
+                        list.markers.remove(k);
+                    } else {
+                        k += 1;
+                    }
+                }
+                if let Some(i) = list.lines.iter().position(|l| l.contains(&line)) {
+                    // Each item on lines of its own ("- - a" is not), moved as lines.
+                    let own = |(l, &m): (&Range<usize>, &usize)| {
+                        text[l.start..m].trim_matches([' ', '\t', '>']).is_empty()
+                    };
+                    list.item = i;
+                    return list
+                        .lines
+                        .iter()
+                        .zip(&list.markers)
+                        .all(own)
+                        .then_some(list);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+/// The list with an item on the line of character `at`, the innermost: an item's sub-items are
+/// in a list of their own.
+pub fn list_at(text: &str, at: usize) -> Option<List> {
+    let byte = text.char_indices().map(|(i, _)| i).nth(at)?;
+    let line = text[..byte].rfind('\n').map_or(0, |n| n + 1);
+    let items = items_at(text, line)?;
+    let chars = |b: usize| text[..b].chars().count();
+    Some(List {
+        items: items
+            .markers
+            .iter()
+            .zip(&items.lines)
+            .map(|(&m, l)| chars(m)..chars(l.end))
+            .collect(),
+        item: items.item,
+    })
+}
+
+/// Move the list item on the line of character `at` (its sub-items with it) to be item `to` of
+/// its list; the numbers of an ordered list stay in their places. The cursor goes to the end of
+/// its first line. None when it stays.
+pub fn move_item(text: &str, at: usize, to: usize) -> Option<crate::table::Change> {
+    let byte = text.char_indices().map(|(i, _)| i).nth(at)?;
+    let line = text[..byte].rfind('\n').map_or(0, |n| n + 1);
+    let items = items_at(text, line)?;
+    let (lines, from) = (&items.lines, items.item);
+    if to == from || to >= lines.len() {
+        return None;
+    }
+    let mut order: Vec<usize> = (0..lines.len()).collect();
+    order.remove(from);
+    order.insert(to, from);
+    let number = |i: usize| {
+        let m = items.markers[i];
+        m..m + text[m..].bytes().take_while(u8::is_ascii_digit).count()
+    };
+    let (start, end) = (lines[0].start, lines[lines.len() - 1].end);
+    let mut out = String::new();
+    let mut cursor = 0;
+    for (place, &i) in order.iter().enumerate() {
+        let item = &text[lines[i].clone()];
+        let item = if items.ordered {
+            let n = number(i);
+            let (a, b) = (n.start - lines[i].start, n.end - lines[i].start);
+            let new = &text[number(place)];
+            let (first, rest) = item.split_at(item.find('\n').unwrap_or(item.len()));
+            let first = format!("{}{new}{}", &first[..a], &first[b..]);
+            first + &reindent(rest, a, new.len() as isize - n.len() as isize)
+        } else {
+            item.to_string()
+        };
+        if place == to {
+            cursor = out.len() + item.find('\n').unwrap_or(item.len());
+        }
+        out.push_str(&item);
+        // What was between this place and the next stays.
+        if let Some(next) = lines.get(place + 1) {
+            out.push_str(&text[lines[place].end..next.start]);
+        }
+    }
+    let chars = |b: usize| text[..b].chars().count();
+    Some(crate::table::Change {
+        cursor: chars(start) + out[..cursor].chars().count(),
+        edit: Edit {
+            start: chars(start),
+            end: chars(end),
+            text: out,
+        },
+    })
+}
+
+/// An item's lines after its first (`rest`, each after a `\n`) moved by `by` columns at byte
+/// `at` (past its indentation and quote marks), as its number got wider or narrower: what is
+/// under its text stays there. Blank lines stay as they are, and only spaces are taken out.
+fn reindent(rest: &str, at: usize, by: isize) -> String {
+    if by == 0 {
+        return rest.to_string();
+    }
+    rest.split('\n')
+        .enumerate()
+        .map(|(n, line)| {
+            let marks = |s: &str| s.trim_matches([' ', '\t', '>']).is_empty();
+            // Not a line indented less (a paragraph's lazy continuation).
+            let indented = line.get(..at).is_some_and(marks);
+            if n == 0 || marks(line) || !indented {
+                return line.to_string();
+            }
+            let (head, tail) = line.split_at(at);
+            if by > 0 {
+                format!("{head}{}{tail}", " ".repeat(by as usize))
+            } else {
+                let spaces = tail.len() - tail.trim_start_matches(' ').len();
+                format!("{head}{}", &tail[spaces.min(-by as usize)..])
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 /// Push `style` over `range`; its marks are what its children leave.
 fn style(out: &mut Vec<(Range<usize>, Style)>, range: &Range<usize>, style: Style) -> bool {
     out.push((range.clone(), style));
@@ -1008,5 +1189,94 @@ mod tests {
         ] {
             assert!(s.iter().any(|s| s.style == style), "no {style:?}");
         }
+    }
+
+    /// `text` with the item on the line of character `at` moved to `to`, and the cursor (`|`).
+    fn moved(text: &str, at: usize, to: usize) -> Option<String> {
+        let c = move_item(text, at, to)?;
+        let chars: Vec<char> = text.chars().collect();
+        let mut out: String = chars[..c.edit.start].iter().collect();
+        out.push_str(&c.edit.text);
+        out.extend(&chars[c.edit.end..]);
+        let byte = out
+            .char_indices()
+            .nth(c.cursor)
+            .map_or(out.len(), |(i, _)| i);
+        out.insert(byte, '|');
+        Some(out)
+    }
+
+    #[test]
+    fn list_items() {
+        let t = "Text\n\n- a\n- b\n  - c\n  more\n- d\n\nAfter";
+        let l = list_at(t, t.find("- b").unwrap()).unwrap();
+        let of = |r: &Range<usize>| &t[r.clone()];
+        assert_eq!(
+            l.items.iter().map(of).collect::<Vec<_>>(),
+            ["- a", "- b\n  - c\n  more", "- d"]
+        );
+        assert_eq!(l.item, 1);
+        // A sub-item's list from its lines (`more` continues it); its parent's from the rest.
+        let c = list_at(t, t.find("more").unwrap()).unwrap();
+        assert_eq!((c.items.len(), c.item), (1, 0));
+        assert_eq!(list_at(t, 0), None);
+        assert_eq!(list_at(t, t.find("After").unwrap()), None);
+        assert_eq!(list_at("```\n- a\n```", 4), None);
+        assert_eq!(list_at("- - a\n  - b", 0), None);
+    }
+
+    #[test]
+    fn moving_items() {
+        let t = "- a\n- b\n  - c\n- d";
+        assert_eq!(moved(t, 0, 2).as_deref(), Some("- b\n  - c\n- d\n- a|"));
+        assert_eq!(moved(t, 4, 0).as_deref(), Some("- b|\n  - c\n- a\n- d"));
+        assert_eq!(moved(t, 0, 0), None);
+        assert_eq!(moved(t, 0, 3), None);
+        // A number getting wider or narrower takes its item's lines along, so sub-items stay its.
+        let t = "1. First\n2. Second\n   1. Nested\n   2. Another\n10. Tenth";
+        let down = moved(t, 9, 2).unwrap();
+        assert_eq!(
+            down,
+            "1. First\n2. Tenth\n10. Second|\n    1. Nested\n    2. Another"
+        );
+        let down = down.replace('|', "");
+        assert_eq!(moved(&down, 18, 1).unwrap().replace('|', ""), t);
+        // Items indented under one, too little to be its sub-items, go with it all the same.
+        let t = "1. First\n2. Second\n10. Tenth\n   1. Nested\n   2. Another\n\nAfter";
+        assert_eq!(
+            list_at(t, t.find("Another").unwrap()).unwrap().items.len(),
+            3
+        );
+        assert_eq!(
+            moved(t, t.find("10.").unwrap(), 0).as_deref(),
+            Some("1. Tenth|\n  1. Nested\n  2. Another\n2. First\n10. Second\n\nAfter")
+        );
+        // Sub-items indented with tabs, which the parser starts at the line before's end.
+        assert_eq!(
+            moved("- [ ] a\n\t- [ ] b\n\t- [ ] c\n- [ ] d", 0, 1).as_deref(),
+            Some("- [ ] d\n- [ ] a|\n\t- [ ] b\n\t- [ ] c")
+        );
+        assert_eq!(
+            moved("- a\n\t- b\n\t- c\n- d", 9, 0).as_deref(),
+            Some("- a\n\t- c|\n\t- b\n- d")
+        );
+        assert_eq!(
+            moved("> - a\n>\t- b\n> - c", 0, 1).as_deref(),
+            Some("> - c\n> - a|\n>\t- b")
+        );
+        // A sub-item within its own list only.
+        assert_eq!(
+            moved("- a\n  - b\n  - c\n- d", 4, 1).as_deref(),
+            Some("- a\n  - c\n  - b|\n- d")
+        );
+        // The numbers stay in their places, the blank lines between items too.
+        assert_eq!(
+            moved("1. a\n\n2. b\n3. c\n\nAfter", 0, 2).as_deref(),
+            Some("1. b\n\n2. c\n3. a|\n\nAfter")
+        );
+        assert_eq!(
+            moved("> - [ ] a\n> - [x] b\n>\n> c", 0, 1).as_deref(),
+            Some("> - [x] b\n> - [ ] a|\n>\n> c")
+        );
     }
 }

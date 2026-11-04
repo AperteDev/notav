@@ -395,12 +395,13 @@ Adw.ApplicationWindow window {
                             orientation: vertical;
                             margin-top: 18;
                             margin-bottom: 18;
-                            margin-start: 12;
                             margin-end: 12;
                             spacing: 6;
 
-                            // The file name: renames the note when changed.
+                            // The file name: renames the note when changed. The text's 12 more
+                            // are its own margin, room for a list item's grip.
                             Gtk.Entry title {
+                              margin-start: 12;
                               placeholder-text: _("Title");
                               styles ["flat", "note-title"]
                             }
@@ -417,7 +418,7 @@ Adw.ApplicationWindow window {
                                 wrap-mode: word_char;
                                 top-margin: 6;
                                 bottom-margin: 48;
-                                left-margin: 6;
+                                left-margin: 18;
                                 right-margin: 6;
                                 styles ["note-text"]
                               }
@@ -425,6 +426,7 @@ Adw.ApplicationWindow window {
 
                             // The notes linking to this one, under its text (`show_backlinks`).
                             Gtk.Box backlinks_box {
+                              margin-start: 12;
                               orientation: vertical;
                               spacing: 12;
                               visible: false;

@@ -37,7 +37,10 @@ row.drop-below { box-shadow: inset 0 -2px 0 0 var(--accent-bg-color); }
 .table-add { min-width: 0; min-height: 0; padding: 0; border-radius: 4px;
   background-color: alpha(currentColor, 0.04); }
 .table-add:hover { background-color: alpha(currentColor, 0.12); }
-.table-grip image, .table-add image { -gtk-icon-size: 12px; }
+.list-grip { min-width: 0; min-height: 0; padding: 2px 0; border-radius: 4px; background: none;
+  box-shadow: none; opacity: 0.55; }
+.list-grip:hover, .list-grip:active { opacity: 1; background-color: alpha(currentColor, 0.1); }
+.table-grip image, .table-add image, .list-grip image { -gtk-icon-size: 12px; }
 .table-drop { background-color: var(--accent-bg-color); }
 .block-strip > undershoot { background: none; box-shadow: none; }
 .block-scrollbar { background: none; }
@@ -897,9 +900,9 @@ fn fit_width(ui: &Ui) {
     } else if wrap_lines() {
         (720, 600)
     } else {
-        // The block's width in the text, with the text's margin after it and the note's box's
-        // margins (12 a side).
-        let block = crate::editor::widest_block(&ui.editor) + ui.editor.right_margin() + 24;
+        // The block's width in the text (its left margin in), with the text's margin after it and
+        // the note's box's at its end (12).
+        let block = crate::editor::widest_block(&ui.editor) + ui.editor.right_margin() + 12;
         // Wider, all of it as far as the window goes: no narrowing from the threshold on.
         if block > 720 {
             (block, block)

@@ -46,6 +46,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Outline turns it off
 - The welcome page waits for the first sync, with how many notes it has downloaded, and
   shows the notes once they are all here
+- A grip beside the list item under the pointer in Editor mode, as on GitHub: dragging it moves
+  the item, its sub-items with it, among the items of its list (an ordered list's numbers stay
+  in order)
 
 ### Changed
 

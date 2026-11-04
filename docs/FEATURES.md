@@ -45,6 +45,7 @@ What Notav can do, in short. The details of each release are in the
 - GitHub's alerts (`> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`) as
   tinted boxes in their colours.
 - Click a task's box to tick it; Enter continues a list or a quote.
+- List items moved by dragging their grip, as on GitHub.
 - Ctrl+click opens a link (Alt+Enter the one at the cursor).
 - Links between notes: Markdown links and `[[wiki links]]`, to a heading too; a missing note is
   made when its link is followed.
@@ -97,6 +98,7 @@ What Notav can do, in short. The details of each release are in the
 
 - On Android: widgets.
 - On Android: a wide table or code block edited unwrapped, as on Linux.
+- On Android: list items moved by dragging, as on Linux.
 - Notes moved between accounts; the journal in an account of your choice.
 - Notes in GNOME Shell's search.
 - Emptying the Trash of notes at once; a version's changes shown against the note.

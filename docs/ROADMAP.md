@@ -127,6 +127,8 @@ The Android app (`notav/android`) still lacks, next:
 - A wide table or code block edited unwrapped, scrolled to the cursor, as on Linux: with the
   cursor in one it wraps now, the strip over it showing it only. Its strip would be a text field
   of its own, its changes put into the note's.
+- List items moved by dragging, as on Linux: a long press on an item's marker picks it up, the
+  core's `markdown::list_at` and `move_item` (exported through the bindings) placing it.
 
 Later: signing in through the Nextcloud app's accounts (as Todav), dragging notes and folders
 in the tree (a long press opens their menu now, with Move…), table handles and menus, a

@@ -44,6 +44,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -612,6 +614,23 @@ private fun Strips(
             Modifier.offset { androidx.compose.ui.unit.IntOffset(0, top.toInt()) }
                 .width(with(density) { s.width.toDp() })
                 .height(with(density) { (s.bottom - top).toDp() })
+                // A shade at each edge while there is more of the block that way, as on Linux:
+                // a block not shown whole is seen to be one at a glance.
+                .drawWithContent {
+                    drawContent()
+                    val edge = 16.dp.toPx()
+                    val shade = colors.onSurface.copy(alpha = 0.15f)
+                    if (sideways.canScrollBackward) {
+                        drawRect(Brush.horizontalGradient(listOf(shade, Color.Transparent), 0f, edge), size = Size(edge, size.height))
+                    }
+                    if (sideways.canScrollForward) {
+                        drawRect(
+                            Brush.horizontalGradient(listOf(Color.Transparent, shade), size.width - edge, size.width),
+                            topLeft = Offset(size.width - edge, 0f),
+                            size = Size(edge, size.height),
+                        )
+                    }
+                }
                 .horizontalScroll(sideways),
         ) {
             androidx.compose.ui.layout.Layout(

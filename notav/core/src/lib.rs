@@ -1,4 +1,5 @@
 mod account;
+pub mod accounts;
 pub mod dav;
 mod files;
 pub mod journal;

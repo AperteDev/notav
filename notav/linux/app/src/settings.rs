@@ -802,7 +802,7 @@ fn account_page(dialog: &adw::PreferencesDialog, id: i64) -> adw::NavigationPage
                 return;
             };
             let connected = core().connected(id);
-            let host = crate::host(&a);
+            let host = notav_core::accounts::host(&a);
             if !connected {
                 status.set_title(&gettext("Not connected"));
                 status.set_subtitle(&if manual {

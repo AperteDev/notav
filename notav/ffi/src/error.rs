@@ -41,6 +41,18 @@ pub enum NotavError {
     Newer {
         reason: String,
     },
+    /// The account is gone (removed meanwhile).
+    Gone,
+    /// The keyring did not take the password.
+    SavePassword {
+        reason: String,
+    },
+    /// Edits not on the server yet could not go up first; they would be lost.
+    Upload {
+        reason: String,
+    },
+    /// The account has edits not on the server yet and is not connected to upload them.
+    NotUploaded,
 }
 
 impl std::fmt::Display for NotavError {
@@ -58,6 +70,28 @@ impl std::fmt::Display for NotavError {
             NotavError::Parse { reason } => write!(f, "parse: {reason}"),
             NotavError::Db { reason } => write!(f, "database: {reason}"),
             NotavError::Newer { reason } => write!(f, "made by a newer version of Notav: {reason}"),
+            NotavError::Gone => write!(f, "the account is gone"),
+            NotavError::SavePassword { reason } => write!(f, "cannot save password: {reason}"),
+            NotavError::Upload { reason } => write!(f, "cannot upload pending changes: {reason}"),
+            NotavError::NotUploaded => write!(f, "changes not uploaded yet"),
+        }
+    }
+}
+
+impl From<notav_core::accounts::Error> for NotavError {
+    fn from(e: notav_core::accounts::Error) -> Self {
+        use notav_core::accounts::Error as E;
+        match e {
+            E::Exists => NotavError::Exists {
+                reason: "account".into(),
+            },
+            E::Gone => NotavError::Gone,
+            E::SavePassword(reason) => NotavError::SavePassword { reason },
+            E::Upload(e) => NotavError::Upload {
+                reason: e.to_string(),
+            },
+            E::NotUploaded => NotavError::NotUploaded,
+            E::Core(e) => e.into(),
         }
     }
 }

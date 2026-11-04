@@ -30,7 +30,7 @@
   | CLI `.env` loading | `cli/src/main.rs` | `NOTAV_*` |
   | GNOME Online Accounts | `linux/app/src/goa.rs` | As is |
   | gettext over glibc, first weekday | `linux/app/src/i18n.rs` | Domain `notav` |
-  | Secret Service, accounts (add, local, reconnect, switch off, remove), sync worker | `linux/app/src/main.rs`, `app/src/accounts.rs` | No push, reminders, D-Bus or Google; the worker syncs each account itself and names the failed ones |
+  | Secret Service, accounts (add, local, reconnect, switch off, remove), sync worker | `linux/app/src/main.rs`, `app/src/accounts.rs` | No push, reminders, D-Bus or Google; the worker syncs each account itself and names the failed ones; adding, reconnecting and removing (with the `Keyring` trait) in `core/src/accounts.rs`, for Linux and Android |
   | Adding an account (welcome page, Preferences), login dialogs | `add_account.rs`, `ui/add-account.blp`, `ui/password-login.blp`, parts of `window.rs` | A notes folder step after connecting, then the welcome page's first sync; no ntfy or Google; GOA accounts need Files on |
   | Preferences: style, accounts (a page each, settings sync, reordering) | `linux/app/src/settings.rs`, `ui/settings.blp`, `ui/account.blp` | A notes folder row; no DAV Push row or ntfy |
   | Undo toast, Ctrl+Z | `linux/app/src/window.rs` (`undo_toast`, `undo`) | As is |

@@ -35,6 +35,22 @@ fun main() {
     check(n.undo(null))
     check(n.notes().any { it.title == "Plans" })
 
+    // A Nextcloud account with its password in the front-end's keyring, removed with it (nothing
+    // waits for its server, so no sync is needed).
+    val kept = mutableMapOf<String, String>()
+    val keyring = object : Keyring {
+        override fun store(url: String, user: String, password: String): String? {
+            kept["$user@$url"] = password
+            return null
+        }
+        override fun clear(url: String, user: String) { kept.remove("$user@$url") }
+    }
+    val cloud = n.addNextcloud(keyring, "https://cloud.example/", "ann", "secret", true)
+    check(kept == mapOf("ann@https://cloud.example" to "secret") && n.settingsAccount() == cloud)
+    check(accountHost(n.account(cloud)!!) == "cloud.example")
+    n.removeAccount(keyring, cloud, false)
+    check(kept.isEmpty() && n.accounts().size == 1)
+
     // Errors come as NotavException.
     try {
         n.addAccount(AccountKind.LOCAL, "", "", "")

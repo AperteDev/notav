@@ -6,11 +6,11 @@
 //! as Kotlin counts them (the core counts characters).
 
 use notav_core::dav::ServerInfo;
-use notav_core::markdown;
 use notav_core::{
     Account, AccountKind, Client, Credentials, Deleted, Features, LoginFlow, Note, SyncReport,
     Version,
 };
+use notav_core::{accounts, markdown};
 use std::sync::Arc;
 
 mod error;
@@ -33,6 +33,30 @@ pub trait Listener: Send + Sync {
     fn settings_changed(&self);
     /// A sync of `account` went through `done` of the `total` notes it downloads.
     fn progress(&self, account: i64, done: u32, total: u32);
+}
+
+/// Where the front-end keeps the app passwords of accounts signed in in Notav, by server and
+/// user.
+#[uniffi::export(callback_interface)]
+pub trait Keyring: Send + Sync {
+    /// None when stored, else why not.
+    fn store(&self, url: String, user: String, password: String) -> Option<String>;
+    fn clear(&self, url: String, user: String);
+}
+
+struct KeyringAdapter(Box<dyn Keyring>);
+
+impl notav_core::accounts::Keyring for KeyringAdapter {
+    fn store(&self, url: &str, user: &str, password: &str) -> std::result::Result<(), String> {
+        match self.0.store(url.into(), user.into(), password.into()) {
+            None => Ok(()),
+            Some(e) => Err(e),
+        }
+    }
+
+    fn clear(&self, url: &str, user: &str) {
+        self.0.clear(url.into(), user.into());
+    }
 }
 
 struct ListenerAdapter(Box<dyn Listener>);
@@ -116,9 +140,55 @@ impl Notav {
         Ok(self.0.move_account(id, url, password)?)
     }
 
-    /// Remove an account and its notes from this device (sync first).
-    pub fn remove_account(&self, id: i64) -> Result<()> {
-        Ok(self.0.remove_account(id)?)
+    /// Add a Nextcloud account signed in here and connect it, its app password in `keyring`;
+    /// with `settings`, settings sync through it. Its notes sync once its folder is chosen.
+    pub fn add_nextcloud(
+        &self,
+        keyring: Box<dyn Keyring>,
+        url: String,
+        user: String,
+        password: String,
+        settings: bool,
+    ) -> Result<i64> {
+        let k = KeyringAdapter(keyring);
+        Ok(accounts::add(
+            &self.0,
+            &k,
+            &url,
+            &user,
+            password,
+            String::new(),
+            settings,
+        )?)
+    }
+
+    /// Account `id` at `url` with `password`: a new app password, or the same user on a moved
+    /// server.
+    pub fn reconnect(
+        &self,
+        keyring: Box<dyn Keyring>,
+        id: i64,
+        url: String,
+        password: String,
+    ) -> Result<()> {
+        Ok(accounts::reconnect(
+            &self.0,
+            &KeyringAdapter(keyring),
+            id,
+            &url,
+            password,
+        )?)
+    }
+
+    /// Remove an account from this device, with its saved password; edits waiting for its
+    /// server go up first (`Upload`, `NotUploaded` when they cannot), unless `force`.
+    pub fn remove_account(&self, keyring: Box<dyn Keyring>, id: i64, force: bool) -> Result<()> {
+        Ok(accounts::remove(
+            &self.0,
+            &KeyringAdapter(keyring),
+            id,
+            force,
+        )?)
     }
 
     pub fn settings_account(&self) -> Option<i64> {
@@ -389,6 +459,12 @@ pub fn password_login(server: String, login_name: String, password: String) -> R
 #[uniffi::export]
 pub fn set_trusted_certificates(certs: Vec<Vec<u8>>) {
     notav_core::set_roots(certs);
+}
+
+/// The host of a Nextcloud account's server, for its default name ("user@host").
+#[uniffi::export]
+pub fn account_host(account: Account) -> String {
+    accounts::host(&account).into()
 }
 
 /// The notes folder of an account until one is chosen ("Notes").

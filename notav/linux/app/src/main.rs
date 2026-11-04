@@ -12,7 +12,7 @@ mod window;
 
 use adw::prelude::*;
 use gtk::{gio, glib};
-use notav_core::{Account, AccountKind, ChangeListener, Client};
+use notav_core::{Account, AccountKind, ChangeListener, Client, accounts};
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::sync::mpsc::{Sender, channel};
@@ -234,6 +234,36 @@ pub fn password_clear(url: &str, user: &str) {
     let _ = libsecret::password_clear_sync(Some(&schema()), attrs, gio::Cancellable::NONE);
 }
 
+/// The Secret Service, for the core's account flows.
+struct SecretService;
+
+impl accounts::Keyring for SecretService {
+    fn store(&self, url: &str, user: &str, password: &str) -> Result<(), String> {
+        password_store(url, user, password).map_err(|e| e.to_string())
+    }
+
+    fn clear(&self, url: &str, user: &str) {
+        password_clear(url, user);
+    }
+}
+
+/// What went wrong adding, reconnecting or removing an account, as the user reads it.
+fn account_error(e: accounts::Error) -> String {
+    match e {
+        accounts::Error::Exists => i18n::gettext("This account is already added"),
+        accounts::Error::Gone => i18n::gettext("Connecting failed"),
+        accounts::Error::SavePassword(e) => {
+            i18n::gettext("Cannot save password: {error}").replace("{error}", &e)
+        }
+        accounts::Error::Upload(e) => i18n::gettext("Cannot upload pending changes first: {error}")
+            .replace("{error}", &e.to_string()),
+        accounts::Error::NotUploaded => {
+            i18n::gettext("It has changes not uploaded yet: sign in again to upload them")
+        }
+        accounts::Error::Core(e) => e.to_string(),
+    }
+}
+
 // --- accounts ----------------------------------------------------------------
 
 /// What an account is called: the name given to it, else "user@host", or "On This Device".
@@ -243,14 +273,8 @@ pub fn account_name(a: &Account) -> String {
     }
     match a.kind {
         AccountKind::Local => i18n::gettext("On This Device"),
-        AccountKind::Nextcloud => format!("{}@{}", a.user, host(a)),
+        AccountKind::Nextcloud => format!("{}@{}", a.user, accounts::host(a)),
     }
-}
-
-/// The host of a Nextcloud account's server, as its default name shows it ("user@host").
-pub fn host(a: &Account) -> &str {
-    let host = a.url.split_once("://").map_or(a.url.as_str(), |(_, h)| h);
-    host.trim_end_matches('/')
 }
 
 /// Connect a Nextcloud account with its saved password: from GNOME Online Accounts (its
@@ -280,11 +304,6 @@ pub fn restore_accounts() -> bool {
     !all.is_empty()
 }
 
-/// Why the edits waiting for an account's server could not go up before it changes.
-fn upload_error(e: &notav_core::Error) -> String {
-    i18n::gettext("Cannot upload pending changes first: {error}").replace("{error}", &e.to_string())
-}
-
 /// A Nextcloud account to add.
 pub enum Target {
     Goa(goa::Account),
@@ -305,31 +324,8 @@ pub async fn add_account(target: Target, settings: bool) -> Result<i64, String> 
             }
             Target::Manual(c) => (c.server, c.login_name, c.app_password, String::new()),
         };
-        let url = url.trim_end_matches('/').to_string();
-        let id = core()
-            .add_account(
-                AccountKind::Nextcloud,
-                url.clone(),
-                user.clone(),
-                source.clone(),
-            )
-            .map_err(|e| match e {
-                notav_core::Error::Exists(_) => i18n::gettext("This account is already added"),
-                e => e.to_string(),
-            })?;
-        if source.is_empty()
-            && let Err(e) = password_store(&url, &user, &pw)
-        {
-            let _ = core().remove_account(id);
-            return Err(
-                i18n::gettext("Cannot save password: {error}").replace("{error}", &e.to_string())
-            );
-        }
-        core().connect(id, pw).map_err(|e| e.to_string())?;
-        if settings {
-            let _ = core().set_settings_account(Some(id));
-        }
-        Ok(id)
+        accounts::add(core(), &SecretService, &url, &user, pw, source, settings)
+            .map_err(account_error)
     })
     .await
     .map_err(|_| i18n::gettext("Connecting failed"))??;
@@ -377,25 +373,8 @@ pub async fn drop_added_account(id: i64) {
 /// user on a moved server (then its notes come again from there, after the edits waiting for
 /// the old one went up).
 pub async fn reconnect(id: i64, url: String, password: String) -> Result<(), String> {
-    gio::spawn_blocking(move || -> Result<(), String> {
-        let a = core()
-            .account(id)
-            .ok_or_else(|| i18n::gettext("Connecting failed"))?;
-        let url = url.trim_end_matches('/').to_string();
-        password_store(&url, &a.user, &password).map_err(|e| {
-            i18n::gettext("Cannot save password: {error}").replace("{error}", &e.to_string())
-        })?;
-        if url == a.url {
-            return core().connect(id, password).map_err(|e| e.to_string());
-        }
-        if core().connected(id) || core().pending(Some(id)) {
-            core().sync_account(id).map_err(|e| upload_error(&e))?;
-        }
-        core()
-            .move_account(id, url, password)
-            .map_err(|e| e.to_string())?;
-        password_clear(&a.url, &a.user);
-        Ok(())
+    gio::spawn_blocking(move || {
+        accounts::reconnect(core(), &SecretService, id, &url, password).map_err(account_error)
     })
     .await
     .map_err(|_| i18n::gettext("Connecting failed"))??;
@@ -416,23 +395,8 @@ pub async fn enable_account(id: i64, on: bool) {
 /// go up first, unless `force` (then they are lost).
 pub async fn remove_account(id: i64, force: bool) -> Result<(), String> {
     window::save();
-    gio::spawn_blocking(move || -> Result<(), String> {
-        let Some(a) = core().account(id) else {
-            return Ok(());
-        };
-        if a.kind == AccountKind::Nextcloud && !force {
-            if core().connected(id) {
-                core().sync_account(id).map_err(|e| upload_error(&e))?;
-            } else if core().pending(Some(id)) {
-                return Err(i18n::gettext(
-                    "It has changes not uploaded yet: sign in again to upload them",
-                ));
-            }
-        }
-        if a.kind == AccountKind::Nextcloud && a.source.is_empty() {
-            password_clear(&a.url, &a.user);
-        }
-        core().remove_account(id).map_err(|e| e.to_string())
+    gio::spawn_blocking(move || {
+        accounts::remove(core(), &SecretService, id, force).map_err(account_error)
     })
     .await
     .map_err(|_| i18n::gettext("Removing the account failed"))??;

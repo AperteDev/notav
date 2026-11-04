@@ -72,6 +72,7 @@ What Notav can do, in short. The details of each release are in the
 
 ## Planned
 
+- An Android app, with the same notes, accounts and Editor mode.
 - Notes moved between accounts; the journal in an account of your choice.
 - Notes in GNOME Shell's search.
 - Emptying the Trash of notes at once; a version's changes shown against the note.

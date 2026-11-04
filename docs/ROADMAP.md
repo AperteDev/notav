@@ -117,6 +117,38 @@ Later (v2):
   layer (accounts are copied already), when a third app or a front-end of its own needs it, or
   when the same fix keeps being made twice.
 
+## Android
+
+An Android app in Jetpack Compose with Material 3 Expressive, built as Todav's is (its
+`AGENTS.md`, "Android"; `todav/android`, `todav/ffi`), on the same SDK, emulator (`apps`) and
+release key setup (Notav's own key, alias `notav`, in this repository's `ANDROID_KEYSTORE`
+secrets). Steps, each a commit:
+
+1. **Bindings**: `notav/ffi` (`notav-ffi`, UniFFI, the bundled SQLite) in a workspace of its own
+   rooted at `notav/`, with `Translations` (the `.mo` reader of Todav's `app/src/i18n.rs`) and
+   `scripts/bindings.sh` with a Kotlin smoke test. The core counts text positions in characters,
+   Kotlin in UTF-16 units: the bindings convert them, so styling and table edits stay in place
+   after an emoji.
+2. **Project**: `notav/android` (`core`: the library by cargo-ndk, its bindings and the `.mo`
+   catalogs; `app`: Compose), its Makefile and `sdk.sh`, CI building the release APK.
+3. **Accounts**: Login Flow v2 in a Custom Tab, a login name and app password, the local account;
+   the notes folder step and the first sync; passwords under an Android Keystore key.
+4. **Notes**: the tree (folders, counts, favorites first) beside the note on wide screens, the
+   note alone on a phone; new, rename, move, delete from a long press, with Undo in a snackbar.
+5. **Editor**: saving as you type, Source mode, then Editor mode (`markdown::spans` as styles of a
+   `BasicTextField`, alerts, quotes and code blocks drawn behind the text; a tap ticks a task;
+   Enter by `markdown::enter`; tables tidied as the cursor leaves them).
+6. **The rest**: search, Today's note, Trash, versions, unlocking, Preferences, text shared to
+   Notav as a new note.
+7. **Release**: the APK signed in the Release workflow, its version code set by
+   `scripts/release.py`, fastlane metadata for F-Droid; then F-Droid (after three months of
+   history, from about 2027-01-24) and Google Play, as Todav.
+
+Sync runs while the app is open and, as the Linux app does when it quits, once more when it is
+left (WorkManager). A periodic sync in the background is optional: a device-only switch in
+Preferences, off by default. Later: table handles and menus, find and replace, widgets, a Quick
+Settings tile.
+
 ## Distribution
 
 - **Screenshots** in the README and the metainfo (Flathub requires them); `scripts/release.py`

@@ -348,6 +348,12 @@ pub fn present(app: &adw::Application) {
         welcome(&ui);
     }
     ui.window.present();
+    // A note opened again: the keys in its text, not its title (GTK's first choice), which
+    // they would rename.
+    if ui.current.borrow().is_some() {
+        ui.editor.grab_focus();
+        ui.title.select_region(0, 0); // focused first, it selected all of it
+    }
 }
 
 /// The welcome page, made anew (GNOME Online Accounts may have changed); the window shows the

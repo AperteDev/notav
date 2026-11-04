@@ -543,7 +543,9 @@ private fun strips(text: CharSequence, collapsed: List<IntRange>, l: TextLayoutR
     }
     val tops = lines.map { l.getLineTop(l.getLineForOffset(it)) }
     val last = l.getLineForOffset(r.last.coerceAtLeast(r.first))
-    Strip(lines, tops, l.getLineBottom(last), l.size.width)
+    // The field's width, not the text's: with the blocks shrunk its widest line may be short.
+    val c = l.layoutInput.constraints
+    Strip(lines, tops, l.getLineBottom(last), if (c.hasBoundedWidth) c.maxWidth else l.size.width)
 }
 
 /**

@@ -123,10 +123,12 @@ pub fn setup(buffer: &sourceview5::Buffer) {
         table.add(&gtk::TextTag::new(Some(name)));
     }
     // What a style scheme cannot say. Tables in monospace, so their columns line up, and a
-    // task's box, so `[ ]` is as wide as `[x]`.
+    // task's box, so `[ ]` is as wide as `[x]`. Without ligatures, which some monospace fonts
+    // have: "fi" in one cell would pull the rest of its row a column left.
     for name in ["md-code", "md-code-block", "md-table", "md-task"] {
         if let Some(t) = table.lookup(name) {
             t.set_family(Some("monospace"));
+            t.set_font_features(Some("\"liga\" 0, \"clig\" 0, \"dlig\" 0"));
         }
     }
     // In place of the text's left margin (18, `window.blp`), not added to it.

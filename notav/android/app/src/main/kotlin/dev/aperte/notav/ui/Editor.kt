@@ -687,8 +687,13 @@ private fun look(style: NoteStyle, c: ColorScheme): SpanStyle? = when (style) {
     NoteStyle.Strong, NoteStyle.TableHeader -> SpanStyle(fontWeight = FontWeight.Bold)
     NoteStyle.Emphasis -> SpanStyle(fontStyle = FontStyle.Italic)
     NoteStyle.Strikethrough -> SpanStyle(textDecoration = TextDecoration.LineThrough)
-    NoteStyle.Code -> SpanStyle(fontFamily = FontFamily.Monospace, background = c.surfaceContainerHighest)
-    NoteStyle.CodeBlock, NoteStyle.Table -> SpanStyle(fontFamily = FontFamily.Monospace)
+    NoteStyle.Code -> SpanStyle(
+        fontFamily = FontFamily.Monospace,
+        fontFeatureSettings = NO_LIGATURES,
+        background = c.surfaceContainerHighest,
+    )
+    NoteStyle.CodeBlock, NoteStyle.Table ->
+        SpanStyle(fontFamily = FontFamily.Monospace, fontFeatureSettings = NO_LIGATURES)
     NoteStyle.Quote -> SpanStyle(color = c.onSurfaceVariant)
     is NoteStyle.Alert -> null
     is NoteStyle.AlertMark -> SpanStyle(color = alertColor(style.kind, c), fontWeight = FontWeight.Bold)
@@ -697,6 +702,10 @@ private fun look(style: NoteStyle, c: ColorScheme): SpanStyle? = when (style) {
     is NoteStyle.Task -> SpanStyle(color = c.primary, fontWeight = FontWeight.Bold)
     NoteStyle.Mark -> SpanStyle(color = c.onSurfaceVariant.copy(alpha = 0.6f))
 }
+
+/** Monospace without ligatures, which some fonts have: "fi" in a table's cell would pull the rest
+ *  of its row a column left. */
+private const val NO_LIGATURES = "\"liga\" 0, \"clig\" 0, \"dlig\" 0"
 
 /** GitHub's alerts in their colours, readable on the theme's light or dark surface. */
 private fun alertColor(kind: Alert, c: ColorScheme): Color {

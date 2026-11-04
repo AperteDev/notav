@@ -71,6 +71,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A table's row with "fi" (or another ligature of the font) in a cell no longer goes out of
+  line from there on in Editor mode: tables and code are shown without ligatures
 - A note changed while it is open in Nextcloud Text waits for its lock and goes up once
   unlocked, instead of becoming a conflict copy: Nextcloud gives a file a new ETag as it is
   locked and unlocked

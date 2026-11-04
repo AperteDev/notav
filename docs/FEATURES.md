@@ -76,6 +76,7 @@ What Notav can do, in short. The details of each release are in the
 - The tree, the note and its outline (with the notes linking to it) swiped between: one at a
   time on a phone, two side by side on a wide screen.
 - Editor mode's styles, ticking tasks, continuing lists, tables kept aligned, links followed.
+- Find and replace in the open note, the matches highlighted and counted.
 - Search, Today's note, and text shared from other apps as a note.
 - A note locked on the server waits with its change; a message says who locked it, and
   Unlock… lets it go.

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notav\n"
 "Report-Msgid-Bugs-To: https://github.com/AperteDev/notav/issues\n"
-"POT-Creation-Date: 2026-11-04 09:58+0100\n"
+"POT-Creation-Date: 2026-11-04 10:01+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -187,29 +187,85 @@ msgstr ""
 msgid "It has changes not uploaded yet: sign in again to upload them"
 msgstr ""
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:106
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:107
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:128
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:129
 #: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Panes.kt:170
 #: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Settings.kt:156
 #: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Settings.kt:157
 msgid "Back"
 msgstr ""
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:113
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:135
 #: notav/linux/app/ui/window.blp:202
 msgid "Editor Mode"
 msgstr ""
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:113
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:135
 #: notav/linux/app/ui/window.blp:208
 msgid "Source Mode"
 msgstr ""
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:120
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:121
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:141
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:142
+msgid "Find in Note"
+msgstr ""
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:145
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:146
 #: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Panes.kt:168
 #: notav/linux/app/ui/settings.blp:149 notav/linux/app/ui/window.blp:145
 msgid "Outline"
+msgstr ""
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:212
+#: notav/linux/app/ui/window.blp:281
+msgid "Find in note"
+msgstr ""
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:218
+#: notav/linux/app/src/window.rs:2040
+#, rust-format
+msgid "{at} of {count}"
+msgstr ""
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:219
+#: notav/linux/app/src/window.rs:2043
+#, rust-format
+msgid "{count} match"
+msgid_plural "{count} matches"
+msgstr[0] ""
+msgstr[1] ""
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:227
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:228
+#: notav/linux/app/ui/shortcuts.blp:114
+msgid "Previous Match"
+msgstr ""
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:230
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:231
+#: notav/linux/app/ui/shortcuts.blp:109
+msgid "Next Match"
+msgstr ""
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:233
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:234
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:243
+msgid "Replace"
+msgstr ""
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:236
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:237
+msgid "Close"
+msgstr ""
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:242
+#: notav/linux/app/ui/window.blp:316 notav/linux/app/ui/window.blp:320
+msgid "Replace with"
+msgstr ""
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:244
+msgid "Replace All"
 msgstr ""
 
 #: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Files.kt:106
@@ -1315,18 +1371,6 @@ msgstr ""
 msgid "{percent}%"
 msgstr ""
 
-#: notav/linux/app/src/window.rs:2040
-#, rust-format
-msgid "{at} of {count}"
-msgstr ""
-
-#: notav/linux/app/src/window.rs:2043
-#, rust-format
-msgid "{count} match"
-msgid_plural "{count} matches"
-msgstr[0] ""
-msgstr[1] ""
-
 #: notav/linux/app/src/window.rs:2804
 msgid "Open in New Tab"
 msgstr ""
@@ -1472,14 +1516,6 @@ msgstr ""
 msgid "Find and Replace"
 msgstr ""
 
-#: notav/linux/app/ui/shortcuts.blp:109
-msgid "Next Match"
-msgstr ""
-
-#: notav/linux/app/ui/shortcuts.blp:114
-msgid "Previous Match"
-msgstr ""
-
 #: notav/linux/app/ui/shortcuts.blp:119
 msgid "Open the Link at the Cursor"
 msgstr ""
@@ -1560,10 +1596,6 @@ msgstr ""
 msgid "Restart"
 msgstr ""
 
-#: notav/linux/app/ui/window.blp:281
-msgid "Find in note"
-msgstr ""
-
 #: notav/linux/app/ui/window.blp:294
 msgid "Previous Match (Ctrl+Shift+G)"
 msgstr ""
@@ -1574,10 +1606,6 @@ msgstr ""
 
 #: notav/linux/app/ui/window.blp:307
 msgid "Replace (Ctrl+H)"
-msgstr ""
-
-#: notav/linux/app/ui/window.blp:316 notav/linux/app/ui/window.blp:320
-msgid "Replace with"
 msgstr ""
 
 #: notav/linux/app/ui/window.blp:325

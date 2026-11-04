@@ -71,6 +71,26 @@ import dev.aperte.notav.core.NoteStyle
 import androidx.core.net.toUri
 import dev.aperte.notav.core.NoteLink
 import dev.aperte.notav.core.noteEnter
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.outlined.FindReplace
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.IconToggleButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import dev.aperte.notav.ntr
+import kotlinx.coroutines.flow.MutableSharedFlow
 import dev.aperte.notav.core.noteHeadings
 import dev.aperte.notav.core.noteLinkAt
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
@@ -97,8 +117,10 @@ private const val MAX_STYLED = 300_000
 @Composable
 fun NotePane(model: Main, note: Note, onBack: (() -> Unit)?, onSide: () -> Unit) {
     val source by model.sourceMode.collectAsStateWithLifecycle()
+    val find = remember(note.id) { FindState() }
     Scaffold(
         topBar = {
+            Column {
             TopAppBar(
                 title = { key(note.id, note.title) { TitleField(model, note) } },
                 navigationIcon = {
@@ -116,15 +138,112 @@ fun NotePane(model: Main, note: Note, onBack: (() -> Unit)?, onSide: () -> Unit)
                             Icon(if (source) Icons.Outlined.TextFields else Icons.Outlined.Code, label)
                         }
                     }
+                    Tip(tr("Find in Note")) {
+                        IconButton(onClick = { find.open = !find.open }) { Icon(Icons.Outlined.Search, tr("Find in Note")) }
+                    }
                     // The side panel, also a swipe away.
                     Tip(tr("Outline")) {
                         IconButton(onClick = onSide) { Icon(Icons.AutoMirrored.Outlined.FormatListBulleted, tr("Outline")) }
                     }
                 },
             )
+            if (find.open) FindBar(find)
+            }
         },
     ) { padding ->
-        key(note.id) { NoteText(model, note, source, Modifier.padding(padding)) }
+        key(note.id) { NoteText(model, note, source, find, Modifier.padding(padding)) }
+    }
+}
+
+/** What the find bar asks the note for. */
+private enum class FindCommand { Next, Previous, Replace, ReplaceAll }
+
+/**
+ * Find and replace in the open note, as the Linux app's find bar: what is typed is found (case
+ * ignored) from the cursor on, the matches highlighted and counted; Enter and the arrows go
+ * through them, Replace and Replace All change them.
+ */
+private class FindState {
+    val query = TextFieldState()
+    val replace = TextFieldState()
+    var open by mutableStateOf(false)
+    var replacing by mutableStateOf(false)
+    /** How many matches there are, and which is the current one (-1: none). */
+    var count by mutableIntStateOf(0)
+    var at by mutableIntStateOf(-1)
+    val commands = MutableSharedFlow<FindCommand>(extraBufferCapacity = 4)
+}
+
+/** Where `query` starts in `text`, case ignored. */
+private fun matches(text: CharSequence, query: String): List<Int> {
+    if (query.isEmpty()) return emptyList()
+    val s = text.toString()
+    val found = mutableListOf<Int>()
+    var at = s.indexOf(query, 0, ignoreCase = true)
+    while (at >= 0) {
+        found += at
+        at = s.indexOf(query, at + query.length, ignoreCase = true)
+    }
+    return found
+}
+
+@Composable
+private fun FindBar(find: FindState) {
+    BackHandler { find.open = false }
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    val field = @Composable { state: TextFieldState, hint: String, modifier: Modifier, onEnter: () -> Unit ->
+        TextField(
+            state,
+            modifier,
+            placeholder = { Text(hint) },
+            lineLimits = TextFieldLineLimits.SingleLine,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            onKeyboardAction = { onEnter() },
+            shape = MaterialTheme.shapes.extraLarge,
+            colors = TextFieldDefaults.colors(
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+            ),
+        )
+    }
+    Column(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            field(find.query, tr("Find in note"), Modifier.weight(1f).focusRequester(focus)) {
+                find.commands.tryEmit(FindCommand.Next)
+            }
+            // "3 of 12" on a match, else how many there are.
+            val count = when {
+                find.query.text.isEmpty() -> ""
+                find.at >= 0 -> tr("{at} of {count}").replace("{at}", "${find.at + 1}").replace("{count}", "${find.count}")
+                else -> ntr("{count} match", "{count} matches", find.count.toLong()).replace("{count}", "${find.count}")
+            }
+            Text(
+                count,
+                Modifier.padding(horizontal = 8.dp),
+                style = MaterialTheme.typography.labelLarge,
+                color = if (find.count == 0 && count.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Tip(tr("Previous Match")) {
+                IconButton(onClick = { find.commands.tryEmit(FindCommand.Previous) }) { Icon(Icons.Filled.KeyboardArrowUp, tr("Previous Match")) }
+            }
+            Tip(tr("Next Match")) {
+                IconButton(onClick = { find.commands.tryEmit(FindCommand.Next) }) { Icon(Icons.Filled.KeyboardArrowDown, tr("Next Match")) }
+            }
+            Tip(tr("Replace")) {
+                IconToggleButton(find.replacing, { find.replacing = it }) { Icon(Icons.Outlined.FindReplace, tr("Replace")) }
+            }
+            Tip(tr("Close")) {
+                IconButton(onClick = { find.open = false }) { Icon(Icons.Filled.Close, tr("Close")) }
+            }
+        }
+        if (find.replacing) {
+            Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                field(find.replace, tr("Replace with"), Modifier.weight(1f)) { find.commands.tryEmit(FindCommand.Replace) }
+                TextButton(onClick = { find.commands.tryEmit(FindCommand.Replace) }) { Text(tr("Replace")) }
+                TextButton(onClick = { find.commands.tryEmit(FindCommand.ReplaceAll) }) { Text(tr("Replace All")) }
+            }
+        }
     }
 }
 
@@ -154,7 +273,7 @@ private fun TitleField(model: Main, note: Note) {
 
 @OptIn(FlowPreview::class)
 @Composable
-private fun NoteText(model: Main, note: Note, source: Boolean, modifier: Modifier) {
+private fun NoteText(model: Main, note: Note, source: Boolean, find: FindState, modifier: Modifier) {
     val state = remember { TextFieldState() }
     // The text as last loaded or saved: what the note is in the core.
     var saved by remember { mutableStateOf<String?>(null) }
@@ -205,6 +324,56 @@ private fun NoteText(model: Main, note: Note, source: Boolean, modifier: Modifie
     // Not a state: written on every layout, it would recompose the field, which lays it out again.
     val layout = remember { arrayOfNulls<TextLayoutResult>(1) }
     val scroll = rememberScrollState()
+    // A place in the text brought into view, a third down the screen, unless it is in sight.
+    val reveal: suspend (Int) -> Unit = reveal@{ at ->
+        val l = layout[0] ?: return@reveal
+        val line = l.getLineForOffset(at.coerceIn(0, state.text.length))
+        val (top, bottom) = l.getLineTop(line).toInt() to l.getLineBottom(line).toInt()
+        if (top < scroll.value || bottom > scroll.value + scroll.viewportSize) {
+            scroll.animateScrollTo((top - scroll.viewportSize / 3).coerceAtLeast(0))
+        }
+    }
+    // Find: the matches of what the find bar has, while it is open.
+    val query = if (find.open) find.query.text.toString() else ""
+    val found = remember(state.text.toString(), query) { matches(state.text, query) }
+    SideEffect {
+        find.count = found.size
+        if (find.at >= found.size) find.at = found.size - 1
+    }
+    // Typed in the find bar: the first match from the cursor on.
+    LaunchedEffect(query) {
+        val f = matches(state.text, query)
+        find.at = f.indexOfFirst { it >= state.selection.start }.takeIf { it >= 0 } ?: (if (f.isEmpty()) -1 else 0)
+        if (find.at >= 0) reveal(f[find.at])
+    }
+    val foundNow by rememberUpdatedState(found)
+    LaunchedEffect(Unit) {
+        find.commands.collect { c ->
+            val f = foundNow
+            val q = find.query.text.toString()
+            if (f.isEmpty()) return@collect
+            val r = find.replace.text.toString()
+            when (c) {
+                FindCommand.Next -> find.at = (find.at + 1).mod(f.size)
+                FindCommand.Previous -> find.at = (find.at.coerceAtLeast(0) - 1).mod(f.size)
+                FindCommand.Replace -> {
+                    val s = f[find.at.coerceAtLeast(0)]
+                    state.edit { replace(s, s + q.length, r) }
+                    // On to the next match after what was put in.
+                    val after = matches(state.text, q)
+                    find.at = after.indexOfFirst { it >= s + r.length }.takeIf { it >= 0 } ?: (if (after.isEmpty()) -1 else 0)
+                    if (find.at >= 0) reveal(after[find.at])
+                    return@collect
+                }
+                FindCommand.ReplaceAll -> {
+                    state.edit { for (s in f.asReversed()) replace(s, s + q.length, r) }
+                    find.at = -1
+                    return@collect
+                }
+            }
+            reveal(f[find.at])
+        }
+    }
     // A heading picked in the outline: the cursor there, its line at the top.
     LaunchedEffect(Unit) {
         model.jump.collect { to ->
@@ -288,7 +457,11 @@ private fun NoteText(model: Main, note: Note, source: Boolean, modifier: Modifie
         ),
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
         inputTransformation = if (styled) ContinueLists else null,
-        outputTransformation = if (styled) MarkdownStyles(spans, colors, window) else null,
+        outputTransformation = if (styled || found.isNotEmpty()) {
+            MarkdownStyles(spans, colors, window, styled, found, query.length, find.at)
+        } else {
+            null
+        },
         onTextLayout = { layout[0] = it() },
         cursorBrush = SolidColor(colors.primary),
     )
@@ -358,9 +531,35 @@ private fun Color.luminance() = 0.2126f * red + 0.7152f * green + 0.0722f * blue
  * them) is styled in full only in `window`, around what is on screen; what changes the lines'
  * heights and widths (headings, code, tables) everywhere, so scrolling does not jump.
  */
-private class MarkdownStyles(val spans: SpanCache, val colors: ColorScheme, val window: IntRange) :
-    OutputTransformation {
+private class MarkdownStyles(
+    val spans: SpanCache,
+    val colors: ColorScheme,
+    val window: IntRange,
+    /** Editor mode's styles; else (Source mode, a long note) only what is found. */
+    val styled: Boolean,
+    /** The find bar's matches (where each starts, `matchLength` long), `current` the one it is on. */
+    val found: List<Int>,
+    val matchLength: Int,
+    val current: Int,
+) : OutputTransformation {
     override fun TextFieldBuffer.transformOutput() {
+        if (styled) markdown()
+        found.forEachIndexed { i, s ->
+            val end = s + matchLength
+            if (end < window.first || s > window.last || end > length) return@forEachIndexed
+            addStyle(
+                if (i == current) {
+                    SpanStyle(background = colors.tertiary, color = colors.onTertiary)
+                } else {
+                    SpanStyle(background = colors.tertiaryContainer, color = colors.onTertiaryContainer)
+                },
+                s,
+                end,
+            )
+        }
+    }
+
+    private fun TextFieldBuffer.markdown() {
         val all = spans.of(asCharSequence())
         for (pass in 0..1) {
             for (s in all) {
@@ -376,8 +575,9 @@ private class MarkdownStyles(val spans: SpanCache, val colors: ColorScheme, val 
     }
 
     override fun equals(other: Any?) =
-        other is MarkdownStyles && other.spans === spans && other.colors == colors && other.window == window
-    override fun hashCode() = spans.hashCode() * 31 + window.hashCode()
+        other is MarkdownStyles && other.spans === spans && other.colors == colors && other.window == window &&
+            other.styled == styled && other.found == found && other.matchLength == matchLength && other.current == current
+    override fun hashCode() = (spans.hashCode() * 31 + window.hashCode()) * 31 + found.hashCode() + current
 }
 
 /** Notes up to this long are styled whole: a few hundred styles, laid out at once. */

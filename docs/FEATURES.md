@@ -79,6 +79,7 @@ What Notav can do, in short. The details of each release are in the
 - Search, Today's note, and text shared from other apps as a note.
 - A note locked on the server waits with its change; a message says who locked it, and
   Unlock… lets it go.
+- The Trash (restore or delete for good) and a note's versions (look at one, restore it).
 - Syncs while open, when the tree is pulled down, and once more when left; in the background
   too, if chosen: from every 15 minutes to once a day.
 - Settings as the Linux app's Preferences: the style, the tree's density and icons, table
@@ -87,7 +88,7 @@ What Notav can do, in short. The details of each release are in the
 
 ## Planned
 
-- On Android: Trash, versions, unlocking notes locked on the server, widgets.
+- On Android: widgets.
 - Notes moved between accounts; the journal in an account of your choice.
 - Notes in GNOME Shell's search.
 - Emptying the Trash of notes at once; a version's changes shown against the note.

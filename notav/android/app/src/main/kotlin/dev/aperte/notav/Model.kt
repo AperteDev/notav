@@ -57,11 +57,15 @@ sealed interface Page {
     data object AddAccount : Page
     /** Signing in again to account `id`. */
     data class Reconnect(val id: Long) : Page
+    /** What Nextcloud's trash bins keep of the accounts' notes. */
+    data object Trash : Page
+    /** The versions Nextcloud keeps of note `id`. */
+    data class Versions(val id: Long) : Page
 
     /** The page Back goes to; none, the notes. */
     val parent: Page?
         get() = when (this) {
-            Settings -> null
+            Settings, Trash, is Versions -> null
             General, Editor, Journal, Accounts, About -> Settings
             is Account, AddAccount -> Accounts
             is Reconnect -> Account(id)
@@ -610,6 +614,23 @@ class Main(app: Application) : AndroidViewModel(app) {
             reveal(n.account, n.folder)
             openNote(n)
             done()
+        } catch (e: Exception) {
+            failed(e)
+        }
+    }
+
+    /** The accounts shown and syncing whose server keeps deleted notes. Blocking. */
+    fun trashAccounts(): List<dev.aperte.notav.core.Account> =
+        core.accounts().filter { core.syncing(it.id) && core.features(it.id).trash }
+
+    /** Whether note `n`'s server keeps its versions. Blocking. */
+    fun hasVersions(n: Note): Boolean = core.syncing(n.account) && core.features(n.account).versions
+
+    /** Make `text` note `id`'s (a version restored); it goes up with the next sync. */
+    fun restoreVersion(id: Long, text: String, message: String) = act {
+        try {
+            core.setText(id, text)
+            done(Message(message))
         } catch (e: Exception) {
             failed(e)
         }

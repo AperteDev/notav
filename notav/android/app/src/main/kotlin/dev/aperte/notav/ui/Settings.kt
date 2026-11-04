@@ -117,6 +117,8 @@ fun PageView(model: Main, page: Page) {
         Page.Accounts -> Frame(tr("Accounts"), back) { Accounts(model) }
         Page.About -> Frame(tr("About Notav"), back) { About() }
         is Page.Account -> AccountPage(model, page.id, back)
+        Page.Trash -> TrashPage(model, back)
+        is Page.Versions -> VersionsPage(model, page.id, back)
         Page.AddAccount -> Frame(tr("Add Account"), back) {
             Steps { AccountChoice(model, welcome = false) }
         }
@@ -134,7 +136,12 @@ fun PageView(model: Main, page: Page) {
 /** A settings page, Todav's: its title in a large bar with a back button, its sections under it, centred on wide screens. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun Frame(title: String, onBack: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+internal fun Frame(
+    title: String,
+    onBack: () -> Unit,
+    actions: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {},
+    content: @Composable ColumnScope.() -> Unit,
+) {
     val bar = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     BoxWithConstraints {
         // The bar's back button and title over the content, centred on wide screens; its colour
@@ -150,6 +157,7 @@ private fun Frame(title: String, onBack: () -> Unit, content: @Composable Column
                             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Back")) }
                         }
                     },
+                    actions = actions,
                     windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = side, right = side)),
                     scrollBehavior = bar,
                 )
@@ -181,7 +189,7 @@ private fun Steps(content: @Composable ColumnScope.() -> Unit) = Column(
 
 /** A [Group] of rows under its title (none: only a gap), as Todav's. */
 @Composable
-private fun Section(title: String?, content: @Composable ColumnScope.() -> Unit) {
+internal fun Section(title: String?, content: @Composable ColumnScope.() -> Unit) {
     if (title != null) {
         Text(
             title,
@@ -197,7 +205,7 @@ private fun Section(title: String?, content: @Composable ColumnScope.() -> Unit)
 
 /** A note under a [Section], as the Linux app's groups' descriptions. */
 @Composable
-private fun Note(text: String) = Text(
+internal fun Note(text: String) = Text(
     text,
     style = MaterialTheme.typography.bodyMedium,
     color = MaterialTheme.colorScheme.onSurfaceVariant,

@@ -121,7 +121,6 @@ Later (v2):
 
 The Android app (`notav/android`) still lacks, next:
 
-- Trash, versions.
 - Release on F-Droid (after three months of history, from about 2027-01-24; a recipe as
   Todav's, its build matching our signed APK) and Google Play, as Todav; screenshots in the
   fastlane metadata.

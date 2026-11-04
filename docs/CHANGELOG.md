@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   it) swiped between, one at a time on a phone, two side by side on wide screens (an unfolded
   foldable, a tablet); Editor mode's styles, ticking tasks, lists and tables;
   search, Today's note, text shared from other apps as a note; a note locked on the server
-  told about, with Unlock…. It syncs while open, when the
+  told about, with Unlock…; the Trash and a note's versions. It syncs while open, when the
   tree is pulled down and once more when left; Settings can add a sync in the background,
   from every 15 minutes to once a day. Settings has the Linux app's pages: the style, the
   tree's density and icons, table formatting, the journal's daily notes, each account's page

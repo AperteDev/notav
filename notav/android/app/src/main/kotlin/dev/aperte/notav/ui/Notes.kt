@@ -51,6 +51,8 @@ import androidx.compose.material.icons.automirrored.outlined.DriveFileMove
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -324,10 +326,25 @@ internal fun TreePane(model: Main, screen: Screen) {
                         Tip(tr("Search Notes")) {
                             IconButton(onClick = { model.search("") }) { Icon(Icons.Outlined.Search, tr("Search Notes")) }
                         }
-                        Tip(tr("Settings")) {
-                            IconButton(onClick = { model.page.value = dev.aperte.notav.Page.Settings }) {
-                                Icon(Icons.Outlined.Settings, tr("Settings"))
+                        // The Trash (where a server keeps deleted notes) and Settings, as the
+                        // Linux app's main menu.
+                        var more by remember { mutableStateOf(false) }
+                        Box {
+                            Tip(tr("Main Menu")) {
+                                IconButton(onClick = { more = true }) { Icon(Icons.Outlined.MoreVert, tr("Main Menu")) }
                             }
+                            val trash = remember(more, screen.accounts) { more && model.trashAccounts().isNotEmpty() }
+                            Menu(
+                                more,
+                                { more = false },
+                                listOf(
+                                    listOfNotNull(
+                                        Entry(tr("Trash"), Icons.Outlined.Delete) { model.page.value = dev.aperte.notav.Page.Trash }
+                                            .takeIf { trash },
+                                        Entry(tr("Settings"), Icons.Outlined.Settings) { model.page.value = dev.aperte.notav.Page.Settings },
+                                    ),
+                                ),
+                            )
                         }
                     },
                 )
@@ -539,6 +556,8 @@ private fun TreeRow(model: Main, screen: Screen, look: TreeLook, depth: Int, ite
         }
         val note = (item as? Item.NoteRow)?.note
         val owned = item !is Item.Account
+        // Asked of the account only once the menu opens.
+        val versions = remember(menu, note) { menu && note != null && model.hasVersions(note) }
         Menu(
             menu,
             { menu = false },
@@ -549,12 +568,14 @@ private fun TreeRow(model: Main, screen: Screen, look: TreeLook, depth: Int, ite
                         Entry(tr("New Folder"), Icons.Outlined.CreateNewFolder) { ask(Ask.NewFolder(item.place)) },
                     )
                 } else {
-                    listOf(
+                    listOfNotNull(
                         if (note.favorite) {
                             Entry(tr("Remove from Favorites"), Icons.Filled.Star) { model.setFavorite(note, false) }
                         } else {
                             Entry(tr("Add to Favorites"), Icons.Outlined.StarBorder) { model.setFavorite(note, true) }
                         },
+                        Entry(tr("Versions…"), Icons.Outlined.History) { model.page.value = dev.aperte.notav.Page.Versions(note.id) }
+                            .takeIf { versions },
                     )
                 },
                 if (owned) {

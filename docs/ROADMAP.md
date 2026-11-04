@@ -131,9 +131,6 @@ table's cells keeping their padding as they are typed in (`table::padding_taken`
 wider than the note scrolling sideways (they wrap now), the text's size, widgets, a Quick
 Settings tile.
 
-Not on Android: "Show outline automatically" (the outline is a swipe away, never hidden beside
-the note) and a font for Source mode (Android has one monospace font).
-
 ## Distribution
 
 - **Screenshots** in the README and the metainfo (Flathub requires them); `scripts/release.py`
@@ -204,6 +201,8 @@ the note) and a font for Source mode (Android has one monospace font).
 
 ## Ruled out
 
+- **On Android, "Show outline automatically"**: the outline is a swipe away, never hidden beside
+  the note; and **a font for Source mode**: Android has one monospace font.
 - **A background service** (autostart, `HOLD`) in v1: notes have no reminders, so the app syncs
   only while it is open (decided 2026-10-24).
 - **The first line as the title**: the title is the file name, as in Obsidian; Nextcloud Notes

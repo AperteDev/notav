@@ -6,6 +6,11 @@
   what is built is described by the code. Read it before working on a planned feature, and
   update it in the same change: remove what is done, add a plan or an open question, move a
   dropped plan under "Ruled out" with why.
+- A feature goes to every platform it applies to (the Linux app, Android), working the same
+  way and with the same words where the platform allows, in the same change or the next one.
+  What cannot be made on a platform yet gets its plan under that platform in
+  `docs/ROADMAP.md`; what does not apply there (a platform's own convention, a piece only one
+  has) goes under "Ruled out" with why. A fix to shared behaviour is checked on each platform.
 
 ## Todav
 

@@ -4,7 +4,7 @@
 
 use std::process::Command;
 
-const PO: &str = "../../po";
+const PO: &str = "../../../po";
 const METAINFO: &str = "../data/dev.aperte.Notav.metainfo.xml";
 
 fn msgfmt(args: &[&str]) {

@@ -52,7 +52,7 @@ at once.
 %cargo_vendor_manifest
 
 %install
-make -C linux install-data PREFIX=%{_prefix} DESTDIR=%{buildroot}
+make -C notav/linux install-data PREFIX=%{_prefix} DESTDIR=%{buildroot}
 %find_lang %{name}
 
 %check

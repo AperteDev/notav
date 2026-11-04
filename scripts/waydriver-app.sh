@@ -1,5 +1,5 @@
 #!/bin/bash
-# The sandbox copy of the app (as `make -C linux sandbox`) for a waydriver-mcp session: give its
+# The sandbox copy of the app (as `make -C notav/linux sandbox`) for a waydriver-mcp session: give its
 # path as start_session's command, with app_name "notav-waydriver". waydriver runs the app on the
 # host's session bus (the keyring works) in a headless Mutter of its own; the sandbox copy is not
 # unique there, so it runs beside the normal app, with its own data in target/sandbox.

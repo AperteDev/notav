@@ -137,7 +137,7 @@ def main() -> None:
             flags=re.M,
         )
     )
-    metainfo = "linux/data/dev.aperte.Notav.metainfo.xml"
+    metainfo = "notav/linux/data/dev.aperte.Notav.metainfo.xml"
     set_release(metainfo, version, date, notes, repo)
     # Every screenshot from the new tag.
     meta = ROOT / metainfo
@@ -145,7 +145,7 @@ def main() -> None:
     meta.write_text(re.sub(shots, rf"\g<1>v{version}\g<2>", meta.read_text()))
 
     # The RPM spec: its version, and a changelog entry by whoever wrote the last one.
-    spec = "linux/rpm/notav.spec"
+    spec = "notav/linux/rpm/notav.spec"
     edit(spec, r"^(Version:\s+)\S+$", rf"\g<1>{version}")
     edit(spec, r"^(Release:\s+)\d+", r"\g<1>1")
     # C locale names (Python leaves LC_TIME alone), as RPM wants them.

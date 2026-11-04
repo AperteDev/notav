@@ -51,7 +51,7 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
   drag stays within its account), as a copy there and a deletion here; the journal's account
   chosen in Preferences (now the first account switched on, `Client::journal_account`).
 - **GNOME Shell search**: notes found from the Activities overview by title and text, as Iotas
-  and Folio have it; Todav's search provider (`linux/app/src/search.rs`, its `.ini`) over the
+  and Folio have it; Todav's search provider (`todav/linux/app/src/search.rs`, its `.ini`) over the
   core's search, under the app's own bus name.
 - **View menu**, more: a focus mode keeping the cursor's line in the middle of the view (as iA
   Writer, Apostrophe and Iotas); the note's word count in the header's subtitle (as Bear's info
@@ -88,7 +88,7 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
 - **Templates**: notes in a folder chosen in Preferences (a synced setting); "New Note from
   Template" copies one, filling `{{title}}`, `{{date}}` and `{{time}}` (dates from the locale).
   The Journal's daily notes start from one template note already (`{{title}}`, `{{date}}`;
-  `core/src/journal.rs`): both should fill in the same way.
+  `notav/core/src/journal.rs`): both should fill in the same way.
 - **Links to Todav's tasks**: a note links a task as `todav://task/<uid>`. Todav opens it (it
   handles the `todav` URI scheme), and Notav shows the task's title and state through Todav's
   D-Bus API (`GetTask`, to be added in Todav). Without Todav the link stays a plain link.
@@ -97,7 +97,7 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
 - **Client Push**: Nextcloud's Client Push app (`notify_push`), which the desktop sync client
   uses. Its WebSocket (from the `notify_push` capability) sends `notify_file` when the user's
   files change; the app then pulls. Optional on the server; polling stays as the safety net
-  (`TODO(v2)` in `linux/app/src/main.rs`). Todav's `dav_push` covers CalDAV only.
+  (`TODO(v2)` in `notav/linux/app/src/main.rs`). Todav's `dav_push` covers CalDAV only.
 
 Later (v2):
 
@@ -135,7 +135,7 @@ Later (v2):
   (Rust, GTK 4, GtkSourceView 5, `pulldown-cmark`) is the closest prior art; it is AGPL, so its
   ideas only, not its code.
 - **Table alignment**: tables are padded by each character's width in a monospace font, taken
-  from the common wide ranges (CJK, Hangul, emoji; `width` in `core/src/table.rs`). A script
+  from the common wide ranges (CJK, Hangul, emoji; `width` in `notav/core/src/table.rs`). A script
   that still lines up wrong needs Unicode's whole East Asian Width table (the `unicode-width`
   crate) or measuring with Pango, and fallback fonts may not be exactly two columns wide anyway.
   Tables (and code blocks) wider than the text column do not wrap: the note widens for them,

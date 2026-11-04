@@ -8,7 +8,7 @@ use notav_core::{AccountKind, ChangeListener, Client, Note};
 use std::sync::{Arc, Mutex};
 
 fn get(k: &str) -> Option<String> {
-    let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../.env"))
+    let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../.env"))
         .unwrap_or_default();
     std::env::var(k).ok().or_else(|| {
         text.lines()

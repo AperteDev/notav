@@ -18,7 +18,7 @@
 - Code copied from Todav (as of Todav 1.2.0; the copies may diverge). A fix to one of these
   probably applies there too: port it or say so.
 
-  | Piece | From Todav | Here |
+  | Piece | From Todav (under `todav/`) | Here (under `notav/`) |
   | --- | --- | --- |
   | Login Flow v2, app password sign-in | `core/src/login.rs` | As is |
   | Minimal JSON | `core/src/json.rs` | As is |
@@ -30,7 +30,7 @@
   | CLI `.env` loading | `cli/src/main.rs` | `NOTAV_*` |
   | GNOME Online Accounts | `linux/app/src/goa.rs` | As is |
   | gettext over glibc, first weekday | `linux/app/src/i18n.rs` | Domain `notav` |
-  | Secret Service, accounts (add, local, reconnect, switch off, remove), sync worker | `linux/app/src/main.rs`, `todav/app/src/accounts.rs` | No push, reminders, D-Bus or Google; the worker syncs each account itself and names the failed ones |
+  | Secret Service, accounts (add, local, reconnect, switch off, remove), sync worker | `linux/app/src/main.rs`, `app/src/accounts.rs` | No push, reminders, D-Bus or Google; the worker syncs each account itself and names the failed ones |
   | Adding an account (welcome page, Preferences), login dialogs | `add_account.rs`, `ui/add-account.blp`, `ui/password-login.blp`, parts of `window.rs` | A notes folder step after connecting, then the welcome page's first sync; no ntfy or Google; GOA accounts need Files on |
   | Preferences: style, accounts (a page each, settings sync, reordering) | `linux/app/src/settings.rs`, `ui/settings.blp`, `ui/account.blp` | A notes folder row; no DAV Push row or ntfy |
   | Undo toast, Ctrl+Z | `linux/app/src/window.rs` (`undo_toast`, `undo`) | As is |
@@ -80,7 +80,7 @@
 ## Stored data
 
 - An update carries on with what the previous version kept. The database (`notav.sqlite` in
-  the data folder) may change in any way, as a new step at the end of `core/src/store.rs`
+  the data folder) may change in any way, as a new step at the end of `notav/core/src/store.rs`
   `MIGRATIONS` that converts what is there (tables, columns, `kv` keys and values); a released
   step is never edited. Each new step gets a test that opens a database of the step before and
   checks what the new one made of it. A database from a newer Notav is refused (`store::open`),
@@ -111,7 +111,7 @@
   (keys that do the expected thing in context, as Tab in a table or Enter after a header line,
   a context menu, a click on the text) over new buttons, panels or dialogs. Add visible UI only
   where nothing in place would do, or where it is planned (`docs/ROADMAP.md`).
-- Static views are Blueprint files in `linux/app/ui/`, compiled by `build.rs`; dynamic UI (note
+- Static views are Blueprint files in `notav/linux/app/ui/`, compiled by `build.rs`; dynamic UI (note
   rows) stays in Rust code.
 - What Editor mode changes by itself (a table tidied as the cursor leaves it) gets a switch in
   Preferences, Editor → Markdown: a synced setting, on by default, read where the change is made
@@ -125,8 +125,8 @@
   sync off. Leave the Test account's synced `notes_folder` at `Notes` when done.
 - Nextcloud derives a file's ETag from its modification time in whole seconds: two writes in one
   second keep it. Keep `X-OC-MTime` on uploads (see `Dav::put`).
-- The app, as in Todav: `make -C linux sandbox` runs a separate copy (`NOTAV_SANDBOX`, data in
-  `target/sandbox`); `make -C linux broadway` runs it in a browser on display `:6`
+- The app, as in Todav: `make -C notav/linux sandbox` runs a separate copy (`NOTAV_SANDBOX`, data
+  in `target/sandbox`); `make -C notav/linux broadway` runs it in a browser on display `:6`
   (`http://127.0.0.1:8086`, Todav uses `:5`). Todav's notes on Broadway's limits apply. Closing
   the window quits the app (after the sync), so a new launch starts fresh.
 - With GTK 4.24, Broadway aborts as soon as a note opens (`append_node_ops` assertion). To see
@@ -149,7 +149,7 @@
     `type_text` drops tabs: `press_key` `Tab`. A right click is `pointer_click` with button 273;
     a click with a key held (Ctrl+click) cannot be made.
   - `read_value` on `(//ScrollBar)[1]` is the open note's scroll position.
-- Editor mode's reference note, `core/tests/reference.md`, has every piece of Markdown it styles;
+- Editor mode's reference note, `notav/core/tests/reference.md`, has every piece of Markdown it styles;
   the core's tests parse it, and it can be put on the Test account (`notav new`) to look at in the
   app. Delete it from there afterwards.
 

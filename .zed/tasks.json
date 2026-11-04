@@ -27,7 +27,7 @@
   {
     "label": "linux: run in browser (Broadway)",
     // In make, not here: Zed runs commands through the user's shell (fish), not sh.
-    "command": "make -C linux broadway",
+    "command": "make -C notav/linux broadway",
     "use_new_terminal": false,
     "allow_concurrent_runs": false,
     "reveal": "always"
@@ -35,14 +35,14 @@
   {
     "label": "linux: run in sandbox",
     // Own data and keyring entries, next to the normal app: for testing other connections.
-    "command": "make -C linux sandbox",
+    "command": "make -C notav/linux sandbox",
     "use_new_terminal": false,
     "allow_concurrent_runs": false,
     "reveal": "always"
   },
   {
     "label": "linux: reset sandbox",
-    "command": "make -C linux sandbox-reset",
+    "command": "make -C notav/linux sandbox-reset",
     "use_new_terminal": false,
     "reveal": "no_focus",
     "hide": "on_success"

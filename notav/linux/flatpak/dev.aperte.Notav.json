@@ -25,12 +25,12 @@
       "buildsystem": "simple",
       "build-commands": [
         "cargo build --release --locked -p notav-linux",
-        "make -C linux install-data PREFIX=/app BINDIR=/app/bin"
+        "make -C notav/linux install-data PREFIX=/app BINDIR=/app/bin"
       ],
       "sources": [
         {
           "type": "dir",
-          "path": "../..",
+          "path": "../../..",
           "skip": ["target", "tmp", ".git", ".env", ".playwright-mcp", ".flatpak-builder", "flatpak_app", "repo"]
         }
       ]

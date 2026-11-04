@@ -13,11 +13,11 @@ x() {
     --msgid-bugs-address=https://github.com/AperteDev/notav/issues --output="$pot" "$@"
 }
 
-x -L Rust -k -kgettext -kngettext:1,2 -kpgettext:1c,2 -kgettext_noop linux/app/src/*.rs
+x -L Rust -k -kgettext -kngettext:1,2 -kpgettext:1c,2 -kgettext_noop notav/linux/app/src/*.rs
 # Blueprint's _("…") and C_("context", "…") read like C.
-x --join-existing -L C -k -k_ -kC_:1c,2 linux/app/ui/*.blp
-x --join-existing linux/data/dev.aperte.Notav.desktop \
-  linux/data/dev.aperte.Notav.metainfo.xml
+x --join-existing -L C -k -k_ -kC_:1c,2 notav/linux/app/ui/*.blp
+x --join-existing notav/linux/data/dev.aperte.Notav.desktop \
+  notav/linux/data/dev.aperte.Notav.metainfo.xml
 
 for lang in $(grep -v '^#' po/LINGUAS); do
   if [ -f "po/$lang.po" ]; then

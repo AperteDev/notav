@@ -1,5 +1,5 @@
 #!/bin/sh
-# Package a staged tree (`make -C linux stage`, the tarball's content) as a .deb. Run it on
+# Package a staged tree (`make -C notav/linux stage`, the tarball's content) as a .deb. Run it on
 # the Ubuntu release the package is for: dpkg-shlibdeps takes the dependencies from the libraries
 # the binary links to, as that release names them.
 #

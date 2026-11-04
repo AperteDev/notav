@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="linux/data/dev.aperte.Notav.svg" width="128" alt="Notav icon">
+  <img src="notav/linux/data/dev.aperte.Notav.svg" width="128" alt="Notav icon">
 </p>
 
 <h1 align="center">Notav</h1>
@@ -88,15 +88,15 @@ SQLite, `blueprint-compiler`, `glib-compile-resources` (GLib) and gettext's `msg
 
 ```sh
 # The app: binary, desktop file and icons in ~/.local
-make -C linux install
+make -C notav/linux install
 ```
 
-A Flatpak manifest is included too: `make -C linux flatpak` (needs `flatpak-builder`). For
-Fedora, `linux/rpm/notav.spec` builds an RPM; COPR builds it with `.copr/Makefile`, which also
-works locally:
+A Flatpak manifest is included too: `make -C notav/linux flatpak` (needs `flatpak-builder`). For
+Fedora, `notav/linux/rpm/notav.spec` builds an RPM; COPR builds it with `.copr/Makefile`, which
+also works locally:
 
 ```sh
-make -f .copr/Makefile srpm outdir=$PWD/target/rpm spec=$PWD/linux/rpm/notav.spec
+make -f .copr/Makefile srpm outdir=$PWD/target/rpm spec=$PWD/notav/linux/rpm/notav.spec
 ```
 
 The `notav` command-line tool (`cargo run -p notav-cli`) syncs and edits notes for debugging.

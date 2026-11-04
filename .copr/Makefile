@@ -1,8 +1,8 @@
 # COPR's "make srpm" build method: the source tarball from this checkout, the crates it needs
 # vendored next to it (COPR builds without network), then the source RPM. COPR passes outdir
 # and spec; locally:
-#   make -f .copr/Makefile srpm outdir=$PWD/target/rpm spec=$PWD/linux/rpm/notav.spec
-spec ?= $(CURDIR)/linux/rpm/notav.spec
+#   make -f .copr/Makefile srpm outdir=$PWD/target/rpm spec=$PWD/notav/linux/rpm/notav.spec
+spec ?= $(CURDIR)/notav/linux/rpm/notav.spec
 outdir ?= $(CURDIR)/target/rpm
 top := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
 

@@ -14,8 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   device; the tree of folders and notes beside the note on wide screens (an unfolded foldable,
   a tablet), the note alone on a phone; Editor mode's styles, ticking tasks, lists and tables;
   search, Today's note, text shared from other apps as a note. It syncs while open, when the
-  tree is pulled down and once more when left; Preferences can add a sync about every hour in
-  the background
+  tree is pulled down and once more when left; Preferences can add a sync in the background,
+  from every 15 minutes to once a day
 - Tabs, as in Obsidian: a click on a note opens it in the selected tab, Ctrl+click or a middle
   click (or "Open in New Tab" in its menu) in a new one; the tabs show above the note once
   there are two. Each keeps where its cursor was; Ctrl+Page Down and Ctrl+Page Up go through

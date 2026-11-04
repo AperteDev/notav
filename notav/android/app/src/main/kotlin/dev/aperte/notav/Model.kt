@@ -414,10 +414,10 @@ class Main(app: Application) : AndroidViewModel(app) {
         notav.changed()
     }
 
-    /** The optional background sync, on or off (device-only, off by default). */
-    fun setBackgroundSync(on: Boolean) = act {
-        core.setSetting("background_sync", on.toString())
-        Upload.background(notav, on)
+    /** The optional background sync, every `minutes` or off (0; device-only, off by default). */
+    fun setBackgroundSync(minutes: Long) = act {
+        core.setSetting("background_sync", minutes.toString())
+        Upload.background(notav, minutes)
         notav.changed()
     }
 

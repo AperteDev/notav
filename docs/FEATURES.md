@@ -76,8 +76,8 @@ What Notav can do, in short. The details of each release are in the
 - The tree beside the note on wide screens, the note alone on a phone.
 - Editor mode's styles, ticking tasks, continuing lists, tables kept aligned, links followed.
 - Search, Today's note, and text shared from other apps as a note.
-- Syncs while open, when the tree is pulled down, and once more when left; a sync every hour
-  or so in the background, if switched on.
+- Syncs while open, when the tree is pulled down, and once more when left; in the background
+  too, if chosen: from every 15 minutes to once a day.
 
 ## Planned
 

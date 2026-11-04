@@ -21,11 +21,21 @@ import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.PhoneAndroid
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ExposedDropdownMenu
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
+import androidx.compose.material3.SelectableDropdownMenuItem
+import dev.aperte.notav.Upload
+import dev.aperte.notav.ntr
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -159,13 +169,59 @@ private fun Preferences(model: Main) {
     }
     Title(tr("Sync"))
     Group {
-        val on = settings["background_sync"] == "true"
+        val minutes = settings["background_sync"]?.toLongOrNull()?.takeIf { it in Upload.INTERVALS } ?: 0L
+        Select(
+            tr("Sync in the Background"),
+            tr("While Notav is closed, to have other devices’ changes ready"),
+            Upload.INTERVALS.map(::interval),
+            Upload.INTERVALS.indexOf(minutes),
+        ) { model.setBackgroundSync(Upload.INTERVALS[it]) }
+    }
+}
+
+/** How often, as the background sync's choices name it. */
+private fun interval(minutes: Long): String = when {
+    minutes == 0L -> ptr("background sync", "Off")
+    minutes == 60L -> tr("Every hour")
+    minutes == 1440L -> tr("Once a day")
+    minutes < 60 -> ntr("Every {n} minute", "Every {n} minutes", minutes).replace("{n}", minutes.toString())
+    else -> ntr("Every {n} hour", "Every {n} hours", minutes / 60).replace("{n}", (minutes / 60).toString())
+}
+
+/**
+ * A row naming the one of `options` picked (`selected`) under `title`, with `subtitle`; a tap
+ * opens them in a menu below it (Material's select, an exposed dropdown menu).
+ */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun Select(title: String, subtitle: String, options: List<String>, selected: Int, onPick: (Int) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(open, { open = it }) {
         Item(
-            headlineContent = { Text(tr("Sync in the Background")) },
-            supportingContent = { Text(tr("About every hour while Notav is closed, to have other devices’ changes ready")) },
-            trailingContent = { Switch(on, { model.setBackgroundSync(it) }) },
-            modifier = Modifier.clickable { model.setBackgroundSync(!on) },
+            headlineContent = { Text(title) },
+            supportingContent = {
+                Column {
+                    Text(options[selected], color = MaterialTheme.colorScheme.primary)
+                    Text(subtitle)
+                }
+            },
+            trailingContent = { ExposedDropdownMenuDefaults.TrailingIcon(open) },
+            modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
         )
+        ExposedDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            options.forEachIndexed { i, o ->
+                SelectableDropdownMenuItem(
+                    selected = i == selected,
+                    onClick = {
+                        open = false
+                        onPick(i)
+                    },
+                    text = { Text(o) },
+                    shapes = MenuDefaults.itemShape(i, options.size),
+                    selectedLeadingIcon = { Icon(Icons.Outlined.Check, null) },
+                )
+            }
+        }
     }
 }
 

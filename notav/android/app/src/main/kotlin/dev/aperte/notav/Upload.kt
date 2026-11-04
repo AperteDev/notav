@@ -35,20 +35,23 @@ class Upload(context: Context, params: WorkerParameters) : CoroutineWorker(conte
     }
 
     companion object {
+        /** How often the background sync may run, in minutes; 0 is off, the default. */
+        val INTERVALS = listOf(0L, 15L, 30L, 60L, 360L, 1440L)
+
         /**
-         * With the device-only `background_sync` on (off by default): a full sync about every
-         * hour while Notav is closed, once there is a network; off, none.
+         * The device-only `background_sync`, minutes between full syncs while Notav is closed,
+         * once there is a network (Android may run them later); 0 (or none), no sync.
          */
-        fun background(app: NotavApp, on: Boolean) {
+        fun background(app: NotavApp, minutes: Long) {
             val work = WorkManager.getInstance(app)
-            if (!on) {
+            if (minutes <= 0) {
                 work.cancelUniqueWork("background")
                 return
             }
-            val request = androidx.work.PeriodicWorkRequestBuilder<Background>(1, java.util.concurrent.TimeUnit.HOURS)
+            val request = androidx.work.PeriodicWorkRequestBuilder<Background>(minutes, java.util.concurrent.TimeUnit.MINUTES)
                 .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
                 .build()
-            work.enqueueUniquePeriodicWork("background", androidx.work.ExistingPeriodicWorkPolicy.KEEP, request)
+            work.enqueueUniquePeriodicWork("background", androidx.work.ExistingPeriodicWorkPolicy.UPDATE, request)
         }
 
         /** Unless nothing waits for the server. */

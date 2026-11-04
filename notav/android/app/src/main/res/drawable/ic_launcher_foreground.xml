@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The app icon's writing and pen (notav/linux/data/dev.aperte.Notav.svg, in its 128 px
-     coordinates, at 0.6) over ic_launcher_background, the notepad that fills the whole adaptive
-     icon: just below its header, all in the 66 dp safe zone whatever the launcher's mask. -->
+     coordinates, at 0.64) over ic_launcher_background, the notepad that fills the whole
+     adaptive icon: just below its header, which is as high as Todav's, all in the 66 dp safe
+     zone whatever the launcher's mask. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
@@ -9,10 +10,10 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
     <group
-        android:translateX="14.4"
-        android:translateY="13.8"
-        android:scaleX="0.6"
-        android:scaleY="0.6">
+        android:translateX="11.7"
+        android:translateY="7.1"
+        android:scaleX="0.64"
+        android:scaleY="0.64">
         <!-- The heading's #, then the lines of text with their bullets. -->
         <path
             android:pathData="M25,54.5l-1.5,9M29.5,54.5l-1.5,9M21.75,57.25h9M21,60.75h9"

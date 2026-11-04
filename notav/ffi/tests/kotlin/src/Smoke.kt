@@ -35,6 +35,10 @@ fun main() {
     check(n.undo(null))
     check(n.notes().any { it.title == "Plans" })
 
+    // The journal's settings shape the daily note's path.
+    n.setSetting("journal_format", "YYYY/MM-DD")
+    check(n.dailyPath(2026, 3u, 7u) == "Journal/2026/03-07") { "daily path: ${n.dailyPath(2026, 3u, 7u)}" }
+
     // A Nextcloud account with its password in the front-end's keyring, removed with it (nothing
     // waits for its server, so no sync is needed).
     val kept = mutableMapOf<String, String>()

@@ -43,11 +43,9 @@ fun NotavUi(model: Main) {
         return
     }
     val page by model.page.collectAsStateWithLifecycle()
-    page?.let {
-        PageView(model, it)
-        return
+    WithMessages(model) {
+        page?.let { PageView(model, it) } ?: Home(model, s)
     }
-    Home(model, s)
 }
 
 /** The data could not be opened (left by a newer Notav, say): only that, nothing else runs. */

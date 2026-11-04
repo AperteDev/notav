@@ -45,12 +45,27 @@ data class Screen(
     val rows: List<Row>,
 )
 
-/** A page over the notes. */
+/** A page over the notes: Settings, its pages (as the Linux app's Preferences), an account's. */
 sealed interface Page {
     data object Settings : Page
+    data object General : Page
+    data object Editor : Page
+    data object Journal : Page
+    data object Accounts : Page
+    data object About : Page
+    data class Account(val id: Long) : Page
     data object AddAccount : Page
     /** Signing in again to account `id`. */
     data class Reconnect(val id: Long) : Page
+
+    /** The page Back goes to; none, the notes. */
+    val parent: Page?
+        get() = when (this) {
+            Settings -> null
+            General, Editor, Journal, Accounts, About -> Settings
+            is Account, AddAccount -> Accounts
+            is Reconnect -> Account(id)
+        }
 }
 
 /** A snackbar's text, with the change its Undo reverts. */
@@ -189,7 +204,7 @@ class Main(app: Application) : AndroidViewModel(app) {
             try {
                 core.reconnect(notav.passwords, again.id, server, password)
                 signIn.value = SignIn.Idle
-                page.value = Page.Settings
+                page.value = Page.Account(again.id)
                 notav.changed()
                 notav.syncNow()
             } catch (e: Exception) {
@@ -418,6 +433,64 @@ class Main(app: Application) : AndroidViewModel(app) {
     fun setBackgroundSync(minutes: Long) = act {
         core.setSetting("background_sync", minutes.toString())
         Upload.background(notav, minutes)
+        notav.changed()
+    }
+
+    fun renameAccount(id: Long, name: String) = act {
+        core.renameAccount(id, name.trim())
+        notav.changed()
+    }
+
+    /** Settings sync through account `id` (a Nextcloud one), or none; its settings come at once. */
+    fun setSettingsAccount(id: Long?) = act {
+        core.setSettingsAccount(id)
+        notav.changed()
+        notav.syncNow()
+    }
+
+    /** Account `id`'s notes in `folder` of its Files, `move`d there from the old one or not. */
+    fun setNotesFolder(id: Long, folder: String, move: Boolean) = act {
+        val text = try {
+            core.setNotesFolder(id, folder, move)
+            if (open.value?.let { core.note(it) } == null) open.value = null
+            notav.changed()
+            notav.syncNow()
+            tr("Notes folder changed to “{folder}”").replace("{folder}", folder)
+        } catch (e: NotavException.Invalid) {
+            tr("Not a folder name")
+        } catch (e: Exception) {
+            tr("Notes folder not changed: {error}").replace("{error}", reason(e))
+        }
+        messages.tryEmit(Message(text))
+    }
+
+    /** The journal's folder, made in its account when there is none; empty, the default. */
+    fun setJournalFolder(folder: String) = act {
+        val f = folder.trim().trim('/')
+        val account = core.journalAccount()
+        if (f.isNotEmpty() && account != null) {
+            try {
+                core.addFolder(account, f)
+            } catch (e: Exception) {
+                failed(e)
+                notav.changed() // the field shows the folder there is again
+                return@act
+            }
+        }
+        core.setSetting("journal_folder", f)
+        notav.changed()
+    }
+
+    /** The note new daily notes copy, one in the journal's account; empty, none. */
+    fun setJournalTemplate(name: String) = act {
+        val t = name.trim().trim('/')
+        val path = if (t.endsWith(".md")) t else "$t.md"
+        val account = core.journalAccount()
+        if (t.isNotEmpty() && core.notes().none { it.account == account && it.path == path }) {
+            messages.tryEmit(Message(tr("No note “{name}”").replace("{name}", t)))
+        } else {
+            core.setSetting("journal_template", t)
+        }
         notav.changed()
     }
 

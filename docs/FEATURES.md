@@ -78,6 +78,9 @@ What Notav can do, in short. The details of each release are in the
 - Search, Today's note, and text shared from other apps as a note.
 - Syncs while open, when the tree is pulled down, and once more when left; in the background
   too, if chosen: from every 15 minutes to once a day.
+- Settings as the Linux app's Preferences: the style, the tree's density and icons, table
+  formatting, the journal's daily notes, each account's page (name, notes folder, server
+  status), settings sync, and About with the Support links.
 
 ## Planned
 

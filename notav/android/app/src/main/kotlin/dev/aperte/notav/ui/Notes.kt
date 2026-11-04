@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -117,36 +118,45 @@ private val TREE_WIDTH = 360.dp
 
 /**
  * The notes: on a phone the tree, then the note opened from it on a page of its own; on a wider
- * screen both side by side. Messages (an undo, a failed sync) in a snackbar over both.
+ * screen both side by side.
  */
 @Composable
 fun Home(model: Main, screen: Screen) {
     val open by model.open.collectAsStateWithLifecycle()
     val note = screen.notes.firstOrNull { it.id == open }
-    val snackbar = remember { SnackbarHostState() }
-    Messages(model, snackbar)
-    Box(Modifier.fillMaxSize()) {
-        BoxWithConstraints(Modifier.fillMaxSize()) {
-            if (maxWidth >= TWO_PANES) {
-                Row(Modifier.fillMaxSize()) {
-                    Box(Modifier.width(TREE_WIDTH).fillMaxHeight()) { TreePane(model, screen) }
-                    VerticalDivider()
-                    Box(Modifier.weight(1f).fillMaxHeight()) {
-                        if (note != null) NotePane(model, note, back = false) else NoNote()
-                    }
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        if (maxWidth >= TWO_PANES) {
+            Row(Modifier.fillMaxSize()) {
+                Box(Modifier.width(TREE_WIDTH).fillMaxHeight()) { TreePane(model, screen) }
+                VerticalDivider()
+                Box(Modifier.weight(1f).fillMaxHeight()) {
+                    if (note != null) NotePane(model, note, back = false) else NoNote()
                 }
-            } else if (note != null) {
-                BackHandler { model.open.value = null }
-                NotePane(model, note, back = true)
-            } else {
-                TreePane(model, screen)
             }
+        } else if (note != null) {
+            BackHandler { model.open.value = null }
+            NotePane(model, note, back = true)
+        } else {
+            TreePane(model, screen)
         }
-        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).navigationBarsPadding())
     }
 }
 
-/** The model's messages, a failed sync and conflict copies, as snackbars. */
+/**
+ * `content` (the notes or a settings page) with the model's messages over it: an undo, a failed
+ * sync, conflict copies, as snackbars.
+ */
+@Composable
+fun WithMessages(model: Main, content: @Composable () -> Unit) {
+    val snackbar = remember { SnackbarHostState() }
+    Messages(model, snackbar)
+    Box(Modifier.fillMaxSize()) {
+        content()
+        // Over the keyboard too.
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().imePadding())
+    }
+}
+
 @Composable
 private fun Messages(model: Main, snackbar: SnackbarHostState) {
     // The latest message replaces the one shown; one with Undo stays a while longer.
@@ -204,6 +214,10 @@ private fun TreePane(model: Main, screen: Screen) {
     val sync by model.notav.syncState.collectAsStateWithLifecycle()
     val found by model.found.collectAsStateWithLifecycle()
     var ask by remember { mutableStateOf<Ask?>(null) }
+    val changes by model.notav.changes.collectAsStateWithLifecycle()
+    val look by produceState(TreeLook(), changes) {
+        value = withContext(Dispatchers.IO) { TreeLook(model.core.setting("dense_tree") == "true", model.core.setting("tree_icons")) }
+    }
     // Pulled to refresh (as Todav's list): shown until the sync it asked for has run, once,
     // without dropping in between (the sync starts a moment after the pull ends).
     var pulling by remember { mutableStateOf(false) }
@@ -278,9 +292,9 @@ private fun TreePane(model: Main, screen: Screen) {
                         Tip(tr("Search Notes")) {
                             IconButton(onClick = { model.search("") }) { Icon(Icons.Outlined.Search, tr("Search Notes")) }
                         }
-                        Tip(tr("Preferences")) {
+                        Tip(tr("Settings")) {
                             IconButton(onClick = { model.page.value = dev.aperte.notav.Page.Settings }) {
-                                Icon(Icons.Outlined.Settings, tr("Preferences"))
+                                Icon(Icons.Outlined.Settings, tr("Settings"))
                             }
                         }
                     },
@@ -379,7 +393,7 @@ private fun TreePane(model: Main, screen: Screen) {
                         }
                     } else {
                         items(screen.rows, key = { r -> rowKey(r.item) }) { r ->
-                            TreeRow(model, screen, r.depth, r.item) { ask = it }
+                            TreeRow(model, screen, look, r.depth, r.item) { ask = it }
                         }
                         item { Spacer(Modifier.height(96.dp)) } // room under the button
                     }
@@ -415,6 +429,15 @@ private fun TreePane(model: Main, screen: Screen) {
     }
 }
 
+/**
+ * How the tree looks, as the Linux app's: shorter rows with the device-only `dense_tree`; the
+ * synced `tree_icons`, "all" (folders too), "notes" (the default) or "none".
+ */
+private data class TreeLook(val dense: Boolean = false, val icons: String? = null) {
+    val folderIcons get() = icons == "all"
+    val noteIcons get() = icons != "none"
+}
+
 private fun rowKey(item: Item): String = when (item) {
     is Item.Account -> "a${item.id}"
     is Item.Folder -> "f${item.account}:${item.path}"
@@ -424,7 +447,7 @@ private fun rowKey(item: Item): String = when (item) {
 /** A row of the tree: a tap opens a note or opens and closes a folder, a long press its menu. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun TreeRow(model: Main, screen: Screen, depth: Int, item: Item, ask: (Ask) -> Unit) {
+private fun TreeRow(model: Main, screen: Screen, look: TreeLook, depth: Int, item: Item, ask: (Ask) -> Unit) {
     val expanded by model.expanded.collectAsStateWithLifecycle()
     val open by model.open.collectAsStateWithLifecycle()
     var menu by remember { mutableStateOf(false) }
@@ -432,7 +455,7 @@ private fun TreeRow(model: Main, screen: Screen, depth: Int, item: Item, ask: (A
     val selected = item is Item.NoteRow && item.note.id == open
     Box {
         Row(
-            Modifier.fillMaxWidth().heightIn(min = 52.dp)
+            Modifier.fillMaxWidth().heightIn(min = if (look.dense) 40.dp else 52.dp)
                 .padding(horizontal = 8.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .then(if (selected) Modifier.background(MaterialTheme.colorScheme.secondaryContainer) else Modifier)
@@ -455,6 +478,7 @@ private fun TreeRow(model: Main, screen: Screen, depth: Int, item: Item, ask: (A
                         if (isOpen) Icons.Filled.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         null,
                     )
+                    if (look.folderIcons && item is Item.Folder) Icon(Icons.Outlined.Folder, null)
                     val name = when (item) {
                         is Item.Account -> screen.accounts.firstOrNull { it.id == item.id }?.let(::accountName).orEmpty()
                         else -> (item as Item.Folder).name
@@ -473,7 +497,7 @@ private fun TreeRow(model: Main, screen: Screen, depth: Int, item: Item, ask: (A
                     )
                 }
                 is Item.NoteRow -> {
-                    Icon(Icons.AutoMirrored.Outlined.Notes, null, tint = color)
+                    if (look.noteIcons) Icon(Icons.AutoMirrored.Outlined.Notes, null, tint = color)
                     Text(item.note.title, Modifier.weight(1f), color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (item.note.favorite) {
                         Icon(Icons.Filled.Star, tr("Favorite"), Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)

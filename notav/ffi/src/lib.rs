@@ -376,6 +376,11 @@ impl Notav {
         self.0.journal_account()
     }
 
+    /// A day's daily note's path in the journal's account, without `.md`.
+    pub fn daily_path(&self, year: i32, month: u32, day: u32) -> String {
+        self.0.daily_path(year, month, day)
+    }
+
     /// The daily note of a day: the one there is, or a new one from the template.
     pub fn daily_note(&self, year: i32, month: u32, day: u32) -> Result<Note> {
         Ok(self.0.daily_note(year, month, day)?)

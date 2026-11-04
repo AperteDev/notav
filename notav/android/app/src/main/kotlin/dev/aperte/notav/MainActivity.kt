@@ -36,6 +36,7 @@ class MainActivity : ComponentActivity() {
             val scheme = remember(changes) { app.core.setting("color_scheme") }
             NotavTheme(scheme) { NotavUi(model) }
         }
+        if (savedInstanceState == null) handle(intent)
         // In front: sync now, then every 30 s for changes from other devices (each notes
         // folder's ETag: one request when nothing changed), as the Linux app while focused.
         lifecycleScope.launch {
@@ -52,6 +53,18 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        if ((application as NotavApp).failed == null) handle(intent)
+    }
+
+    /** Text shared from another app: a new note. */
+    private fun handle(intent: android.content.Intent?) {
+        if (intent?.action != android.content.Intent.ACTION_SEND) return
+        val text = intent.getStringExtra(android.content.Intent.EXTRA_TEXT) ?: return
+        model.shared(intent.getStringExtra(android.content.Intent.EXTRA_SUBJECT), text)
     }
 
     /** Left: what waits for the server goes up once there is a network. */

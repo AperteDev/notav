@@ -42,6 +42,10 @@ import androidx.compose.material.icons.outlined.CreateNewFolder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Today
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -183,15 +187,57 @@ private sealed interface Ask {
 @Composable
 private fun TreePane(model: Main, screen: Screen) {
     val sync by model.notav.syncState.collectAsStateWithLifecycle()
+    val found by model.found.collectAsStateWithLifecycle()
     var ask by remember { mutableStateOf<Ask?>(null) }
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Notav") },
-                actions = {
-                    if (sync == SyncState.Syncing) LoadingIndicator(Modifier.padding(end = 12.dp).size(32.dp))
-                },
-            )
+            val results = found
+            if (results != null) {
+                BackHandler { model.search(null) }
+                val query = rememberTextFieldState()
+                val focus = remember { FocusRequester() }
+                LaunchedEffect(Unit) { focus.requestFocus() }
+                LaunchedEffect(query.text) { model.search(query.text.toString()) }
+                TopAppBar(
+                    navigationIcon = {
+                        IconButton(onClick = { model.search(null) }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Cancel"))
+                        }
+                    },
+                    title = {
+                        androidx.compose.foundation.text.BasicTextField(
+                            query,
+                            Modifier.fillMaxWidth().focusRequester(focus),
+                            textStyle = MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                            lineLimits = TextFieldLineLimits.SingleLine,
+                            cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary),
+                            decorator = { field ->
+                                if (query.text.isEmpty()) {
+                                    Text(
+                                        tr("Search notes"),
+                                        style = MaterialTheme.typography.titleLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                field()
+                            },
+                        )
+                    },
+                )
+            } else {
+                TopAppBar(
+                    title = { Text("Notav") },
+                    actions = {
+                        if (sync == SyncState.Syncing) LoadingIndicator(Modifier.padding(end = 4.dp).size(32.dp))
+                        Tip(tr("Today’s Note")) {
+                            IconButton(onClick = { model.today() }) { Icon(Icons.Outlined.Today, tr("Today’s Note")) }
+                        }
+                        Tip(tr("Search Notes")) {
+                            IconButton(onClick = { model.search("") }) { Icon(Icons.Outlined.Search, tr("Search Notes")) }
+                        }
+                    },
+                )
+            }
         },
         floatingActionButton = {
             // A new note or folder where the last one went (the folder last opened, or the open
@@ -221,7 +267,32 @@ private fun TreePane(model: Main, screen: Screen) {
             }
         },
     ) { padding ->
-        if (screen.rows.isEmpty()) {
+        val results = found
+        if (results != null) {
+            // The notes found, each with its folder (and account, with more than one).
+            if (results.isEmpty()) {
+                Box(Modifier.fillMaxSize().padding(padding), Alignment.Center) {
+                    Text(tr("No Results"), style = MaterialTheme.typography.titleLarge)
+                }
+            } else {
+                val names = screen.accounts.associate { it.id to accountName(it) }
+                LazyColumn(Modifier.fillMaxSize().padding(padding)) {
+                    items(results, key = { it.id }) { n ->
+                        val where = listOfNotNull(
+                            names[n.account].takeIf { screen.folders.size > 1 },
+                            n.folder.takeIf { it.isNotEmpty() },
+                        ).joinToString(" · ")
+                        Item(
+                            headlineContent = { Text(n.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            supportingContent = where.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
+                            leadingContent = { Icon(Icons.AutoMirrored.Outlined.Notes, null) },
+                            modifier = Modifier.clickable { model.openNote(n) },
+                            containerColor = MaterialTheme.colorScheme.surface,
+                        )
+                    }
+                }
+            }
+        } else if (screen.rows.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), Alignment.Center) {
                 Text(tr("No Notes"), style = MaterialTheme.typography.titleLarge)
             }

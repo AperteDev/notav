@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -399,6 +400,54 @@ class Main(app: Application) : AndroidViewModel(app) {
             notav.requestSync()
         } catch (e: Exception) {
             messages.tryEmit(Message(tr("Cannot save the note: {error}").replace("{error}", reason(e))))
+        }
+    }
+
+    /** The notes found for what is typed in the search (null: not searching). */
+    val found = MutableStateFlow<List<Note>?>(null)
+    private var searching: Job? = null
+
+    /** Search titles and text for `query` (case and accents ignored); null stops searching. */
+    fun search(query: String?) {
+        searching?.cancel()
+        if (query == null) {
+            found.value = null
+            return
+        }
+        searching = act {
+            delay(200) // as typing goes on
+            found.value = if (query.isBlank()) emptyList() else core.search(query)
+        }
+    }
+
+    /** Today's note of the journal: the one there is, or a new one from the template. */
+    fun today() = act {
+        val d = java.time.LocalDate.now()
+        try {
+            val n = core.dailyNote(d.year, d.monthValue.toUInt(), d.dayOfMonth.toUInt())
+            reveal(n.account, n.folder)
+            openNote(n)
+            done()
+        } catch (e: Exception) {
+            failed(e)
+        }
+    }
+
+    /** Text shared from another app, as a new note where new notes go (`subject` its title, else
+     * its first line). */
+    fun shared(subject: String?, text: String) = act {
+        screen.first { it != null } // shared as the app starts: once its accounts are read
+        val (account, folder) = newPlace() ?: return@act
+        val title = subject?.takeIf { it.isNotBlank() }
+            ?: text.lineSequence().firstOrNull { it.isNotBlank() }?.trim()?.take(60)
+            ?: tr("Untitled")
+        try {
+            val n = core.addNote(account, folder, title.replace('/', '-'), text)
+            reveal(account, folder)
+            openNote(n)
+            done()
+        } catch (e: Exception) {
+            failed(e)
         }
     }
 

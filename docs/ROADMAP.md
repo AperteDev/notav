@@ -124,10 +124,9 @@ An Android app in Jetpack Compose with Material 3 Expressive, built as Todav's i
 release key setup (Notav's own key, alias `notav`, in this repository's `ANDROID_KEYSTORE`
 secrets), in `notav/android` over the core's bindings (`notav/ffi`). Steps, each a commit:
 
-1. **Editor**: saving as you type, the title renamed in place, Source mode, then Editor mode
-   (`markdown::spans` as styles of a `BasicTextField`, alerts, quotes and code blocks drawn
-   behind the text; a tap ticks a task; Enter by `markdown::enter`; tables tidied as the cursor
-   leaves them; links followed).
+1. **Editor**, the rest of it: tables tidied as the cursor leaves them (`format_tables`, through
+   the bindings' table calls), links followed (a tap on one while the note is not being edited,
+   as Todav's task notes do), the outline of headings.
 2. **The rest**: search, Today's note, Trash, versions, unlocking, Preferences (accounts: adding
    more, signing in again, removing; style, the tree's density), text shared to Notav as a new
    note.
@@ -151,6 +150,17 @@ widgets, a Quick Settings tile.
 
 ## Open questions and risks
 
+- **Long notes on Android**: Android adds each text style in time growing with the styles already
+  there, so a note's thousands of them took seconds a keystroke (a 120 KB note: about 12,000).
+  Notes over 10,000 characters are styled in full only around the screen, and everywhere in
+  what changes line heights (headings, code, tables); typing there takes about 30 ms a frame in
+  a debug build, with a slow frame now and then (about 1 s at the 90th percentile in a debug
+  build). Building fewer, merged styles, or styling only the paragraphs that changed, if it
+  shows in release builds.
+- **A Compose crash in the text selection toolbar** (`TextFieldCoreModifier.kt:759`, "Required
+  value was null"), seen once on the emulator: a selection's toolbar asked for the editor's
+  bounds as a home gesture's inset animation started. Compose's own; watch its releases, and
+  whether it happens on phones.
 - **Hiding text in the editor**: GtkTextView's `invisible` tag can abort the app
   ([gtk#8346](https://gitlab.gnome.org/GNOME/gtk/-/issues/8346)); the fix (!10228) was not
   merged nor released as of 2026-10-27, and Notav supports GNOME 49. Either wait for it in the

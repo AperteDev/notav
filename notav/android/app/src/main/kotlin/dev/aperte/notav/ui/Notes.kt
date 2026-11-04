@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
@@ -33,10 +32,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.TextRange
-import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.NoteAdd
 import androidx.compose.material.icons.automirrored.outlined.Notes
@@ -56,7 +52,6 @@ import androidx.compose.material3.FloatingActionButtonMenu
 import androidx.compose.material3.FloatingActionButtonMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ToggleFloatingActionButton
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -429,33 +424,5 @@ private fun NoNote() = androidx.compose.material3.Surface(Modifier.fillMaxSize()
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(tr("No Note Selected"), style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
-    }
-}
-
-/** The open note. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun NotePane(model: Main, note: dev.aperte.notav.core.Note, back: Boolean) {
-    val changes by model.notav.changes.collectAsStateWithLifecycle()
-    val text by produceState<String?>(null, note.id, changes) {
-        value = withContext(Dispatchers.IO) { model.core.noteText(note.id) }
-    }
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(note.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                navigationIcon = {
-                    if (back) {
-                        IconButton(onClick = { model.open.value = null }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
-                        }
-                    }
-                },
-            )
-        },
-    ) { padding ->
-        SelectionContainer(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState())) {
-            Text(text.orEmpty(), Modifier.padding(16.dp))
-        }
     }
 }

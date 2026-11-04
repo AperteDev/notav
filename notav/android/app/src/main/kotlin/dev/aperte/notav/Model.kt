@@ -381,6 +381,27 @@ class Main(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // --- the note ---------------------------------------------------------------------------
+
+    /** Source mode instead of Editor mode: the device-only `source_mode`, as on Linux. */
+    val sourceMode = MutableStateFlow(false)
+
+    fun setSourceMode(on: Boolean) {
+        sourceMode.value = on
+        act { core.setSetting("source_mode", on.toString()) }
+    }
+
+    /** Save a note's text; it goes to the server with the next sync. On the app's scope, so a
+     * note left (or the app closed) is saved all the same. */
+    fun saveText(id: Long, text: String) = notav.scope.launch {
+        try {
+            core.setText(id, text)
+            notav.requestSync()
+        } catch (e: Exception) {
+            messages.tryEmit(Message(tr("Cannot save the note: {error}").replace("{error}", reason(e))))
+        }
+    }
+
     fun undo(change: ULong?) = act {
         try {
             core.undo(change)
@@ -394,6 +415,7 @@ class Main(app: Application) : AndroidViewModel(app) {
         act {
             notav.awaitReady()
             expanded.value = core.setting("expanded_folders").orEmpty().lines().filter { it.isNotEmpty() }.toSet()
+            sourceMode.value = core.setting("source_mode") == "true"
         }
     }
 }

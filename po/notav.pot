@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notav\n"
 "Report-Msgid-Bugs-To: https://github.com/AperteDev/notav/issues\n"
-"POT-Creation-Date: 2026-11-04 01:56+0100\n"
+"POT-Creation-Date: 2026-11-04 02:12+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -104,6 +104,12 @@ msgstr ""
 msgid "“{title}” deleted"
 msgstr ""
 
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:401
+#: notav/linux/app/src/window.rs:2531
+#, rust-format
+msgid "Cannot save the note: {error}"
+msgstr ""
+
 #: notav/android/app/src/main/kotlin/dev/aperte/notav/Words.kt:11
 #: notav/linux/app/src/main.rs:275
 msgid "On This Device"
@@ -149,23 +155,33 @@ msgstr ""
 msgid "It has changes not uploaded yet: sign in again to upload them"
 msgstr ""
 
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:104
+#: notav/linux/app/ui/window.blp:202
+msgid "Editor Mode"
+msgstr ""
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:104
+#: notav/linux/app/ui/window.blp:208
+msgid "Source Mode"
+msgstr ""
+
 #: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/NotavUi.kt:59
 #: notav/linux/app/src/main.rs:460
 msgid "Notav Cannot Open Its Data"
 msgstr ""
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:144
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:139
 #: notav/linux/app/src/window.rs:486 notav/linux/app/ui/shortcuts.blp:89
 msgid "Undo"
 msgstr ""
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:157
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:152
 #: notav/linux/app/src/window.rs:532
 #, rust-format
 msgid "Sync failed: {error}"
 msgstr ""
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:166
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:161
 #: notav/linux/app/src/window.rs:554
 #, rust-format
 msgid ""
@@ -173,7 +189,7 @@ msgid ""
 "copy"
 msgstr ""
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:170
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:165
 #: notav/linux/app/src/window.rs:558
 #, rust-format
 msgid ""
@@ -184,83 +200,83 @@ msgid_plural ""
 msgstr[0] ""
 msgstr[1] ""
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:209
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:211
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:204
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:206
 #: notav/linux/app/ui/settings.blp:213
 msgid "Add"
 msgstr ""
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:218
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:348
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:213
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:343
 #: notav/linux/app/src/window.rs:2793 notav/linux/app/ui/shortcuts.blp:10
 msgid "New Note"
 msgstr ""
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:223
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:252
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:349
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:218
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:247
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:344
 #: notav/linux/app/src/window.rs:2795 notav/linux/app/ui/new-folder.blp:6
 msgid "New Folder"
 msgstr ""
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:231
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:226
 #: notav/linux/app/ui/window.blp:84
 msgid "No Notes"
 msgstr ""
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:252
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:247
 #: notav/linux/app/ui/new-folder.blp:12
 msgid "Create"
 msgstr ""
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:258
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:253
 #: notav/linux/app/src/window.rs:2690
 msgid "Rename Folder"
 msgstr ""
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:259
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:262
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:254
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:257
 #: notav/linux/app/src/window.rs:2691
 msgid "Rename"
 msgstr ""
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:340
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:335
 #: notav/linux/app/src/window.rs:1896
 msgid "Favorite"
 msgstr ""
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:353
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:348
 #: notav/linux/app/src/window.rs:2809
 msgid "Add to Favorites"
 msgstr ""
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:353
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:348
 #: notav/linux/app/src/window.rs:2807
 msgid "Remove from Favorites"
 msgstr ""
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:358
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:353
 #: notav/linux/app/src/window.rs:2825
 msgid "Rename…"
 msgstr ""
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:359
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:354
 msgid "Move…"
 msgstr ""
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:360
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:355
 #: notav/linux/app/src/files.rs:193 notav/linux/app/src/window.rs:2818
 #: notav/linux/app/src/window.rs:2826
 msgid "Delete"
 msgstr ""
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:386
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:381
 #: notav/linux/app/ui/account.blp:18 notav/linux/app/ui/new-folder.blp:17
 msgid "Name"
 msgstr ""
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:393
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:419
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:388
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:414
 #: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:178
 #: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:245
 #: notav/linux/app/src/files.rs:192 notav/linux/app/src/settings.rs:357
@@ -271,12 +287,12 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:405
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:400
 #: notav/linux/app/src/settings.rs:359
 msgid "Move"
 msgstr ""
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:431
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:426
 #: notav/linux/app/ui/window.blp:371
 msgid "No Note Selected"
 msgstr ""
@@ -860,11 +876,6 @@ msgid_plural "Linked from {count} notes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: notav/linux/app/src/window.rs:2531
-#, rust-format
-msgid "Cannot save the note: {error}"
-msgstr ""
-
 #: notav/linux/app/src/window.rs:2804
 msgid "Open in New Tab"
 msgstr ""
@@ -1314,14 +1325,6 @@ msgstr ""
 
 #: notav/linux/app/ui/window.blp:186
 msgid "Larger Text (Ctrl++)"
-msgstr ""
-
-#: notav/linux/app/ui/window.blp:202
-msgid "Editor Mode"
-msgstr ""
-
-#: notav/linux/app/ui/window.blp:208
-msgid "Source Mode"
 msgstr ""
 
 #: notav/linux/app/ui/window.blp:215

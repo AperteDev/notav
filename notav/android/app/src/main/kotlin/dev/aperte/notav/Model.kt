@@ -45,6 +45,14 @@ data class Screen(
     val rows: List<Row>,
 )
 
+/** A page over the notes. */
+sealed interface Page {
+    data object Settings : Page
+    data object AddAccount : Page
+    /** Signing in again to account `id`. */
+    data class Reconnect(val id: Long) : Page
+}
+
 /** A snackbar's text, with the change its Undo reverts. */
 data class Message(val text: String, val undo: ULong? = null)
 
@@ -109,6 +117,7 @@ class Main(app: Application) : AndroidViewModel(app) {
                 )
             }
         }
+        page.value = null
         notav.changed()
     }
 
@@ -173,12 +182,26 @@ class Main(app: Application) : AndroidViewModel(app) {
         signIn.value = SignIn.Idle
     }
 
-    /** Add the account (the first one: settings sync through it); its notes folder is next. */
+    /** Add the account (the first one: settings sync through it); its notes folder is next. Or,
+     * signing in again (`page` is `Page.Reconnect`), the account's new app password or server. */
     private fun connect(server: String, user: String, password: String) {
+        (page.value as? Page.Reconnect)?.let { again ->
+            try {
+                core.reconnect(notav.passwords, again.id, server, password)
+                signIn.value = SignIn.Idle
+                page.value = Page.Settings
+                notav.changed()
+                notav.syncNow()
+            } catch (e: Exception) {
+                signIn.value = SignIn.Failed(reason(e))
+            }
+            return
+        }
         try {
             val first = core.accounts().none { it.kind == AccountKind.NEXTCLOUD }
             core.addNextcloud(notav.passwords, server, user, password, first && core.settingsAccount() == null)
             signIn.value = SignIn.Idle
+            page.value = null
             notav.changed()
         } catch (e: Exception) {
             signIn.value = SignIn.Failed(reason(e))
@@ -377,6 +400,49 @@ class Main(app: Application) : AndroidViewModel(app) {
         try {
             core.setFavorite(note.id, on)
             done()
+        } catch (e: Exception) {
+            failed(e)
+        }
+    }
+
+    // --- Preferences -------------------------------------------------------------------------
+
+    val page = MutableStateFlow<Page?>(null)
+
+    fun setSetting(key: String, value: String) = act {
+        core.setSetting(key, value)
+        notav.changed()
+    }
+
+    /** The optional background sync, on or off (device-only, off by default). */
+    fun setBackgroundSync(on: Boolean) = act {
+        core.setSetting("background_sync", on.toString())
+        Upload.background(notav, on)
+        notav.changed()
+    }
+
+    fun setEnabled(id: Long, on: Boolean) = act {
+        core.setAccountEnabled(id, on)
+        notav.changed()
+        if (on) notav.syncNow()
+    }
+
+    /**
+     * Remove account `id`; what waits for its server goes up first, unless `force`. `cannot`
+     * gets why that failed, to ask whether to remove it anyway.
+     */
+    fun removeAccount(id: Long, force: Boolean, cannot: (String) -> Unit) = act {
+        val name = core.account(id)?.let(::accountName) ?: return@act
+        try {
+            core.removeAccount(notav.passwords, id, force)
+            if (open.value?.let { core.note(it) } == null) open.value = null
+            target = null
+            notav.changed()
+            messages.tryEmit(Message(tr("{name} removed").replace("{name}", name)))
+        } catch (e: NotavException.Upload) {
+            cannot(reason(e))
+        } catch (e: NotavException.NotUploaded) {
+            cannot(reason(e))
         } catch (e: Exception) {
             failed(e)
         }

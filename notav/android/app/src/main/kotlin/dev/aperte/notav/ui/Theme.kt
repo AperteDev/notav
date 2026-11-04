@@ -33,5 +33,16 @@ fun NotavTheme(scheme: String?, content: @Composable () -> Unit) {
         dark -> darkColorScheme(primary = Color(0xFFF5C84C), secondary = Color(0xFF8EC4EE))
         else -> lightColorScheme(primary = Color(0xFF8A5A00), secondary = Color(0xFF1A5FB4))
     }
+    // The status and navigation bars' icons for this style, not the system's when they differ.
+    val view = androidx.compose.ui.platform.LocalView.current
+    if (!view.isInEditMode) {
+        androidx.compose.runtime.SideEffect {
+            val window = (view.context as? android.app.Activity)?.window ?: return@SideEffect
+            androidx.core.view.WindowCompat.getInsetsController(window, view).apply {
+                isAppearanceLightStatusBars = !dark
+                isAppearanceLightNavigationBars = !dark
+            }
+        }
+    }
     MaterialExpressiveTheme(colorScheme = colors, motionScheme = MotionScheme.expressive(), content = content)
 }

@@ -30,6 +30,8 @@ pub const DEVICE_ONLY: &[&str] = &[
     "show_outline",
     "window_size",
     "window_maximized",
+    // Android: a sync now and then while Notav is closed; a phone's battery, a device's choice.
+    "background_sync",
 ];
 
 /// key → (value, unix time of the last change)

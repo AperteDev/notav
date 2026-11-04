@@ -148,7 +148,7 @@ private fun Choice(title: String, description: String, icon: ImageVector, onClic
 /** A server to sign in to, with the browser or an app password. Todav's SignInForm. */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun SignInForm(model: Main, server: String, onServer: (String) -> Unit) {
+fun SignInForm(model: Main, server: String, onServer: (String) -> Unit) {
     val state by model.signIn.collectAsStateWithLifecycle()
     var password by remember { mutableStateOf(false) }
     val context = LocalContext.current

@@ -42,6 +42,11 @@ fun NotavUi(model: Main) {
         NotesFolder(model, it)
         return
     }
+    val page by model.page.collectAsStateWithLifecycle()
+    page?.let {
+        PageView(model, it)
+        return
+    }
     Home(model, s)
 }
 

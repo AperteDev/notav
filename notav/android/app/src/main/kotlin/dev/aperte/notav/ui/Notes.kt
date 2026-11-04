@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Today
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.IconButton
@@ -234,6 +235,11 @@ private fun TreePane(model: Main, screen: Screen) {
                         }
                         Tip(tr("Search Notes")) {
                             IconButton(onClick = { model.search("") }) { Icon(Icons.Outlined.Search, tr("Search Notes")) }
+                        }
+                        Tip(tr("Preferences")) {
+                            IconButton(onClick = { model.page.value = dev.aperte.notav.Page.Settings }) {
+                                Icon(Icons.Outlined.Settings, tr("Preferences"))
+                            }
                         }
                     },
                 )

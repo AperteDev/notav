@@ -124,9 +124,8 @@ An Android app in Jetpack Compose with Material 3 Expressive, built as Todav's i
 release key setup (Notav's own key, alias `notav`, in this repository's `ANDROID_KEYSTORE`
 secrets), in `notav/android` over the core's bindings (`notav/ffi`). Steps, each a commit:
 
-1. **The rest**: search, Today's note, Trash, versions, unlocking, Preferences (accounts: adding
-   more, signing in again, removing; style, the tree's density; `format_tables`), text shared to
-   Notav as a new note.
+1. **The rest**: Trash, versions, unlocking a note locked on the server (its banner), the tree's
+   density and "Sync settings with" in Preferences, About with the Support links.
 2. **Release**: the APK signed in the Release workflow (as Todav's CI signs it) and published
    with the release, fastlane metadata for F-Droid; then F-Droid (after three months of
    history, from about 2027-01-24) and Google Play, as Todav.

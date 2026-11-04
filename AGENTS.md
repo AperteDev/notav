@@ -83,6 +83,15 @@
   AURomatic account (a co-maintainer; AperteDev secret `AUR_SSH_KEY`, shared with Todav) as
   commits by SelfRef; a packaging change to them still goes in by hand. The metainfo must
   pass `appstreamcli validate` without warnings (Flathub treats them as errors).
+- The Android APK of a release is signed in CI with Notav's release key (this repository's
+  secrets `ANDROID_KEYSTORE`, base64 of a PKCS#12 keystore with the alias `notav`, and
+  `ANDROID_KEYSTORE_PASSWORD`; the Release workflow passes them with `secrets: inherit`) and
+  published with the release. As Todav's, the release build must stay reproducible for F-Droid's
+  rebuild of the tag: the NDK, cargo-ndk (`notav.cargoNdk`) and Rust
+  (`notav/ffi/rust-toolchain.toml`) pinned, the core's build paths remapped, the bindings'
+  workspace rooted at `notav/`; nothing in it may depend on the time, the machine or the commit.
+  Check a change that could affect this by building the release APK in two directories and
+  comparing them. Store texts are in `notav/android/app/fastlane/metadata/android/`.
 - CI (`.github/workflows/ci.yml`) runs on every push: `cargo fmt --check`, clippy with warnings
   as errors, the unit tests, the bindings (`scripts/bindings.sh`), the Android app's unit tests
   and release APK (`testDebugUnitTest`, `assembleRelease`, both ABIs, unsigned), and the packages (Flatpak, tarball, `.deb`). Run the checks before

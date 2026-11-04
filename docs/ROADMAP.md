@@ -119,19 +119,15 @@ Later (v2):
 
 ## Android
 
-An Android app in Jetpack Compose with Material 3 Expressive, built as Todav's is (its
-`AGENTS.md`, "Android"; `todav/android`, `todav/ffi`), on the same SDK, emulator (`apps`) and
-release key setup (Notav's own key, alias `notav`, in this repository's `ANDROID_KEYSTORE`
-secrets), in `notav/android` over the core's bindings (`notav/ffi`). Steps, each a commit:
+The Android app (`notav/android`) still lacks, next:
 
-1. **The rest**: Trash, versions, unlocking a note locked on the server (its banner), the tree's
-   density and "Sync settings with" in Preferences, About with the Support links.
-2. **Release**: the APK signed in the Release workflow (as Todav's CI signs it) and published
-   with the release, fastlane metadata for F-Droid; then F-Droid (after three months of
-   history, from about 2027-01-24) and Google Play, as Todav.
+- Trash, versions, unlocking a note locked on the server (its banner), the tree's density and
+  "Sync settings with" in Preferences, About with the Support links.
+- Release on F-Droid (after three months of history, from about 2027-01-24; a recipe as
+  Todav's, its build matching our signed APK) and Google Play, as Todav; screenshots in the
+  fastlane metadata.
 
-A periodic sync in the background is optional: a device-only switch in Preferences, off by
-default (now it syncs while the app is open, and once more when it is left). Later: signing in
+Later: signing in
 through the Nextcloud app's accounts (as Todav), dragging notes and folders in the tree (a
 long press opens their menu now, with Move…), table handles and menus, a table's cells keeping
 their padding as they are typed in (`table::padding_taken`), tables wider than the note

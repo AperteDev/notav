@@ -1,0 +1,24 @@
+Notav keeps your notes as plain Markdown files in a folder of your Nextcloud Files, so the Nextcloud Notes app and Obsidian (through the Nextcloud desktop client) can open the same notes. It syncs with your Nextcloud by itself: it needs neither the Nextcloud app nor another sync app. Or keep your notes on this device only, without a server.
+
+<b>Notes</b>
+<ul>
+<li>Folders and notes as a tree, with favorites first; new, rename, move and delete, with undo</li>
+<li>Editor mode: Markdown styled as it reads (headings, emphasis, code, quotes, lists, tasks, tables, links, GitHub's alerts), the marks dimmed; or plain Markdown in Source mode</li>
+<li>Tap a task's box to tick it; Enter continues a list; tables are kept aligned</li>
+<li>Links between notes, wiki links too; search through titles and text, ignoring accents</li>
+<li>Today's note for a journal, made from a template note</li>
+</ul>
+
+<b>Sync</b>
+<ul>
+<li>Local-first: works offline and sends changes when the server is reachable</li>
+<li>A note changed on two devices at once keeps both versions</li>
+<li>Several Nextcloud accounts side by side; sign in with the browser or an app password</li>
+<li>Preferences sync between devices, also with Notav on the GNOME desktop</li>
+</ul>
+
+<b>On Android</b>
+<ul>
+<li>Material 3 Expressive, the tree beside the note on unfolded foldables and tablets</li>
+<li>Text shared from other apps becomes a note</li>
+</ul>

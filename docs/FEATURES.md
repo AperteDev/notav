@@ -70,9 +70,18 @@ What Notav can do, in short. The details of each release are in the
 - English and Polish.
 - Restart into a new version from a banner, when Notav is updated while it runs.
 
+**Android**
+
+- The same notes, accounts and synced settings, in Material 3 Expressive.
+- The tree beside the note on wide screens, the note alone on a phone.
+- Editor mode's styles, ticking tasks, continuing lists, tables kept aligned, links followed.
+- Search, Today's note, and text shared from other apps as a note.
+- Syncs while open and once more when left; a sync every hour or so in the background, if
+  switched on.
+
 ## Planned
 
-- An Android app, with the same notes, accounts and Editor mode.
+- On Android: Trash, versions, unlocking notes locked on the server, widgets.
 - Notes moved between accounts; the journal in an account of your choice.
 - Notes in GNOME Shell's search.
 - Emptying the Trash of notes at once; a version's changes shown against the note.

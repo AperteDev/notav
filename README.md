@@ -4,7 +4,7 @@
 
 <h1 align="center">Notav</h1>
 
-<p align="center">Notes and a journal for GNOME, kept in your Nextcloud.</p>
+<p align="center">Notes and a journal for GNOME and Android, kept in your Nextcloud.</p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="License: GPL-3.0-or-later"></a>
@@ -14,7 +14,7 @@
   <a href="https://copr.fedorainfracloud.org/coprs/selfref/notav/"><img src="https://copr.fedorainfracloud.org/coprs/selfref/notav/package/notav/status_image/last_build.png" alt="COPR build status"></a>
 </p>
 
-Notav is a notes app for the GNOME desktop, with an Obsidian-style journal planned. Your notes
+Notav is a notes app for the GNOME desktop and Android, with an Obsidian-style journal. Your notes
 stay in your own Nextcloud as plain Markdown files, so the Nextcloud Notes app and Obsidian
 (through the Nextcloud desktop client) can open the same folder. Notav works from a local copy
 and syncs while it runs. It is the sibling of [Todav](https://github.com/AperteDev/todav), the
@@ -69,6 +69,8 @@ sudo apt install ./notav_<version>_amd64.deb
 # Other distributions: the same files to unpack into /
 sudo tar -xzf notav-<version>-x86_64.tar.gz -C /
 ```
+
+On Android (10 and newer), install `notav-<version>.apk` from the same release.
 
 Or [build and install](#building-and-installing) Notav from source. Then open Notav, sign in to
 your Nextcloud and pick the folder your notes are in, or keep your notes on this device only.

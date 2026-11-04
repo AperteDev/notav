@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- An Android app (an APK with each release), in Material 3 Expressive: the same notes, accounts
+  and synced settings. Sign in with the browser or an app password, or keep notes on this
+  device; the tree of folders and notes beside the note on wide screens (an unfolded foldable,
+  a tablet), the note alone on a phone; Editor mode's styles, ticking tasks, lists and tables;
+  search, Today's note, text shared from other apps as a note. It syncs while open and once
+  more when left; Preferences can add a sync about every hour in the background
 - Tabs, as in Obsidian: a click on a note opens it in the selected tab, Ctrl+click or a middle
   click (or "Open in New Tab" in its menu) in a new one; the tabs show above the note once
   there are two. Each keeps where its cursor was; Ctrl+Page Down and Ctrl+Page Up go through

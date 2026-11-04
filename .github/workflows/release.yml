@@ -19,6 +19,8 @@ jobs:
     uses: ./.github/workflows/ci.yml
     with:
       version: ${{ inputs.version }}
+    # The Android release key (ANDROID_KEYSTORE, ANDROID_KEYSTORE_PASSWORD) signs the APK there.
+    secrets: inherit
 
   publish:
     name: Commit, tag and publish
@@ -42,7 +44,7 @@ jobs:
           pattern: notav-*
           path: dist
           merge-multiple: true
-      # The Flatpak bundle, the tarball and the .deb.
+      # The Flatpak bundle, the tarball, the .deb and the Android APK.
       - name: Checksums
         working-directory: dist
         run: sha256sum * > SHA256SUMS

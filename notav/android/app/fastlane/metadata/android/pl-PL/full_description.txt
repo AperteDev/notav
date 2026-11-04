@@ -1,0 +1,24 @@
+Notav przechowuje twoje notatki jako zwykłe pliki Markdown w folderze Plików twojego Nextcloud, więc aplikacja Notatki Nextcloud i Obsidian (przez klienta Nextcloud na komputerze) otwierają te same notatki. Synchronizuje się z Nextcloud sam: nie potrzebuje ani aplikacji Nextcloud, ani innej aplikacji do synchronizacji. Możesz też trzymać notatki tylko na tym urządzeniu, bez serwera.
+
+<b>Notatki</b>
+<ul>
+<li>Foldery i notatki w drzewie, ulubione na początku; tworzenie, zmiana nazwy, przenoszenie i usuwanie, z cofaniem</li>
+<li>Tryb edytora: Markdown sformatowany tak, jak się go czyta (nagłówki, wyróżnienia, kod, cytaty, listy, zadania, tabele, odnośniki, alerty GitHuba), ze znacznikami przyciemnionymi; albo zwykły Markdown w trybie źródła</li>
+<li>Stuknięcie pola zadania odhacza je; Enter kontynuuje listę; tabele są wyrównywane</li>
+<li>Odnośniki między notatkami, także wiki; wyszukiwanie w tytułach i treści, bez względu na znaki diakrytyczne</li>
+<li>Dzisiejsza notatka do dziennika, tworzona z notatki-szablonu</li>
+</ul>
+
+<b>Synchronizacja</b>
+<ul>
+<li>Najpierw lokalnie: działa bez sieci i wysyła zmiany, gdy serwer jest osiągalny</li>
+<li>Notatka zmieniona na dwóch urządzeniach naraz zachowuje obie wersje</li>
+<li>Kilka kont Nextcloud obok siebie; logowanie w przeglądarce lub hasłem aplikacji</li>
+<li>Preferencje synchronizowane między urządzeniami, także z Notav na pulpicie GNOME</li>
+</ul>
+
+<b>Na Androidzie</b>
+<ul>
+<li>Material 3 Expressive, drzewo obok notatki na rozłożonych składanych telefonach i tabletach</li>
+<li>Tekst udostępniony z innych aplikacji staje się notatką</li>
+</ul>

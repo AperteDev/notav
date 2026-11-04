@@ -125,14 +125,14 @@ The Android app (`notav/android`) still lacks, next:
   Todav's, its build matching our signed APK) and Google Play, as Todav; screenshots in the
   fastlane metadata.
 
-Later: signing in
-through the Nextcloud app's accounts (as Todav), dragging notes and folders in the tree (a
-long press opens their menu now, with Move…), table handles and menus, a table's cells keeping
-their padding as they are typed in (`table::padding_taken`), tables wider than the note
-scrolling sideways (they wrap now), widgets, a Quick
-Settings tile. Settings the Linux app has that Android has not yet: the fonts of Editor and
-Source mode, the outline's, restoring the session (the note left open), suggestions in the
-journal's folder and template fields, ordering accounts by dragging.
+Later: signing in through the Nextcloud app's accounts (as Todav), dragging notes and folders
+in the tree (a long press opens their menu now, with Move…), table handles and menus, a
+table's cells keeping their padding as they are typed in (`table::padding_taken`), tables
+wider than the note scrolling sideways (they wrap now), the text's size, widgets, a Quick
+Settings tile.
+
+Not on Android: "Show outline automatically" (the outline is a swipe away, never hidden beside
+the note) and a font for Source mode (Android has one monospace font).
 
 ## Distribution
 

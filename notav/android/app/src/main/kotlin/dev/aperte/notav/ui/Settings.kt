@@ -66,6 +66,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -175,6 +181,9 @@ internal fun Frame(
         }
     }
 }
+
+/** Editor mode's fonts to choose from, as `editor_font` keeps them; empty, the default. */
+private val EDITOR_FONTS = listOf("", "Serif", "Monospace")
 
 /** The widest the settings' rows get, centred. */
 private val SETTINGS_WIDTH = 720.dp
@@ -288,26 +297,60 @@ private fun Select(title: String, subtitle: String?, options: List<String>, sele
 
 /**
  * A text to set, as the Linux app's entry rows with an apply button: `value` until typed over,
- * then applied with Done or the check button. Another `reset` shows `value` again.
+ * then applied with Done or the check button. Another `reset` shows `value` again. As it is
+ * typed in, those of `suggestions` with its text in them show under it, one picked put in.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ApplyField(value: String, label: String, icon: ImageVector? = null, reset: Int = 0, onApply: (String) -> Unit) {
+private fun ApplyField(
+    value: String,
+    label: String,
+    icon: ImageVector? = null,
+    reset: Int = 0,
+    suggestions: () -> List<String> = { emptyList() },
+    onApply: (String) -> Unit,
+) {
     var text by rememberSaveable(value, reset) { mutableStateOf(value) }
     val changed = text != value
-    FieldItem(
-        text,
-        { text = it },
-        label,
-        icon = icon,
-        singleLine = true,
-        trailing = if (changed) {
-            { Tip(tr("Apply")) { IconButton(onClick = { onApply(text) }) { Icon(Icons.Outlined.Check, tr("Apply")) } } }
-        } else {
-            null
-        },
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-        keyboardActions = KeyboardActions(onDone = { if (changed) onApply(text) }),
-    )
+    var open by remember { mutableStateOf(false) }
+    val shown = remember(text, open) {
+        if (!open) emptyList() else suggestions().filter { it.contains(text, ignoreCase = true) && it != text }.take(8)
+    }
+    ExposedDropdownMenuBox(open && shown.isNotEmpty(), { open = it }) {
+        FieldItem(
+            text,
+            {
+                text = it
+                open = true
+            },
+            label,
+            Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
+            icon = icon,
+            singleLine = true,
+            trailing = if (changed) {
+                { Tip(tr("Apply")) { IconButton(onClick = { onApply(text) }) { Icon(Icons.Outlined.Check, tr("Apply")) } } }
+            } else {
+                null
+            },
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = {
+                open = false
+                if (changed) onApply(text)
+            }),
+        )
+        ExposedDropdownMenu(expanded = open && shown.isNotEmpty(), onDismissRequest = { open = false }) {
+            shown.forEachIndexed { i, s ->
+                androidx.compose.material3.DropdownMenuItem(
+                    onClick = {
+                        open = false
+                        text = s
+                    },
+                    text = { Text(s) },
+                    shape = MenuDefaults.itemShape(i, shown.size).shape,
+                )
+            }
+        }
+    }
 }
 
 // --- pages ------------------------------------------------------------------------------------
@@ -359,10 +402,25 @@ private fun General(model: Main) {
             )
         }
     }
+    // Kept on this device only, as on Linux.
+    Section(tr("Session")) {
+        SwitchRow(model, tr("Restore session"), "restore_session", tr("Reopen the note left open when Notav starts"))
+    }
 }
 
 @Composable
 private fun EditorSettings(model: Main) {
+    // Editor mode's font (the device-only `editor_font`, as on Linux, by the names Pango knows
+    // too). Source mode's stays monospace: Android has one.
+    Section(tr("Fonts")) {
+        val current = EDITOR_FONTS.indexOf(setting(model, "editor_font").orEmpty()).coerceAtLeast(0)
+        Select(
+            tr("Editor mode"),
+            null,
+            listOf(ptr("font", "Default"), ptr("font", "Serif"), ptr("font", "Monospace")),
+            current,
+        ) { model.setSetting("editor_font", EDITOR_FONTS[it]) }
+    }
     Section(tr("Markdown")) {
         SwitchRow(
             model, tr("Format tables"), "format_tables",
@@ -383,8 +441,18 @@ private fun Journal(model: Main) {
         core.dailyPath(d.year, d.monthValue.toUInt(), d.dayOfMonth.toUInt()) + ".md"
     }
     Section(tr("Daily Notes")) {
-        ApplyField(folder, tr("Folder"), Icons.Outlined.Folder) { model.setJournalFolder(it) }
-        ApplyField(template, tr("Template note"), Icons.Outlined.EditNote) { model.setJournalTemplate(it) }
+        // Suggesting the folders and notes there are in the journal's account.
+        ApplyField(
+            folder, tr("Folder"), Icons.Outlined.Folder,
+            suggestions = { core.journalAccount()?.let { core.folders(it) }.orEmpty() },
+        ) { model.setJournalFolder(it) }
+        ApplyField(
+            template, tr("Template note"), Icons.Outlined.EditNote,
+            suggestions = {
+                val account = core.journalAccount()
+                core.notes().filter { it.account == account }.map { it.path.removeSuffix(".md") }
+            },
+        ) { model.setJournalTemplate(it) }
     }
     Note(tr("A new daily note is a copy of the template note, with {{title}} and {{date}} in it filled in."))
     Section(tr("Note Name")) {
@@ -403,14 +471,68 @@ private fun Journal(model: Main) {
 @Composable
 private fun Accounts(model: Main) {
     val accounts = load(model) { model.core.accounts() }
+    // The order everything lists accounts in: dragged by the handles, as in Todav and the Linux
+    // app.
+    var order by remember(accounts) { mutableStateOf(accounts) }
+    // The handles' gestures outlive recompositions: they read the order through this.
+    val current by rememberUpdatedState(order)
+    var held by remember { mutableStateOf<Long?>(null) }
+    var shift by remember { mutableStateOf(0f) }
     Section(tr("Accounts")) {
-        accounts.forEach { a ->
-            Item(
-                headlineContent = { Text(accountName(a)) },
-                supportingContent = status(model, a)?.let { { Text(it) } },
-                leadingContent = { Icon(if (a.kind == AccountKind.LOCAL) Icons.Outlined.PhoneAndroid else Icons.Outlined.Cloud, null) },
-                modifier = Modifier.clickable { model.page.value = Page.Account(a.id) },
-            )
+        // Keyed by account, so a row keeps its handle's gesture while it moves.
+        order.forEach { a ->
+            key(a.id) {
+                var height by remember { mutableStateOf(0) }
+                Item(
+                    headlineContent = { Text(accountName(a)) },
+                    supportingContent = status(model, a)?.let { { Text(it) } },
+                    leadingContent = { Icon(if (a.kind == AccountKind.LOCAL) Icons.Outlined.PhoneAndroid else Icons.Outlined.Cloud, null) },
+                    trailingContent = if (order.size > 1) {
+                        {
+                            Icon(
+                                Icons.Filled.DragHandle,
+                                tr("Drag to Move"),
+                                Modifier.pointerInput(a.id) {
+                                    detectVerticalDragGestures(
+                                        onDragStart = {
+                                            held = a.id
+                                            shift = 0f
+                                        },
+                                        onVerticalDrag = { change, dy ->
+                                            change.consume()
+                                            shift += dy
+                                            // Past half a row (with the gap below it): one place up or down.
+                                            val row = height + 2.dp.toPx()
+                                            val i = current.indexOfFirst { it.id == a.id }
+                                            val to = (i + Math.round(shift / row)).coerceIn(0, current.lastIndex)
+                                            if (to != i) {
+                                                order = current.toMutableList().apply { add(to, removeAt(i)) }
+                                                shift -= (to - i) * row
+                                            }
+                                        },
+                                        onDragEnd = {
+                                            held = null
+                                            model.reorderAccounts(current.map { it.id })
+                                        },
+                                        onDragCancel = {
+                                            held = null
+                                            order = accounts
+                                        },
+                                    )
+                                },
+                            )
+                        }
+                    } else {
+                        null
+                    },
+                    containerColor = if (held == a.id) {
+                        MaterialTheme.colorScheme.surfaceContainerHighest
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainer
+                    },
+                    modifier = Modifier.onSizeChanged { height = it.height }.clickable { model.page.value = Page.Account(a.id) },
+                )
+            }
         }
         Item(
             headlineContent = { Text(tr("Add Account")) },

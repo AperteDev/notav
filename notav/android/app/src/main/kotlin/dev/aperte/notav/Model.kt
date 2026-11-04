@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -106,8 +108,10 @@ class Main(app: Application) : AndroidViewModel(app) {
     /** The note shown. */
     val open = MutableStateFlow<Long?>(null)
 
-    /** A note was opened (the same one again too): the panes slide to it. */
-    val showNote = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    /** A note was opened (the same one again too): the panes slide to it, once they are there
+     * (one opened as the app starts waits for them). */
+    private val reveals = kotlinx.coroutines.channels.Channel<Unit>(kotlinx.coroutines.channels.Channel.CONFLATED)
+    val showNote = reveals.receiveAsFlow()
 
     /** Where the open note's text should go to (a heading picked in the outline), in UTF-16 units. */
     val jump = kotlinx.coroutines.flow.MutableSharedFlow<Int>(extraBufferCapacity = 1)
@@ -323,7 +327,7 @@ class Main(app: Application) : AndroidViewModel(app) {
     fun openNote(note: Note) {
         open.value = note.id
         target = note.account to note.folder
-        showNote.tryEmit(Unit)
+        reveals.trySend(Unit)
     }
 
     /** Where something new goes without a place given: where the last one went, else the top of
@@ -451,6 +455,16 @@ class Main(app: Application) : AndroidViewModel(app) {
         core.setSetting("background_sync", minutes.toString())
         Upload.background(notav, minutes)
         notav.changed()
+    }
+
+    /** The accounts in the order `ids` gives (the tree's and everything's). */
+    fun reorderAccounts(ids: List<Long>) = act {
+        try {
+            core.reorderAccounts(ids)
+            notav.changed()
+        } catch (e: Exception) {
+            failed(e)
+        }
     }
 
     fun renameAccount(id: Long, name: String) = act {
@@ -665,6 +679,20 @@ class Main(app: Application) : AndroidViewModel(app) {
             notav.awaitReady()
             expanded.value = core.setting("expanded_folders").orEmpty().lines().filter { it.isNotEmpty() }.toSet()
             sourceMode.value = core.setting("source_mode") == "true"
+            // Restore Session (the device-only `restore_session`, on unless "false"): the note
+            // left open, kept as the Linux app keeps its tabs (`open_tabs`, the selected one
+            // after a `*`), then kept as notes are opened.
+            if (core.setting("restore_session") != "false") {
+                val ids = core.setting("open_tabs").orEmpty().split(',').filter { it.isNotEmpty() }
+                val id = (ids.firstOrNull { it.startsWith('*') } ?: ids.firstOrNull())?.removePrefix("*")?.toLongOrNull()
+                id?.let { core.note(it) }?.let {
+                    reveal(it.account, it.folder)
+                    openNote(it)
+                }
+            }
+            open.drop(1).collect { id ->
+                if (core.setting("restore_session") != "false") core.setSetting("open_tabs", id?.let { "*$it" }.orEmpty())
+            }
         }
     }
 }

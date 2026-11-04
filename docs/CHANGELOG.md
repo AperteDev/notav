@@ -18,9 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   told about, with Unlock…; the Trash and a note's versions. It syncs while open, when the
   tree is pulled down and once more when left; Settings can add a sync in the background,
   from every 15 minutes to once a day. Settings has the Linux app's pages: the style, the
-  tree's density and icons, table formatting, the journal's daily notes, each account's page
-  (on or off, name, sign in again, notes folder, server status, remove), settings sync, and
-  About with the Support links
+  tree's density and icons, restoring the note left open, Editor mode's font, table
+  formatting, the journal's daily notes, the accounts' order and each one's page (on or off,
+  name, sign in again, notes folder, server status, remove), settings sync, and About with the
+  Support links
 - Tabs, as in Obsidian: a click on a note opens it in the selected tab, Ctrl+click or a middle
   click (or "Open in New Tab" in its menu) in a new one; the tabs show above the note once
   there are two. Each keeps where its cursor was; Ctrl+Page Down and Ctrl+Page Up go through

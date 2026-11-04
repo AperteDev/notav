@@ -85,6 +85,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.focus.FocusRequester
@@ -318,6 +319,10 @@ private fun NoteText(model: Main, note: Note, source: Boolean, find: FindState, 
     }
     DisposableEffect(Unit) { onDispose { model.headings.value = emptyList() } }
 
+    // Editor mode's font from Settings; Source mode's monospace.
+    val editorFont by produceState<String?>(null, changes) {
+        value = withContext(Dispatchers.IO) { model.core.setting("editor_font") }
+    }
     val colors = MaterialTheme.colorScheme
     val styled = !source && state.text.length <= MAX_STYLED
     val spans = remember(styled) { SpanCache() }
@@ -453,7 +458,11 @@ private fun NoteText(model: Main, note: Note, source: Boolean, find: FindState, 
             .onFocusChanged { focused = it.isFocused },
         textStyle = MaterialTheme.typography.bodyLarge.copy(
             color = colors.onSurface,
-            fontFamily = if (source) FontFamily.Monospace else null,
+            fontFamily = when {
+                source || editorFont == "Monospace" -> FontFamily.Monospace
+                editorFont == "Serif" -> FontFamily.Serif
+                else -> null
+            },
         ),
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
         inputTransformation = if (styled) ContinueLists else null,

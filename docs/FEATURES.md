@@ -83,9 +83,10 @@ What Notav can do, in short. The details of each release are in the
 - The Trash (restore or delete for good) and a note's versions (look at one, restore it).
 - Syncs while open, when the tree is pulled down, and once more when left; in the background
   too, if chosen: from every 15 minutes to once a day.
-- Settings as the Linux app's Preferences: the style, the tree's density and icons, table
-  formatting, the journal's daily notes, each account's page (name, notes folder, server
-  status), settings sync, and About with the Support links.
+- Settings as the Linux app's Preferences: the style, the tree's density and icons, restoring
+  the note left open, Editor mode's font, table formatting, the journal's daily notes (with
+  suggestions), accounts in your order with a page each (name, notes folder, server status),
+  settings sync, and About with the Support links.
 
 ## Planned
 

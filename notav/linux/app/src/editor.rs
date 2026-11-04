@@ -395,7 +395,7 @@ const HANDLES_REACH: i32 = 28;
 const BAR: i32 = 16;
 const BAR_GAP: i32 = 4;
 /// The room under a table with text right after it, for the bar that adds a row (`md-table-end`).
-const TABLE_SPACE: i32 = BAR + 2 * BAR_GAP;
+pub const TABLE_SPACE: i32 = BAR + 2 * BAR_GAP;
 
 /// What never wraps, with the room after its lines' end (a table's for the bar that adds a
 /// column; none: the text's margin).

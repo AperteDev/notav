@@ -36,7 +36,8 @@ struct Strip {
     adj: gtk::Adjustment,
     /// A shade at its left and right edge while there is more of it that way.
     edges: [gtk::Box; 2],
-    /// The block, and where its lines are in the note's text (its top, its bottom).
+    /// The block, and where its lines are in the note's text (its top, the foot of its last line
+    /// with text, where its bar goes).
     block: Cell<Block>,
     top: Rc<Cell<i32>>,
     bottom: Cell<i32>,
@@ -193,7 +194,22 @@ impl Strips {
             let (y, h) = self.main.line_yrange(&last);
             s.block.set(*b);
             s.top.set(top);
-            s.bottom.set(y + h);
+            // The bar at the foot of the block's last line with text, as an overlay scrollbar is
+            // at its content's edge: not over the bar that adds a row, under a table in the blank
+            // line after it (in the block, as its first character ends the table) or in the
+            // room left there (`md-table-end`).
+            let mut row = last;
+            if row.ends_line() && b.last > b.first {
+                row.backward_line();
+            }
+            let (row_y, row_h) = self.main.line_yrange(&row);
+            let end = buffer.tag_table().lookup("md-table-end");
+            let room = if end.is_some_and(|e| row.has_tag(&e)) {
+                crate::editor::TABLE_SPACE
+            } else {
+                0
+            };
+            s.bottom.set(row_y + row_h - room);
             s.window.set_size_request(width, y + h - top);
             self.main.move_overlay(&s.window, 0, top);
             // In the strip's view the text starts below its top margin.
@@ -388,7 +404,8 @@ impl Strips {
         for s in self.strips.borrow().iter().take(self.used.get()) {
             let height = s.bar.measure(gtk::Orientation::Vertical, -1).1;
             let (top, bottom) = (s.top.get(), s.bottom.get());
-            let y = (shown.min(bottom) - height).max(top);
+            // Its slider, in its middle, along the block's foot.
+            let y = (shown - height).min(bottom - height / 2).max(top);
             self.main.move_overlay(&s.bar, 0, y);
         }
     }

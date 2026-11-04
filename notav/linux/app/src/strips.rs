@@ -166,6 +166,12 @@ impl Strips {
         // Those left over are hidden, to be used again: a text view's overlays cannot be taken
         // off it. Without the buffer they lay nothing out meanwhile.
         let buffer = self.main.buffer();
+        // The cursor followed only into blocks that changed: laid out again for anything else
+        // (a table's handles showing), a strip scrolled away from it stays.
+        let changed = strips[..self.used.get()]
+            .iter()
+            .map(|s| s.block.get())
+            .ne(wide.iter().copied());
         for (i, s) in strips.iter().enumerate() {
             let used = i < wide.len();
             if used == s.window.is_visible() {
@@ -235,7 +241,9 @@ impl Strips {
         }
         drop(strips);
         self.place_bars();
-        self.follow();
+        if changed {
+            self.follow();
+        }
     }
 
     /// A new strip, its view a copy of the note's.

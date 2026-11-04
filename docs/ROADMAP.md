@@ -124,21 +124,20 @@ An Android app in Jetpack Compose with Material 3 Expressive, built as Todav's i
 release key setup (Notav's own key, alias `notav`, in this repository's `ANDROID_KEYSTORE`
 secrets), in `notav/android` over the core's bindings (`notav/ffi`). Steps, each a commit:
 
-1. **Editor**, the rest of it: tables tidied as the cursor leaves them (`format_tables`, through
-   the bindings' table calls), links followed (a tap on one while the note is not being edited,
-   as Todav's task notes do), the outline of headings.
-2. **The rest**: search, Today's note, Trash, versions, unlocking, Preferences (accounts: adding
-   more, signing in again, removing; style, the tree's density), text shared to Notav as a new
-   note.
-3. **Release**: the APK signed in the Release workflow (as Todav's CI signs it) and published
+1. **The rest**: search, Today's note, Trash, versions, unlocking, Preferences (accounts: adding
+   more, signing in again, removing; style, the tree's density; `format_tables`), text shared to
+   Notav as a new note.
+2. **Release**: the APK signed in the Release workflow (as Todav's CI signs it) and published
    with the release, fastlane metadata for F-Droid; then F-Droid (after three months of
    history, from about 2027-01-24) and Google Play, as Todav.
 
 A periodic sync in the background is optional: a device-only switch in Preferences, off by
 default (now it syncs while the app is open, and once more when it is left). Later: signing in
 through the Nextcloud app's accounts (as Todav), dragging notes and folders in the tree (a
-long press opens their menu now, with Move…), table handles and menus, find and replace,
-widgets, a Quick Settings tile.
+long press opens their menu now, with Move…), table handles and menus, a table's cells keeping
+their padding as they are typed in (`table::padding_taken`), tables wider than the note
+scrolling sideways (they wrap now), the outline of headings, find and replace, widgets, a Quick
+Settings tile.
 
 ## Distribution
 

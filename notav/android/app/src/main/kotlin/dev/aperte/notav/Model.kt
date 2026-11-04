@@ -402,6 +402,18 @@ class Main(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Open the note a link in `from` names; made where the link puts it when there is none. */
+    fun followLink(from: Note, target: String, wiki: Boolean) = act {
+        try {
+            val n = core.followLink(from.id, target, wiki)
+            reveal(n.account, n.folder)
+            openNote(n)
+            done()
+        } catch (e: Exception) {
+            failed(e)
+        }
+    }
+
     fun undo(change: ULong?) = act {
         try {
             core.undo(change)

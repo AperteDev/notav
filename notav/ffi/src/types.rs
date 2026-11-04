@@ -170,6 +170,15 @@ pub struct NoteEdit {
     pub text: String,
 }
 
+/// An edit of a note (UTF-16 code units), and where the cursor goes in the text after it.
+#[derive(uniffi::Record)]
+pub struct NoteChange {
+    pub start: u32,
+    pub end: u32,
+    pub text: String,
+    pub cursor: u32,
+}
+
 /// What a link points to (`markdown::Link`).
 #[derive(uniffi::Enum)]
 pub enum NoteLink {

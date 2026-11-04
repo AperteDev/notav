@@ -517,6 +517,33 @@ pub fn note_headings(text: String) -> Vec<NoteHeading> {
         .collect()
 }
 
+/// The table holding `at` (where the text was last changed) aligned, the cursor at `cursor`
+/// after it; None when there is no table there or it is aligned already.
+#[uniffi::export]
+pub fn note_table_tidy(text: String, at: u32, cursor: u32) -> Option<NoteChange> {
+    let p = Utf16::of(&text);
+    let c = notav_core::table::apply(
+        &text,
+        p.char(at),
+        p.char(cursor),
+        notav_core::table::Op::Tidy,
+    )?;
+    let cursor = Utf16::of(&apply(&text, &c.edit)).unit(c.cursor);
+    Some(NoteChange {
+        start: p.unit(c.edit.start),
+        end: p.unit(c.edit.end),
+        text: c.edit.text,
+        cursor,
+    })
+}
+
+/// `text` with `edit` made (character positions).
+fn apply(text: &str, edit: &markdown::Edit) -> String {
+    let mut chars: Vec<char> = text.chars().collect();
+    chars.splice(edit.start..edit.end, edit.text.chars());
+    chars.into_iter().collect()
+}
+
 /// Where the heading titled `heading` starts in a note, as a link names it.
 #[uniffi::export]
 pub fn note_heading_at(text: String, heading: String) -> Option<u32> {

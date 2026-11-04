@@ -3,7 +3,10 @@ package dev.aperte.notav.ui
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
@@ -65,8 +68,12 @@ import dev.aperte.notav.core.Alert
 import dev.aperte.notav.core.Note
 import dev.aperte.notav.core.NoteSpan
 import dev.aperte.notav.core.NoteStyle
+import androidx.core.net.toUri
+import dev.aperte.notav.core.NoteLink
 import dev.aperte.notav.core.noteEnter
+import dev.aperte.notav.core.noteLinkAt
 import dev.aperte.notav.core.noteSpans
+import dev.aperte.notav.core.noteTableTidy
 import dev.aperte.notav.tr
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -206,12 +213,52 @@ private fun NoteText(model: Main, note: Note, source: Boolean, modifier: Modifie
             }
         }
     }
+    // A table is aligned once the cursor leaves the row it was changed in (the synced
+    // `format_tables`, on unless "false"), as on Linux.
+    if (styled) {
+        LaunchedEffect(Unit) {
+            if (withContext(Dispatchers.IO) { model.core.setting("format_tables") } == "false") return@LaunchedEffect
+            var last = state.text.toString()
+            var edited: Int? = null
+            snapshotFlow { state.text.toString() to state.selection }.collect { (text, selection) ->
+                if (text != last) {
+                    last = text
+                    edited = selection.start
+                    return@collect
+                }
+                val at = edited ?: return@collect
+                if (!selection.collapsed || lineStart(text, at) == lineStart(text, selection.start)) return@collect
+                edited = null
+                val c = noteTableTidy(text, at.toUInt(), selection.start.toUInt()) ?: return@collect
+                state.edit {
+                    replace(c.start.toInt(), c.end.toInt(), c.text)
+                    this.selection = androidx.compose.ui.text.TextRange(c.cursor.toInt())
+                }
+                last = state.text.toString()
+            }
+        }
+    }
+    // Being typed in: focused with the keyboard up (Back hides the keyboard, the focus stays).
+    var focused by remember { mutableStateOf(false) }
+    @OptIn(ExperimentalLayoutApi::class)
+    val keyboard = WindowInsets.isImeVisible
+    val editing by rememberUpdatedState(focused && keyboard)
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val open: (NoteLink) -> Unit = { link ->
+        when (link) {
+            is NoteLink.Address -> runCatching {
+                context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, link.url.toUri()))
+            }
+            is NoteLink.Note -> model.followLink(note, link.target, link.wiki)
+        }
+    }
     BasicTextField(
         state,
         modifier.fillMaxSize().imePadding().verticalScroll(scroll)
-            .then(if (styled) Modifier.tickTasks(state, spans) { layout[0] } else Modifier)
+            .then(if (styled) Modifier.tickTasks(state, spans, { editing }, open) { layout[0] } else Modifier)
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .then(if (styled) Modifier.blocks(state, spans, colors) { layout[0] } else Modifier),
+            .then(if (styled) Modifier.blocks(state, spans, colors) { layout[0] } else Modifier)
+            .onFocusChanged { focused = it.isFocused },
         textStyle = MaterialTheme.typography.bodyLarge.copy(
             color = colors.onSurface,
             fontFamily = if (source) FontFamily.Monospace else null,
@@ -334,18 +381,38 @@ private object ContinueLists : InputTransformation {
     }
 }
 
+/** Where the line holding `at` starts. */
+private fun lineStart(text: String, at: Int) = text.lastIndexOf('\n', (at - 1).coerceAtLeast(0)) + 1
+
 /**
  * A tap on a task's box ticks or unticks it, before the field would move the cursor there, as a
- * click does on Linux.
+ * click does on Linux. While the note is not being edited (`editing`), a tap on a link opens
+ * it (`open`), as Todav's task notes do; editing, it places the cursor.
  */
-private fun Modifier.tickTasks(state: TextFieldState, spans: SpanCache, layout: () -> TextLayoutResult?) =
+private fun Modifier.tickTasks(
+    state: TextFieldState,
+    spans: SpanCache,
+    editing: () -> Boolean,
+    open: (NoteLink) -> Unit,
+    layout: () -> TextLayoutResult?,
+) =
     pointerInput(state) {
         awaitEachGesture {
             val down = awaitFirstDown(pass = PointerEventPass.Initial)
             val l = layout() ?: return@awaitEachGesture
             // The field's text starts 16dp in and 8dp down (its padding).
             val at = l.getOffsetForPosition(down.position - Offset(16.dp.toPx(), 8.dp.toPx()))
-            val box = spans.of(state.text).firstOrNull {
+            val all = spans.of(state.text)
+            val link = all.firstOrNull { it.style == NoteStyle.Link && at >= it.start.toInt() && at < it.end.toInt() }
+            if (link != null && !editing()) {
+                val target = noteLinkAt(state.text.toString(), at.toUInt()) ?: return@awaitEachGesture
+                down.consume()
+                val up = waitForUpOrCancellation(PointerEventPass.Initial) ?: return@awaitEachGesture
+                up.consume()
+                open(target)
+                return@awaitEachGesture
+            }
+            val box = all.firstOrNull {
                 it.style is NoteStyle.Task && at >= it.start.toInt() && at < it.end.toInt()
             } ?: return@awaitEachGesture
             val bounds = l.getBoundingBox(box.start.toInt())
@@ -367,7 +434,8 @@ private fun Modifier.blocks(state: TextFieldState, spans: SpanCache, c: ColorSch
     drawBehind {
         val l = layout() ?: return@drawBehind
         val text = state.text
-        for (s in spans.of(text)) {
+        // Alerts last, see-through: their box goes on over a code block in them, as on Linux.
+        for (s in spans.of(text).sortedBy { it.style is NoteStyle.Alert }) {
             val color = when (val style = s.style) {
                 NoteStyle.CodeBlock -> c.surfaceContainerHigh
                 is NoteStyle.Alert -> alertColor(style.kind, c).copy(alpha = 0.12f)

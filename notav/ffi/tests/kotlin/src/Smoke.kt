@@ -68,6 +68,11 @@ fun main() {
     val link = noteLinkAt("😀 [[Plans]]", 5u)
     check(link is NoteLink.Note && link.target == "Plans" && link.wiki) { "link: $link" }
     check(noteHeadings("😀\n## Two").single().let { it.level == 2.toUByte() && it.at == 3u })
+    // A table aligned once the cursor has left it, the cursor kept after it.
+    val table = "😀\n| a | bb |\n|---|---|\n| 1 | 2 |\n\nx"
+    val tidy = noteTableTidy(table, 5u, table.length.toUInt())!!
+    val tidied = table.replaceRange(tidy.start.toInt(), tidy.end.toInt(), tidy.text)
+    check(tidied.contains("| a   | bb  |") && tidied.substring(tidy.cursor.toInt()) == "") { "tidy: $tidied" }
 
     // Translations from the Polish catalog (made by scripts/bindings.sh).
     val pl = Translations(java.io.File("../../target/bindings/pl.mo").readBytes())

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Prepare a release: set the version in Cargo.toml and Cargo.lock, the app's metainfo and the RPM
+"""Prepare a release: set the version in the Cargo manifests and lock files (the app's and the
+bindings'), the app's metainfo and the RPM
 spec (with a changelog entry), move the Unreleased changelog section under the new version, and
 print its notes for the GitHub release. The metainfo gets those notes too, and its screenshots
 (once it has some) are taken from the new tag (app stores want them from a tag, not a branch).
@@ -127,16 +128,18 @@ def main() -> None:
     changelog.write_text(f"{text[:body_start]}\n## [{version}] - {date}\n\n{notes}\n\n{rest}")
 
     edit("Cargo.toml", r'(\[workspace\.package\].*?^version = )"[^"]*"', rf'\g<1>"{version}"')
-    # The workspace's own crates, the packages without a `source`, so `--locked` builds still work.
-    lock = ROOT / "Cargo.lock"
-    lock.write_text(
-        re.sub(
-            r'^(name = "[^"]+"\nversion = )"[^"]*"$(?!\nsource)',
-            rf'\g<1>"{version}"',
-            lock.read_text(),
-            flags=re.M,
+    # The bindings are a workspace of their own.
+    edit("notav/ffi/Cargo.toml", r'(\[package\].*?^version = )"[^"]*"', rf'\g<1>"{version}"')
+    # The workspaces' own crates, the packages without a `source`, so `--locked` builds still work.
+    for lock in [ROOT / "Cargo.lock", ROOT / "notav/Cargo.lock"]:
+        lock.write_text(
+            re.sub(
+                r'^(name = "[^"]+"\nversion = )"[^"]*"$(?!\nsource)',
+                rf'\g<1>"{version}"',
+                lock.read_text(),
+                flags=re.M,
+            )
         )
-    )
     metainfo = "notav/linux/data/dev.aperte.Notav.metainfo.xml"
     set_release(metainfo, version, date, notes, repo)
     # Every screenshot from the new tag.

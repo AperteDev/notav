@@ -38,17 +38,30 @@
   | Update while running, Restart banner | `linux/app/src/update.rs`, `update_banners` in `window.rs` | No restart in the background (no service): only the banner, quitting as closing the window does |
   | Build, packaging, release | `build.rs`, `linux/Makefile`, Flatpak manifest, `scripts/`, `.github/workflows/`, `po/its/`, RPM spec, `.copr/Makefile` | No GNOME extension, D-Bus service or autostart; GtkSourceView |
   | Polish translations | `po/pl.po` | Shared strings merged |
-  | HTTPS trusting the system's certificate authorities (Todav after 2.4.0) | `core/src/net.rs` | Without Android's `set_roots` |
+  | HTTPS trusting the system's certificate authorities (Todav after 2.4.0) | `core/src/net.rs` | As is |
+  | Bindings: UniFFI, errors, mirrored types, UTF-16 positions, the smoke test | `ffi/`, `scripts/bindings.sh` | One object over the core, no service; Kotlin only |
+  | `.mo` catalogs for Android | `app/src/i18n.rs` | `ffi/src/i18n.rs` |
   | Error pages' text in HTTP errors (Todav after 2.4.0) | `html_text` in `core/src/lib.rs` | As is |
 ## Dependencies
 
 - Standard library and platform SDKs first; a third-party crate only where it replaces real
   work, with the reason in its commit. Now: `ureq` (rustls, with the platform verifier), `rusqlite`, `quick-xml`,
   `pulldown-cmark` (Markdown for Editor mode, without its HTML writer), `gtk4`, `libadwaita`,
-  `sourceview5`, `libsecret`, `libc`.
+  `sourceview5`, `libsecret`, `libc`; for Android, `uniffi` in `notav/ffi`.
 - `rusqlite` stays within 0.38 to 0.40 on the system SQLite, not bundled: distributions
   (Fedora) require that, and Fedora packages 0.38. Search needs FTS5, which every SQLite Notav
-  runs on has.
+  runs on has. Only the bindings bundle SQLite (Android has none to link to); their smoke test
+  searches, so FTS5 is checked there too.
+
+## Bindings
+
+- `notav/ffi` (`notav-ffi`, in a Cargo workspace of its own, `notav/Cargo.toml`) exports the
+  core to Kotlin with UniFFI, as Todav's `todav/ffi`: `Notav` over `Client`, plain functions for
+  the rest. Keep the core's API exportable: synchronous, no closures or generics in what
+  front-ends call. Text positions cross as UTF-16 code units (`types::Utf16`).
+- After changing it or the core types it mirrors, run `scripts/bindings.sh` (it generates the
+  bindings and runs their smoke test; CI does too), plus `cargo fmt` and clippy in
+  `notav/ffi`, which the root workspace's checks don't cover.
 
 ## Releases
 
@@ -59,7 +72,7 @@
   `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`.
 - Don't bump versions by hand: releases are cut by the manual Release workflow
   (`.github/workflows/release.yml`), as in Todav: `scripts/release.py` sets the version in
-  `Cargo.toml`, `Cargo.lock`, the metainfo and the RPM spec and moves the `[Unreleased]` changes
+  `Cargo.toml`, `notav/ffi/Cargo.toml`, both `Cargo.lock`s, the metainfo and the RPM spec and moves the `[Unreleased]` changes
   under it; the metainfo gets them as the release's notes (untranslated). COPR (`selfref/notav`)
   builds the tag's RPMs (AperteDev secret `COPR_CONFIG`, shared with Todav, an API token that
   expires after 180 days; it ends on 2027-04-27). After publishing,
@@ -68,7 +81,8 @@
   commits by SelfRef; a packaging change to them still goes in by hand. The metainfo must
   pass `appstreamcli validate` without warnings (Flathub treats them as errors).
 - CI (`.github/workflows/ci.yml`) runs on every push: `cargo fmt --check`, clippy with warnings
-  as errors, the unit tests, and the packages (Flatpak, tarball, `.deb`). Run the checks before
+  as errors, the unit tests, the bindings (`scripts/bindings.sh`), and the packages (Flatpak,
+  tarball, `.deb`). Run the checks before
   committing.
 
 ## Translations

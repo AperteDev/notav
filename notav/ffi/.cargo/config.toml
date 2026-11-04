@@ -1,0 +1,3 @@
+# Build output stays here, not in the workspace's notav/target.
+[build]
+target-dir = "target"

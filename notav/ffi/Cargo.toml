@@ -1,0 +1,28 @@
+# The bindings for Android (and later other apps not in Rust): the core exported with UniFFI. A
+# workspace of its own (notav/Cargo.toml), so UniFFI and the bundled SQLite stay out of the Linux
+# builds and their packaging. The version is set by scripts/release.py.
+[package]
+name = "notav-ffi"
+version = "0.2.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "notav_ffi"
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
+required-features = ["bindgen"]
+
+[dependencies]
+notav-core = { path = "../core" }
+# The SQLite inside: Android has none to link to. FTS5, which search needs, is in its build.
+rusqlite = { version = ">=0.38, <0.41", features = ["bundled"] }
+uniffi = "0.31"
+
+[features]
+# The Kotlin generator, as a binary of this crate (`cargo run --features bindgen`).
+bindgen = ["uniffi/cli"]

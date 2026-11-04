@@ -21,6 +21,7 @@ use std::sync::{Arc, Mutex};
 pub use account::{Account, AccountKind};
 pub use files::{Deleted, Features, Version};
 pub use login::{Credentials, LoginFlow, login_flow_poll, login_flow_start, password_login};
+pub use net::set_roots;
 pub use notes::Note;
 pub use settings::DEVICE_ONLY;
 pub use sync::{DEFAULT_FOLDER, Locked, SyncReport};

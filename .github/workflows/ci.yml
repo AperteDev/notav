@@ -39,6 +39,32 @@ jobs:
       # Unit tests; the integration tests need a Nextcloud account.
       - run: cargo test --workspace --locked
 
+  bindings:
+    name: Bindings (Kotlin)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: notav -> ffi/target
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      # msgfmt, for the catalog the smoke test reads.
+      - run: sudo apt-get install -y --no-install-recommends gettext
+      - run: cargo fmt --check
+        working-directory: notav/ffi
+      - run: cargo clippy --all-targets --locked -- -D warnings
+        working-directory: notav/ffi
+      - run: cargo test --locked
+        working-directory: notav/ffi
+      # The bindings generated and run against the library built for Linux.
+      - run: scripts/bindings.sh
+
   flatpak:
     name: Flatpak
     runs-on: ubuntu-24.04

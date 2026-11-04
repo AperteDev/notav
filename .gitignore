@@ -2,3 +2,8 @@
 /tmp
 /.playwright-mcp
 .env
+/notav/target
+/notav/ffi/target
+/notav/ffi/tests/*/build
+/notav/ffi/tests/*/.gradle
+/notav/ffi/tests/*/.kotlin

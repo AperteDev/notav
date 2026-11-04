@@ -1,6 +1,8 @@
 [workspace]
 resolver = "3"
 members = ["notav/core", "notav/cli", "notav/linux/app"]
+# The bindings' own workspace: see notav/Cargo.toml.
+exclude = ["notav/ffi"]
 
 # One version for the whole app, set by the Release workflow (scripts/release.py).
 [workspace.package]

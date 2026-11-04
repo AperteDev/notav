@@ -310,6 +310,8 @@ impl Strips {
         });
         let bar = gtk::Scrollbar::new(gtk::Orientation::Horizontal, Some(&adj));
         bar.add_css_class("block-scrollbar");
+        // Over the text, whose I-beam it would take.
+        bar.set_cursor_from_name(Some("default"));
 
         // Sideways moves over it scroll it; the rest scrolls the note, as over its text.
         let scroll = gtk::EventControllerScroll::new(gtk::EventControllerScrollFlags::BOTH_AXES);

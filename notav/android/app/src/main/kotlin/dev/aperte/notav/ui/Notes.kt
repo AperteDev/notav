@@ -46,11 +46,13 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Today
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.DriveFileMove
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingActionButtonMenu
@@ -414,30 +416,39 @@ private fun TreeRow(model: Main, screen: Screen, depth: Int, item: Item, ask: (A
                 }
             }
         }
-        DropdownMenu(menu, { menu = false }) {
-            val close = { menu = false }
-            if (item !is Item.NoteRow) {
-                Entry(tr("New Note"), close) { model.newNote(item.place) }
-                Entry(tr("New Folder"), close) { ask(Ask.NewFolder(item.place)) }
-            }
-            if (item is Item.NoteRow) {
-                val n = item.note
-                Entry(if (n.favorite) tr("Remove from Favorites") else tr("Add to Favorites"), close) {
-                    model.setFavorite(n, !n.favorite)
-                }
-            }
-            if (item !is Item.Account) {
-                Entry(tr("Rename…"), close) { ask(Ask.Rename(item)) }
-                Entry(tr("Move…"), close) { ask(Ask.Move(item)) }
-                Entry(tr("Delete"), close) { model.delete(item) }
-            }
-        }
+        val note = (item as? Item.NoteRow)?.note
+        val owned = item !is Item.Account
+        Menu(
+            menu,
+            { menu = false },
+            listOf(
+                if (note == null) {
+                    listOf(
+                        Entry(tr("New Note"), Icons.AutoMirrored.Outlined.NoteAdd) { model.newNote(item.place) },
+                        Entry(tr("New Folder"), Icons.Outlined.CreateNewFolder) { ask(Ask.NewFolder(item.place)) },
+                    )
+                } else {
+                    listOf(
+                        if (note.favorite) {
+                            Entry(tr("Remove from Favorites"), Icons.Filled.Star) { model.setFavorite(note, false) }
+                        } else {
+                            Entry(tr("Add to Favorites"), Icons.Outlined.StarBorder) { model.setFavorite(note, true) }
+                        },
+                    )
+                },
+                if (owned) {
+                    listOf(
+                        Entry(tr("Rename…"), Icons.Outlined.Edit) { ask(Ask.Rename(item)) },
+                        Entry(tr("Move…"), Icons.AutoMirrored.Outlined.DriveFileMove) { ask(Ask.Move(item)) },
+                    )
+                } else {
+                    emptyList()
+                },
+                if (owned) listOf(Entry(tr("Delete"), Icons.Outlined.Delete, danger = true) { model.delete(item) }) else emptyList(),
+            ),
+        )
     }
 }
-
-@Composable
-private fun Entry(label: String, close: () -> Unit, action: () -> Unit) =
-    DropdownMenuItem(text = { Text(label) }, onClick = { close(); action() })
 
 /** A name to give (a new folder, a note's or folder's new name): the field focused, the name
  * there selected to type over. */
@@ -476,13 +487,14 @@ private fun MoveDialog(model: Main, screen: Screen, item: Item, onDismiss: () ->
         onDismissRequest = onDismiss,
         title = { Text(tr("Move")) },
         text = {
-            LazyColumn {
+            // A block of rows, as Todav's Move to List.
+            LazyColumn(Modifier.clip(RoundedCornerShape(24.dp)), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 items(targets.filter { moves(item, it) }) { f ->
                     Item(
                         headlineContent = { Text(if (f.isEmpty()) top else f) },
                         leadingContent = { Icon(Icons.Outlined.Folder, null) },
                         modifier = Modifier.clickable { onPick(f) },
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                     )
                 }
             }

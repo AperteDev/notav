@@ -5,12 +5,30 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.DropdownMenuGroup
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MenuDefaults
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonDefaults
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -109,6 +127,69 @@ fun FieldItem(
         disabledIndicatorColor = Color.Transparent,
     ),
 )
+
+/** One of `options` picked with connected toggle buttons sharing the room (Todav's). */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun Connected(options: List<String>, selected: Int, modifier: Modifier = Modifier, onSelect: (Int) -> Unit) = Row(
+    modifier,
+    horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+) {
+    val haptics = LocalHapticFeedback.current
+    options.forEachIndexed { i, o ->
+        ToggleButton(
+            checked = i == selected,
+            onCheckedChange = {
+                // A tick as another one is picked.
+                if (i != selected) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                onSelect(i)
+            },
+            shapes = when (i) {
+                0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+            },
+            // Seen on a row's own colour too.
+            colors = ToggleButtonDefaults.colors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            ),
+            contentPadding = PaddingValues(horizontal = 8.dp),
+            modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
+        ) { Text(o, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+    }
+}
+
+/** An entry of a [Menu]; a `danger` one (Delete) in the error colour. */
+class Entry(val label: String, val icon: ImageVector, val danger: Boolean = false, val action: () -> Unit)
+
+/**
+ * A menu of Material 3 Expressive groups, as Todav's task menu: each group a block of its own,
+ * the empty ones left out. Picking an entry closes it.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun Menu(expanded: Boolean, onDismiss: () -> Unit, groups: List<List<Entry>>) = DropdownMenuPopup(expanded, onDismiss) {
+    val shown = groups.filter { it.isNotEmpty() }
+    shown.forEachIndexed { g, entries ->
+        if (g > 0) Spacer(Modifier.height(MenuDefaults.GroupSpacing))
+        DropdownMenuGroup(MenuDefaults.groupShape(g, shown.size)) {
+            entries.forEachIndexed { i, e ->
+                val color = if (e.danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                DropdownMenuItem(
+                    onClick = {
+                        onDismiss()
+                        e.action()
+                    },
+                    text = { Text(e.label) },
+                    shape = MenuDefaults.itemShape(i, entries.size).shape,
+                    leadingIcon = { Icon(e.icon, null) },
+                    colors = MenuDefaults.itemColors(textColor = color, leadingIconColor = color),
+                )
+            }
+        }
+    }
+}
 
 /** `content` (an icon button) with `label` as a tooltip when it is held or hovered. */
 @OptIn(ExperimentalMaterial3Api::class)

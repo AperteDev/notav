@@ -15,21 +15,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Login
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Cloud
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -133,15 +130,9 @@ private fun Preferences(model: Main) {
                     "light" to ptr("style", "Light"),
                     "dark" to ptr("style", "Dark"),
                 )
-                val current = settings["color_scheme"]?.takeIf { s -> choices.any { it.first == s } } ?: "system"
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                    choices.forEachIndexed { i, (key, label) ->
-                        SegmentedButton(
-                            selected = current == key,
-                            onClick = { model.setSetting("color_scheme", key) },
-                            shape = SegmentedButtonDefaults.itemShape(i, choices.size),
-                        ) { Text(label) }
-                    }
+                val current = choices.indexOfFirst { it.first == settings["color_scheme"] }.coerceAtLeast(0)
+                Connected(choices.map { it.second }, current, Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                    model.setSetting("color_scheme", choices[it].first)
                 }
             },
         )
@@ -206,18 +197,18 @@ private fun AccountRow(model: Main, a: Account) {
                 Switch(a.enabled, { model.setEnabled(a.id, it) })
                 Box {
                     IconButton(onClick = { menu = true }) { Icon(Icons.Outlined.MoreVert, tr("Account")) }
-                    DropdownMenu(menu, { menu = false }) {
-                        if (a.kind == AccountKind.NEXTCLOUD) {
-                            DropdownMenuItem(
-                                text = { Text(tr("Sign In Again")) },
-                                onClick = { menu = false; model.page.value = Page.Reconnect(a.id) },
-                            )
-                        }
-                        DropdownMenuItem(
-                            text = { Text(tr("Remove Account")) },
-                            onClick = { menu = false; removing = "" },
-                        )
-                    }
+                    Menu(
+                        menu,
+                        { menu = false },
+                        listOf(
+                            listOfNotNull(
+                                Entry(tr("Sign In Again"), Icons.AutoMirrored.Outlined.Login) {
+                                    model.page.value = Page.Reconnect(a.id)
+                                }.takeIf { a.kind == AccountKind.NEXTCLOUD },
+                            ),
+                            listOf(Entry(tr("Remove Account"), Icons.Outlined.Delete, danger = true) { removing = "" }),
+                        ),
+                    )
                 }
             }
         },

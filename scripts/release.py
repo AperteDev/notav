@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Prepare a release: set the version in the Cargo manifests and lock files (the app's and the
-bindings'), the app's metainfo and the RPM
+bindings'), the Android version code, the app's metainfo and the RPM
 spec (with a changelog entry), move the Unreleased changelog section under the new version, and
 print its notes for the GitHub release. The metainfo gets those notes too, and its screenshots
 (once it has some) are taken from the new tag (app stores want them from a tag, not a branch).
@@ -140,6 +140,13 @@ def main() -> None:
                 flags=re.M,
             )
         )
+    # The Android version code (1.2.3 is 10203), which F-Droid reads from here.
+    major, minor, patch = map(int, version.split("."))
+    edit(
+        "notav/android/gradle.properties",
+        r"^(notav\.versionCode=)\d+$",
+        rf"\g<1>{major * 10000 + minor * 100 + patch}",
+    )
     metainfo = "notav/linux/data/dev.aperte.Notav.metainfo.xml"
     set_release(metainfo, version, date, notes, repo)
     # Every screenshot from the new tag.

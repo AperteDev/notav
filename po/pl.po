@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notav\n"
 "Report-Msgid-Bugs-To: https://github.com/AperteDev/notav/issues\n"
-"POT-Creation-Date: 2026-11-04 01:25+0100\n"
+"POT-Creation-Date: 2026-11-04 01:38+0100\n"
 "PO-Revision-Date: 2026-10-24 20:03+0200\n"
 "Last-Translator: SelfRef\n"
 "Language-Team: Polish\n"
@@ -17,6 +17,47 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 "
 "|| n%100>=20) ? 1 : 2);\n"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/NotavUi.kt:71
+#: notav/linux/app/ui/add-account.blp:22
+msgid ""
+"Notes and a journal kept as Markdown files in your Nextcloud, or on this "
+"device"
+msgstr ""
+"Notatki i dziennik w plikach Markdown w twoim Nextcloud lub na tym urządzeniu"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/NotavUi.kt:80
+#: notav/linux/app/src/main.rs:353
+msgid "Welcome to Notav"
+msgstr "Witaj w Notav"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/NotavUi.kt:82
+#: notav/linux/app/src/main.rs:355
+msgid ""
+"Your notes stay on this device. They are written in Markdown: # starts a "
+"heading, - a list, - [ ] a task, and [[Title]] links another note."
+msgstr ""
+"Twoje notatki zostają na tym urządzeniu. Pisze się je w Markdown: # zaczyna "
+"nagłówek, - listę, - [ ] zadanie, a [[Tytuł]] to link do innej notatki."
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/NotavUi.kt:89
+#: notav/linux/app/ui/add-account.blp:70
+msgid "On This Device Only"
+msgstr "Tylko na tym urządzeniu"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/NotavUi.kt:97
+#: notav/linux/app/src/main.rs:496
+msgid "Notav Cannot Open Its Data"
+msgstr "Notav nie może otworzyć swoich danych"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/NotavUi.kt:100
+#: notav/linux/app/src/main.rs:488
+msgid ""
+"It was saved by a newer version of Notav. Update Notav to open it; this "
+"version leaves it as it is."
+msgstr ""
+"Zapisała je nowsza wersja Notav. Zaktualizuj Notav, aby je otworzyć; ta "
+"wersja ich nie zmienia."
 
 #: notav/linux/app/src/add_account.rs:89
 msgid "Its Nextcloud accounts are all added"
@@ -239,18 +280,6 @@ msgstr "Nie można zapisać hasła: {error}"
 msgid "Connecting failed"
 msgstr "Nie udało się połączyć"
 
-#: notav/linux/app/src/main.rs:353
-msgid "Welcome to Notav"
-msgstr "Witaj w Notav"
-
-#: notav/linux/app/src/main.rs:355
-msgid ""
-"Your notes stay on this device. They are written in Markdown: # starts a "
-"heading, - a list, - [ ] a task, and [[Title]] links another note."
-msgstr ""
-"Twoje notatki zostają na tym urządzeniu. Pisze się je w Markdown: # zaczyna "
-"nagłówek, - listę, - [ ] zadanie, a [[Tytuł]] to link do innej notatki."
-
 #: notav/linux/app/src/main.rs:428
 msgid "It has changes not uploaded yet: sign in again to upload them"
 msgstr "Ma niewysłane zmiany: zaloguj się ponownie, aby je wysłać"
@@ -258,18 +287,6 @@ msgstr "Ma niewysłane zmiany: zaloguj się ponownie, aby je wysłać"
 #: notav/linux/app/src/main.rs:438
 msgid "Removing the account failed"
 msgstr "Nie udało się usunąć konta"
-
-#: notav/linux/app/src/main.rs:488
-msgid ""
-"It was saved by a newer version of Notav. Update Notav to open it; this "
-"version leaves it as it is."
-msgstr ""
-"Zapisała je nowsza wersja Notav. Zaktualizuj Notav, aby je otworzyć; ta "
-"wersja ich nie zmienia."
-
-#: notav/linux/app/src/main.rs:496
-msgid "Notav Cannot Open Its Data"
-msgstr "Notav nie może otworzyć swoich danych"
 
 #: notav/linux/app/src/settings.rs:161
 #, rust-format
@@ -784,20 +801,9 @@ msgstr "Skopiuj odnośnik logowania"
 msgid "Sign In with Password…"
 msgstr "Zaloguj się hasłem…"
 
-#: notav/linux/app/ui/add-account.blp:22
-msgid ""
-"Notes and a journal kept as Markdown files in your Nextcloud, or on this "
-"device"
-msgstr ""
-"Notatki i dziennik w plikach Markdown w twoim Nextcloud lub na tym urządzeniu"
-
 #: notav/linux/app/ui/add-account.blp:54
 msgid "Sign in with the browser or an app password"
 msgstr "Zaloguj się w przeglądarce lub hasłem aplikacji"
-
-#: notav/linux/app/ui/add-account.blp:70
-msgid "On This Device Only"
-msgstr "Tylko na tym urządzeniu"
 
 #: notav/linux/app/ui/add-account.blp:88
 msgid "You can add more accounts later in Preferences"

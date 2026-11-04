@@ -65,6 +65,39 @@ jobs:
       # The bindings generated and run against the library built for Linux.
       - run: scripts/bindings.sh
 
+  android:
+    name: Android
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set the release version
+        if: env.VERSION != ''
+        run: python3 scripts/release.py "$VERSION" > /dev/null
+      # The runner's rustup installs the Rust notav/ffi/rust-toolchain.toml pins, with its targets.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: notav -> ffi/target
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      # The SDK packages gradle.properties names (the runner has the SDK's command-line tools),
+      # cargo-ndk, and msgfmt for the catalogs.
+      - name: Install the SDK packages, cargo-ndk and gettext
+        working-directory: notav/android
+        run: |
+          prop() { sed -n "s/^$1=//p" gradle.properties; }
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;$(prop notav.platform)" "build-tools;$(prop notav.buildTools)" \
+            "ndk;$(prop notav.ndk)" platform-tools
+          cargo install cargo-ndk --locked --version "$(prop notav.cargoNdk)"
+          sudo apt-get install -y --no-install-recommends gettext
+      - uses: gradle/actions/setup-gradle@v6
+      # Unsigned release APK for both ABIs: the core, its bindings and catalogs, the app.
+      - run: ./gradlew --console=plain assembleRelease
+        working-directory: notav/android
+
   flatpak:
     name: Flatpak
     runs-on: ubuntu-24.04

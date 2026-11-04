@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The symbolic icon (notav/linux/data/dev.aperte.Notav-symbolic.svg, 16 px) as the themed
+     icon, about as big in its circle as the system apps' glyphs. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="16"
+    android:viewportHeight="16">
+    <group
+        android:pivotX="8"
+        android:pivotY="8"
+        android:scaleX="0.44"
+        android:scaleY="0.44">
+        <path
+            android:fillColor="#000"
+            android:pathData="M4,1C2.355,1 1,2.355 1,4v8c0,1.645 1.355,3 3,3h8c1.645,0 3,-1.355 3,-3V4c0,-1.645 -1.355,-3 -3,-3zm0,5h8c0.555,0 1,0.445 1,1v5c0,0.57 -0.441,0.887 -1,1H4c-0.57,0 -1,-0.43 -1,-1V7c0,-0.555 0.445,-1 1,-1z" />
+        <path
+            android:fillColor="#000"
+            android:pathData="M4.5,12.5l0.5,-2 4,-4 1.5,1.5 -4,4z" />
+    </group>
+</vector>

@@ -16,6 +16,10 @@ x() {
 x -L Rust -k -kgettext -kngettext:1,2 -kpgettext:1c,2 -kgettext_noop notav/linux/app/src/*.rs
 # Blueprint's _("…") and C_("context", "…") read like C.
 x --join-existing -L C -k -k_ -kC_:1c,2 notav/linux/app/ui/*.blp
+# Kotlin's tr("…"), ntr(…) and ptr("context", "…") read like Java (its parser warns about some
+# Kotlin syntax, and finds the messages all the same).
+x --join-existing -L Java -k -ktr -kntr:1,2 -kptr:1c,2 \
+  $(find notav/android/app/src -name '*.kt' | sort)
 x --join-existing notav/linux/data/dev.aperte.Notav.desktop \
   notav/linux/data/dev.aperte.Notav.metainfo.xml
 

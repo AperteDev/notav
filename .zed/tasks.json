@@ -55,5 +55,58 @@
     "allow_concurrent_runs": false,
     "reveal": "no_focus",
     "hide": "on_success"
+  },
+  {
+    "label": "android: run on emulator",
+    // Starts the emulator if needed (sdk.sh), builds for its ABI, installs and opens the app.
+    "command": "make -C notav/android run",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always"
+  },
+  {
+    "label": "android: follow app log",
+    "command": "make -C notav/android logs",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always"
+  },
+  {
+    "label": "android: build APKs",
+    // Debug APK for every ABI, in notav/android/app/build/outputs/apk/debug/.
+    "command": "make -C notav/android build",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always"
+  },
+  {
+    "label": "android: stop emulator",
+    "command": "make -C notav/android stop",
+    "use_new_terminal": false,
+    "reveal": "no_focus",
+    "hide": "on_success"
+  },
+  {
+    "label": "android: fold emulator",
+    // The foldable emulator closed, the app on its cover screen as on a phone.
+    "command": "make -C notav/android fold",
+    "use_new_terminal": false,
+    "reveal": "no_focus",
+    "hide": "on_success"
+  },
+  {
+    "label": "android: unfold emulator",
+    "command": "make -C notav/android unfold",
+    "use_new_terminal": false,
+    "reveal": "no_focus",
+    "hide": "on_success"
+  },
+  {
+    "label": "android: set up SDK and emulator",
+    // The SDK in ~/Android/Sdk shared with Todav, with the versions gradle.properties names.
+    "command": "make -C notav/android setup",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always"
   }
 ]

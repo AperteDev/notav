@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notav\n"
 "Report-Msgid-Bugs-To: https://github.com/AperteDev/notav/issues\n"
-"POT-Creation-Date: 2026-11-04 01:25+0100\n"
+"POT-Creation-Date: 2026-11-04 01:38+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,6 +17,42 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/NotavUi.kt:71
+#: notav/linux/app/ui/add-account.blp:22
+msgid ""
+"Notes and a journal kept as Markdown files in your Nextcloud, or on this "
+"device"
+msgstr ""
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/NotavUi.kt:80
+#: notav/linux/app/src/main.rs:353
+msgid "Welcome to Notav"
+msgstr ""
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/NotavUi.kt:82
+#: notav/linux/app/src/main.rs:355
+msgid ""
+"Your notes stay on this device. They are written in Markdown: # starts a "
+"heading, - a list, - [ ] a task, and [[Title]] links another note."
+msgstr ""
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/NotavUi.kt:89
+#: notav/linux/app/ui/add-account.blp:70
+msgid "On This Device Only"
+msgstr ""
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/NotavUi.kt:97
+#: notav/linux/app/src/main.rs:496
+msgid "Notav Cannot Open Its Data"
+msgstr ""
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/NotavUi.kt:100
+#: notav/linux/app/src/main.rs:488
+msgid ""
+"It was saved by a newer version of Notav. Update Notav to open it; this "
+"version leaves it as it is."
+msgstr ""
 
 #: notav/linux/app/src/add_account.rs:89
 msgid "Its Nextcloud accounts are all added"
@@ -237,32 +273,12 @@ msgstr ""
 msgid "Connecting failed"
 msgstr ""
 
-#: notav/linux/app/src/main.rs:353
-msgid "Welcome to Notav"
-msgstr ""
-
-#: notav/linux/app/src/main.rs:355
-msgid ""
-"Your notes stay on this device. They are written in Markdown: # starts a "
-"heading, - a list, - [ ] a task, and [[Title]] links another note."
-msgstr ""
-
 #: notav/linux/app/src/main.rs:428
 msgid "It has changes not uploaded yet: sign in again to upload them"
 msgstr ""
 
 #: notav/linux/app/src/main.rs:438
 msgid "Removing the account failed"
-msgstr ""
-
-#: notav/linux/app/src/main.rs:488
-msgid ""
-"It was saved by a newer version of Notav. Update Notav to open it; this "
-"version leaves it as it is."
-msgstr ""
-
-#: notav/linux/app/src/main.rs:496
-msgid "Notav Cannot Open Its Data"
 msgstr ""
 
 #: notav/linux/app/src/settings.rs:161
@@ -752,18 +768,8 @@ msgstr ""
 msgid "Sign In with Password…"
 msgstr ""
 
-#: notav/linux/app/ui/add-account.blp:22
-msgid ""
-"Notes and a journal kept as Markdown files in your Nextcloud, or on this "
-"device"
-msgstr ""
-
 #: notav/linux/app/ui/add-account.blp:54
 msgid "Sign in with the browser or an app password"
-msgstr ""
-
-#: notav/linux/app/ui/add-account.blp:70
-msgid "On This Device Only"
 msgstr ""
 
 #: notav/linux/app/ui/add-account.blp:88

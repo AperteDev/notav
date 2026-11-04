@@ -122,21 +122,19 @@ Later (v2):
 An Android app in Jetpack Compose with Material 3 Expressive, built as Todav's is (its
 `AGENTS.md`, "Android"; `todav/android`, `todav/ffi`), on the same SDK, emulator (`apps`) and
 release key setup (Notav's own key, alias `notav`, in this repository's `ANDROID_KEYSTORE`
-secrets), over the core's bindings (`notav/ffi`). Steps, each a commit:
+secrets), in `notav/android` over the core's bindings (`notav/ffi`). Steps, each a commit:
 
-1. **Project**: `notav/android` (`core`: the library by cargo-ndk, its bindings and the `.mo`
-   catalogs; `app`: Compose), its Makefile and `sdk.sh`, CI building the release APK.
-2. **Accounts**: Login Flow v2 in a Custom Tab, a login name and app password, the local account;
+1. **Accounts**: Login Flow v2 in a Custom Tab, a login name and app password, the local account;
    the notes folder step and the first sync; passwords under an Android Keystore key.
-3. **Notes**: the tree (folders, counts, favorites first) beside the note on wide screens, the
+2. **Notes**: the tree (folders, counts, favorites first) beside the note on wide screens, the
    note alone on a phone; new, rename, move, delete from a long press, with Undo in a snackbar.
-4. **Editor**: saving as you type, Source mode, then Editor mode (`markdown::spans` as styles of a
+3. **Editor**: saving as you type, Source mode, then Editor mode (`markdown::spans` as styles of a
    `BasicTextField`, alerts, quotes and code blocks drawn behind the text; a tap ticks a task;
    Enter by `markdown::enter`; tables tidied as the cursor leaves them).
-5. **The rest**: search, Today's note, Trash, versions, unlocking, Preferences, text shared to
+4. **The rest**: search, Today's note, Trash, versions, unlocking, Preferences, text shared to
    Notav as a new note.
-6. **Release**: the APK signed in the Release workflow, its version code set by
-   `scripts/release.py`, fastlane metadata for F-Droid; then F-Droid (after three months of
+5. **Release**: the APK signed in the Release workflow (as Todav's CI signs it) and published
+   with the release, fastlane metadata for F-Droid; then F-Droid (after three months of
    history, from about 2027-01-24) and Google Play, as Todav.
 
 Sync runs while the app is open and, as the Linux app does when it quits, once more when it is

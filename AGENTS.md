@@ -41,6 +41,8 @@
   | HTTPS trusting the system's certificate authorities (Todav after 2.4.0) | `core/src/net.rs` | As is |
   | Bindings: UniFFI, errors, mirrored types, UTF-16 positions, the smoke test | `ffi/`, `scripts/bindings.sh` | One object over the core, no service; Kotlin only |
   | `.mo` catalogs for Android | `app/src/i18n.rs` | `ffi/src/i18n.rs` |
+  | Android build: the `core` module (cargo-ndk, bindings, catalogs), versions, `sdk.sh`, Makefile, CI job | `android/` | No widgets, push or reminders; no signing yet |
+  | Android app: `I18n.kt`, theme, trusted certificates, the app's process | `android/app/src/main/kotlin/…/` (`I18n.kt`, `ui/Theme.kt`, `TodavApp.kt`) | The icon's yellows as the fallback colours |
   | Error pages' text in HTTP errors (Todav after 2.4.0) | `html_text` in `core/src/lib.rs` | As is |
 ## Dependencies
 
@@ -72,7 +74,8 @@
   `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`.
 - Don't bump versions by hand: releases are cut by the manual Release workflow
   (`.github/workflows/release.yml`), as in Todav: `scripts/release.py` sets the version in
-  `Cargo.toml`, `notav/ffi/Cargo.toml`, both `Cargo.lock`s, the metainfo and the RPM spec and moves the `[Unreleased]` changes
+  `Cargo.toml`, `notav/ffi/Cargo.toml`, both `Cargo.lock`s, the Android version code
+  (`notav.versionCode`), the metainfo and the RPM spec and moves the `[Unreleased]` changes
   under it; the metainfo gets them as the release's notes (untranslated). COPR (`selfref/notav`)
   builds the tag's RPMs (AperteDev secret `COPR_CONFIG`, shared with Todav, an API token that
   expires after 180 days; it ends on 2027-04-27). After publishing,
@@ -81,8 +84,8 @@
   commits by SelfRef; a packaging change to them still goes in by hand. The metainfo must
   pass `appstreamcli validate` without warnings (Flathub treats them as errors).
 - CI (`.github/workflows/ci.yml`) runs on every push: `cargo fmt --check`, clippy with warnings
-  as errors, the unit tests, the bindings (`scripts/bindings.sh`), and the packages (Flatpak,
-  tarball, `.deb`). Run the checks before
+  as errors, the unit tests, the bindings (`scripts/bindings.sh`), the Android release APK
+  (`assembleRelease`, both ABIs, unsigned), and the packages (Flatpak, tarball, `.deb`). Run the checks before
   committing.
 
 ## Translations
@@ -130,6 +133,23 @@
 - What Editor mode changes by itself (a table tidied as the cursor leaves it) gets a switch in
   Preferences, Editor → Markdown: a synced setting, on by default, read where the change is made
   (`editor::format_tables`). What the user asks for (a menu item, a click) needs none.
+
+## Android
+
+- `notav/android` is a Gradle project, as Todav's: `core` (notav-ffi built by cargo-ndk, its
+  Kotlin bindings, the `.mo` catalogs as assets) and `app` (Jetpack Compose, Material 3
+  Expressive). Build and run it with `make -C notav/android <target>` (Zed tasks "android: …"):
+  `setup`, `run`, `logs`, `build`, `stop`, `fold`, `unfold`, `wipe`.
+- The SDK (`~/Android/Sdk`) and the emulator (the `apps` AVD on `emulator-5580`, a foldable) are
+  Todav's: its `AGENTS.md`, "Android", says how they are set up and driven (adb taps,
+  screenshots per display). `gradle.properties` names the same versions as Todav's
+  (`notav.*`); change them in both, and `sdk.sh` is Todav's script with `notav.*` keys. `wipe`
+  wipes Todav's data on it too.
+- Text is translated with `tr`, `ntr` and `ptr` (`I18n.kt`, over the bindings' `Translations`),
+  not `strings.xml`; the same rules as the Linux app. Reuse the Linux app's messages where they
+  fit, so their translations come along.
+- The Linux UI's rule holds here too: what fits where the user already is (a long press, a tap
+  on the text) before new buttons and screens.
 
 ## Testing
 

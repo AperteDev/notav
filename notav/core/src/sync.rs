@@ -577,6 +577,19 @@ impl Client {
         {
             return Ok(());
         }
+        // Only its ETag changed there: Nextcloud gives the file a new one as a lock is taken or
+        // let go (Nextcloud Text opening the note), its text the one this change started from.
+        // This one goes up over it, under the new ETag.
+        if r.base.as_deref() == Some(body.as_str())
+            && r.fileid.as_deref() == Some(entry.fileid.as_str())
+            && r.etag.as_deref() != Some(entry.etag.as_str())
+        {
+            let r = Row {
+                etag: Some(entry.etag),
+                ..r.clone()
+            };
+            return self.upload(dav, root, &r, report, changed);
+        }
         let take_server = |db: &Connection| -> Result<()> {
             // Another note here may hold this oc:id (moved on the server): it is this one now.
             db.execute(

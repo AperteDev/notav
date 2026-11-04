@@ -58,6 +58,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A note changed while it is open in Nextcloud Text waits for its lock and goes up once
+  unlocked, instead of becoming a conflict copy: Nextcloud gives a file a new ETag as it is
+  locked and unlocked
 - A narrow window gives the note all its width: the sidebar never went away there, the outline
   folding instead
 - A table's handles show as the pointer comes near the table from outside it too: beside a

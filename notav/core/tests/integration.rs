@@ -352,6 +352,29 @@ fn a_note_locked_on_the_server_waits_and_the_rest_syncs() {
 }
 
 #[test]
+fn a_note_edited_while_locked_goes_up_once_unlocked() {
+    let f = Fixture::new("locked-edit");
+    let n =
+        f.a.add_note(A, "".into(), "Open".into(), "v1".into())
+            .unwrap();
+    f.a.sync().unwrap();
+    // Taking the lock (and letting it go) gives the file a new ETag, its text the same.
+    let href = format!("{}Open.md", f.root);
+    let lock = [("X-User-Lock", "1"), ("X-User-Lock-Type", "1")];
+    let r = f.dav.request("LOCK", &href, &lock, "").unwrap();
+    assert_eq!(r.status, 200, "{}", r.body);
+    f.a.set_text(n.id, "v2".into()).unwrap();
+    let r = f.a.sync().unwrap();
+    assert_eq!(r.locked.len(), 1, "{r:?}");
+
+    f.a.unlock(A, "Open.md".into()).unwrap();
+    let r = f.a.sync().unwrap();
+    assert!(r.conflicts.is_empty() && r.locked.is_empty(), "{r:?}");
+    assert_eq!(f.server_text("Open.md").unwrap(), "v2");
+    assert!(!f.a.pending(None));
+}
+
+#[test]
 fn a_folder_moves_whole_on_the_server() {
     let f = Fixture::new("folder-move");
     let plan =

@@ -476,8 +476,6 @@ private fun NoteText(model: Main, note: Note, source: Boolean, find: FindState, 
             .filter { it.style == NoteStyle.CodeBlock || it.style == NoteStyle.Table }
             .map { it.start.toInt() until it.end.toInt().coerceAtMost(state.text.length) }
             .filter { !(focused && selection.start in it.first..it.last + 1) }
-            // The find bar's current match shows in the field, the rest in the strips.
-            .filter { r -> found.getOrNull(find.at)?.let { it in r } != true }
     }
     // Where each strip goes, from the field's layout: written only when it changes, and read
     // by the strips alone (the field laid out again for each write would never settle).
@@ -518,7 +516,10 @@ private fun NoteText(model: Main, note: Note, source: Boolean, find: FindState, 
             Box {
                 field()
                 if (styled) {
-                    Strips({ strips }, state, spans, colors, textStyle.copy(fontFamily = FontFamily.Monospace), found, query.length) { at ->
+                    Strips(
+                        { strips }, state, spans, colors, textStyle.copy(fontFamily = FontFamily.Monospace),
+                        found, query.length, found.getOrNull(find.at),
+                    ) { at ->
                         // A tap in one: the cursor there, the block the field's to edit.
                         state.edit { this.selection = androidx.compose.ui.text.TextRange(at) }
                         fieldFocus.requestFocus()
@@ -556,9 +557,11 @@ private fun Strips(
     spans: SpanCache,
     colors: ColorScheme,
     style: androidx.compose.ui.text.TextStyle,
-    /** The find bar's matches, highlighted as in the field. */
+    /** The find bar's matches, highlighted as in the field; the strip with the current one
+     * scrolls sideways to it, as a strip follows the cursor on Linux. */
     found: List<Int>,
     matchLength: Int,
+    current: Int?,
     onTap: (Int) -> Unit,
 ) {
     val density = androidx.compose.ui.platform.LocalDensity.current
@@ -579,16 +582,35 @@ private fun Strips(
                 }
                 for (f in found) {
                     val (a, b) = f.coerceAtLeast(start) to (f + matchLength).coerceAtMost(end)
-                    if (a < b) addStyle(SpanStyle(background = colors.tertiaryContainer, color = colors.onTertiaryContainer), a - start, b - start)
+                    if (a >= b) continue
+                    addStyle(
+                        if (f == current) {
+                            SpanStyle(background = colors.tertiary, color = colors.onTertiary)
+                        } else {
+                            SpanStyle(background = colors.tertiaryContainer, color = colors.onTertiaryContainer)
+                        },
+                        a - start,
+                        b - start,
+                    )
                 }
             }
         }
         val layouts = remember(s) { arrayOfNulls<TextLayoutResult>(s.lines.size) }
+        val sideways = rememberScrollState()
+        // The current match in this strip: in sight, a third in from the left.
+        LaunchedEffect(current, s) {
+            val at = current ?: return@LaunchedEffect
+            // Its line in the strip, if it is in one of them.
+            val i = s.lines.indexOfLast { it <= at }
+            if (i < 0 || at > text.indexOf('\n', s.lines[i]).let { if (it < 0) text.length else it }) return@LaunchedEffect
+            val x = layouts[i]?.getHorizontalPosition(at - s.lines[i], true) ?: return@LaunchedEffect
+            if (x < sideways.value || x > sideways.value + s.width) sideways.animateScrollTo((x - s.width / 3).toInt().coerceAtLeast(0))
+        }
         androidx.compose.foundation.layout.Box(
             Modifier.offset { androidx.compose.ui.unit.IntOffset(0, top.toInt()) }
                 .width(with(density) { s.width.toDp() })
                 .height(with(density) { (s.bottom - top).toDp() })
-                .horizontalScroll(rememberScrollState()),
+                .horizontalScroll(sideways),
         ) {
             androidx.compose.ui.layout.Layout(
                 content = { lines.forEachIndexed { i, t -> Text(t, style = style, softWrap = false, maxLines = 1, onTextLayout = { layouts[i] = it }) } },

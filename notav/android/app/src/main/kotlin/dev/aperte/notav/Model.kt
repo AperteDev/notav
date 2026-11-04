@@ -68,8 +68,11 @@ sealed interface Page {
         }
 }
 
-/** A snackbar's text, with the change its Undo reverts. */
-data class Message(val text: String, val undo: ULong? = null)
+/** A snackbar's text, with the change its Undo reverts, or the lock its Unlock… removes. */
+data class Message(val text: String, val undo: ULong? = null, val unlock: dev.aperte.notav.core.Locked? = null)
+
+/** A note's title from its path: the file name without its extension. */
+fun titleOf(path: String): String = path.substringAfterLast('/').let { f -> f.substringBeforeLast('.', f) }
 
 class Main(app: Application) : AndroidViewModel(app) {
     val notav = app as NotavApp
@@ -609,6 +612,21 @@ class Main(app: Application) : AndroidViewModel(app) {
             done()
         } catch (e: Exception) {
             failed(e)
+        }
+    }
+
+    /** Remove the lock on the server that a change to its note waits for; the sync then goes on. */
+    fun unlock(lock: dev.aperte.notav.core.Locked) = act {
+        val file = lock.file ?: return@act
+        try {
+            core.unlock(lock.account, file)
+            notav.syncNow()
+        } catch (e: Exception) {
+            messages.tryEmit(
+                Message(
+                    tr("Cannot unlock “{title}”: {error}").replace("{title}", titleOf(lock.path)).replace("{error}", reason(e)),
+                ),
+            )
         }
     }
 

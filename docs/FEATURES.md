@@ -77,6 +77,8 @@ What Notav can do, in short. The details of each release are in the
   time on a phone, two side by side on a wide screen.
 - Editor mode's styles, ticking tasks, continuing lists, tables kept aligned, links followed.
 - Search, Today's note, and text shared from other apps as a note.
+- A note locked on the server waits with its change; a message says who locked it, and
+  Unlock… lets it go.
 - Syncs while open, when the tree is pulled down, and once more when left; in the background
   too, if chosen: from every 15 minutes to once a day.
 - Settings as the Linux app's Preferences: the style, the tree's density and icons, table

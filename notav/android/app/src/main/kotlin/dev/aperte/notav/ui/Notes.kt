@@ -66,6 +66,10 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.runtime.derivedStateOf
 import dev.aperte.notav.core.AccountKind
+import dev.aperte.notav.core.Locked
+import dev.aperte.notav.titleOf
+import java.text.DateFormat
+import java.util.Date
 import kotlinx.coroutines.delay
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingActionButtonMenu
@@ -133,18 +137,72 @@ fun WithMessages(model: Main, content: @Composable () -> Unit) {
 
 @Composable
 private fun Messages(model: Main, snackbar: SnackbarHostState) {
-    // The latest message replaces the one shown; one with Undo stays a while longer.
+    // The lock whose Unlock… was pressed: asked first.
+    var unlocking by remember { mutableStateOf<Locked?>(null) }
+    // The locks told about already: each is told once, again after Unlock.
+    val told = remember { mutableSetOf<Locked>() }
+    // The latest message replaces the one shown; one with Undo stays a while longer, a lock until
+    // it is dismissed.
     LaunchedEffect(Unit) {
         model.messages.collectLatest { m ->
             snackbar.currentSnackbarData?.dismiss()
             val r = snackbar.showSnackbar(
                 m.text,
-                actionLabel = m.undo?.let { tr("Undo") },
+                actionLabel = m.undo?.let { tr("Undo") } ?: m.unlock?.let { tr("Unlock…") },
                 withDismissAction = true,
-                duration = if (m.undo != null) SnackbarDuration.Long else SnackbarDuration.Short,
+                duration = when {
+                    m.unlock != null -> SnackbarDuration.Indefinite
+                    m.undo != null -> SnackbarDuration.Long
+                    else -> SnackbarDuration.Short
+                },
             )
-            if (r == SnackbarResult.ActionPerformed) model.undo(m.undo)
+            if (r == SnackbarResult.ActionPerformed) {
+                if (m.undo != null) model.undo(m.undo) else unlocking = m.unlock
+            }
         }
+    }
+    // A change waiting for a lock on the server: who holds it and since when, as the Linux app's
+    // toast; Unlock… for a note's.
+    LaunchedEffect(Unit) {
+        model.notav.locked.collect { locks ->
+            told.retainAll(locks.toSet())
+            for (l in locks.filter { it !in told }) {
+                told += l
+                val since = l.since?.let {
+                    DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(it * 1000))
+                }
+                val text = when {
+                    l.file == null -> tr("Something in “{title}” is locked on the server")
+                    l.owner != null && since != null -> tr("“{title}” is locked on the server by {owner} since {time}")
+                    l.owner != null -> tr("“{title}” is locked on the server by {owner}")
+                    else -> tr("“{title}” is locked on the server")
+                }.replace("{title}", titleOf(l.path)).replace("{owner}", l.owner.orEmpty()).replace("{time}", since.orEmpty())
+                model.messages.tryEmit(dev.aperte.notav.Message(text, unlock = l.takeIf { it.file != null }))
+            }
+        }
+    }
+    unlocking?.let { l ->
+        // An editor that still has the note open may lose what it saves afterwards.
+        AlertDialog(
+            onDismissRequest = { unlocking = null },
+            title = { Text(tr("Unlock “{title}”?").replace("{title}", titleOf(l.path))) },
+            text = {
+                Text(
+                    tr(
+                        "Your change to it waits for the lock. If it is still open in an editor, what is saved there " +
+                            "afterwards may be lost: unlock it only if nobody is editing it.",
+                    ),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    unlocking = null
+                    told.remove(l)
+                    model.unlock(l)
+                }) { Text(tr("Unlock"), color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { unlocking = null }) { Text(tr("Cancel")) } },
+        )
     }
     LaunchedEffect(Unit) {
         var last: String? = null

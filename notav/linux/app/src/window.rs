@@ -41,6 +41,8 @@ row.drop-below { box-shadow: inset 0 -2px 0 0 var(--accent-bg-color); }
 .table-drop { background-color: var(--accent-bg-color); }
 .block-strip > undershoot { background: none; box-shadow: none; }
 .block-scrollbar { background: none; }
+.block-edge.left { background-image: linear-gradient(to right, alpha(currentColor, 0.15), transparent); }
+.block-edge.right { background-image: linear-gradient(to left, alpha(currentColor, 0.15), transparent); }
 ";
 
 /// How far each folder level is indented in the tree, and the width of a folder's arrow.

@@ -12,6 +12,19 @@ use gtk::{glib, graphene};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
+/// How wide the shade at a strip's edge is (pixels).
+const EDGE: i32 = 16;
+
+/// The shades at a strip's edges (`[left, right]`): each while there is more of the block that
+/// way, so a block not shown whole is seen to be one at a glance; none while the strip is not
+/// `used`.
+fn show_edges(adj: &gtk::Adjustment, edges: &[gtk::Box; 2], used: bool) {
+    // Not for the room past a block's end alone (a table's for the bar that adds a column).
+    let more = adj.upper() - adj.page_size() - adj.value();
+    edges[0].set_visible(used && adj.value() > 0.5);
+    edges[1].set_visible(used && more > (2 * EDGE) as f64);
+}
+
 /// One block's strip.
 struct Strip {
     /// The window on the block's lines (scrolled down to them), over the note's text.
@@ -21,6 +34,8 @@ struct Strip {
     /// Its scrollbar, also over the note's text, and its range: the block's width.
     bar: gtk::Scrollbar,
     adj: gtk::Adjustment,
+    /// A shade at its left and right edge while there is more of it that way.
+    edges: [gtk::Box; 2],
     /// The block, and where its lines are in the note's text (its top, its bottom).
     block: Cell<Block>,
     top: Rc<Cell<i32>>,
@@ -165,6 +180,7 @@ impl Strips {
             }
             s.window.set_visible(used);
             s.bar.set_visible(used);
+            show_edges(&s.adj, &s.edges, used);
         }
         self.used.set(wide.len());
         for (s, b) in strips.iter().zip(&wide) {
@@ -193,6 +209,13 @@ impl Strips {
                 width as f64,
             );
             s.bar.set_size_request(width, -1);
+            let [left, right] = &s.edges;
+            for e in [left, right] {
+                e.set_size_request(EDGE, y + h - top);
+            }
+            self.main.move_overlay(left, 0, top);
+            self.main.move_overlay(right, width - EDGE, top);
+            show_edges(&s.adj, &s.edges, true);
         }
         drop(strips);
         self.place_bars();
@@ -315,11 +338,26 @@ impl Strips {
 
         main.add_overlay(&window, 0, 0);
         main.add_overlay(&bar, 0, 0);
+        // Over the strip, letting the pointer through to it.
+        let edges = ["left", "right"].map(|side| {
+            let e = gtk::Box::builder()
+                .can_target(false)
+                .visible(false)
+                .css_classes(["block-edge", side])
+                .build();
+            main.add_overlay(&e, 0, 0);
+            e
+        });
+        let (e, w) = (edges.clone(), window.clone());
+        adj.connect_value_changed(move |a| show_edges(a, &e, w.is_visible()));
+        let (e, w) = (edges.clone(), window.clone());
+        adj.connect_changed(move |a| show_edges(a, &e, w.is_visible()));
         Strip {
             window,
             view,
             bar,
             adj,
+            edges,
             block: Cell::new(Block {
                 first: 0,
                 last: 0,

@@ -14,7 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   device; the tree of folders and notes, the note and its outline (with the notes linking to
   it) swiped between, one at a time on a phone, two side by side on wide screens (an unfolded
   foldable, a tablet); Editor mode's styles, ticking tasks, lists and tables
-  (tables and code blocks unwrapped, each scrolled sideways on its own); find and replace;
+  (tables and code blocks unwrapped, each scrolled sideways on its own, shaded at the edge
+  where more is hidden); find and replace;
   search, Today's note, text shared from other apps as a note; a note locked on the server
   told about, with Unlock…; the Trash and a note's versions. It syncs while open, when the
   tree is pulled down and once more when left; Settings can add a sync in the background,
@@ -50,7 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Tables and code blocks wider than the note scroll sideways each on its own, the note keeping
   its width (it widened for them, and the whole text scrolled sideways): edited in place, they
-  follow the cursor; their scrollbar stays at the bottom of the window while they go on below
+  follow the cursor; a shade at an edge shows that more of one is hidden that way; their
+  scrollbar stays at the bottom of the window while they go on below
   it, and a touchpad's sideways move or Shift and the wheel over them scrolls them too. Without
   Wrap Lines the whole text still scrolls
 - The sidebar, as in Todav: the Toggle Sidebar button (F9) hides and shows it; on a narrow

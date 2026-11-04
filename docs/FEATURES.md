@@ -61,7 +61,8 @@ What Notav can do, in short. The details of each release are in the
   menu or with handles, as in Obsidian.
 - Rows copied from a spreadsheet are pasted as a table.
 - Tables and code blocks wider than the note scroll sideways each on its own, edited in place:
-  their scrollbar stays in sight, and they follow the cursor.
+  a shade at the edge where more of one is hidden, their scrollbar in sight, and they follow
+  the cursor.
 
 **Look and app**
 
@@ -78,7 +79,8 @@ What Notav can do, in short. The details of each release are in the
 - The tree, the note and its outline (with the notes linking to it) swiped between: one at a
   time on a phone, two side by side on a wide screen.
 - Editor mode's styles, ticking tasks, continuing lists, tables kept aligned, links followed;
-  tables and code blocks unwrapped, each scrolled sideways on its own (a tap edits it).
+  tables and code blocks unwrapped, each scrolled sideways on its own, shaded at the edge where
+  more is hidden (a tap edits it).
 - Find and replace in the open note, the matches highlighted and counted.
 - Search, Today's note, and text shared from other apps as a note.
 - A note locked on the server waits with its change; a message says who locked it, and

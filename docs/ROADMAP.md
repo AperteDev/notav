@@ -130,7 +130,7 @@ Later: signing in
 through the Nextcloud app's accounts (as Todav), dragging notes and folders in the tree (a
 long press opens their menu now, with Move…), table handles and menus, a table's cells keeping
 their padding as they are typed in (`table::padding_taken`), tables wider than the note
-scrolling sideways (they wrap now), the outline of headings, find and replace, widgets, a Quick
+scrolling sideways (they wrap now), find and replace, widgets, a Quick
 Settings tile. Settings the Linux app has that Android has not yet: the fonts of Editor and
 Source mode, the outline's, restoring the session (the note left open), suggestions in the
 journal's folder and template fields, ordering accounts by dragging.

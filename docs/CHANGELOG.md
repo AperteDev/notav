@@ -11,8 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - An Android app (an APK with each release), in Material 3 Expressive: the same notes, accounts
   and synced settings. Sign in with the browser or an app password, or keep notes on this
-  device; the tree of folders and notes beside the note on wide screens (an unfolded foldable,
-  a tablet), the note alone on a phone; Editor mode's styles, ticking tasks, lists and tables;
+  device; the tree of folders and notes, the note and its outline (with the notes linking to
+  it) swiped between, one at a time on a phone, two side by side on wide screens (an unfolded
+  foldable, a tablet); Editor mode's styles, ticking tasks, lists and tables;
   search, Today's note, text shared from other apps as a note. It syncs while open, when the
   tree is pulled down and once more when left; Settings can add a sync in the background,
   from every 15 minutes to once a day. Settings has the Linux app's pages: the style, the

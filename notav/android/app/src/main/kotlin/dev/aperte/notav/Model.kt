@@ -99,6 +99,15 @@ class Main(app: Application) : AndroidViewModel(app) {
     /** The note shown. */
     val open = MutableStateFlow<Long?>(null)
 
+    /** A note was opened (the same one again too): the panes slide to it. */
+    val showNote = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** Where the open note's text should go to (a heading picked in the outline), in UTF-16 units. */
+    val jump = kotlinx.coroutines.flow.MutableSharedFlow<Int>(extraBufferCapacity = 1)
+
+    /** The open note's headings as typed, for the outline. */
+    val headings = MutableStateFlow<List<dev.aperte.notav.core.NoteHeading>>(emptyList())
+
     /** Where a new note goes: the account and folder last opened in the tree, or the open note's. */
     var target: Pair<Long, String>? = null
 
@@ -307,6 +316,7 @@ class Main(app: Application) : AndroidViewModel(app) {
     fun openNote(note: Note) {
         open.value = note.id
         target = note.account to note.folder
+        showNote.tryEmit(Unit)
     }
 
     /** Where something new goes without a place given: where the last one went, else the top of

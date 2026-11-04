@@ -71,7 +71,9 @@ import dev.aperte.notav.core.NoteStyle
 import androidx.core.net.toUri
 import dev.aperte.notav.core.NoteLink
 import dev.aperte.notav.core.noteEnter
+import dev.aperte.notav.core.noteHeadings
 import dev.aperte.notav.core.noteLinkAt
+import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import dev.aperte.notav.core.noteSpans
 import dev.aperte.notav.core.noteTableTidy
 import dev.aperte.notav.tr
@@ -93,16 +95,16 @@ private const val MAX_STYLED = 300_000
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotePane(model: Main, note: Note, back: Boolean) {
+fun NotePane(model: Main, note: Note, onBack: (() -> Unit)?, onSide: () -> Unit) {
     val source by model.sourceMode.collectAsStateWithLifecycle()
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { key(note.id, note.title) { TitleField(model, note) } },
                 navigationIcon = {
-                    if (back) {
-                        IconButton(onClick = { model.open.value = null }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
+                    onBack?.let {
+                        Tip(tr("Back")) {
+                            IconButton(onClick = it) { Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Back")) }
                         }
                     }
                 },
@@ -113,6 +115,10 @@ fun NotePane(model: Main, note: Note, back: Boolean) {
                         IconButton(onClick = { model.setSourceMode(!source) }) {
                             Icon(if (source) Icons.Outlined.TextFields else Icons.Outlined.Code, label)
                         }
+                    }
+                    // The side panel, also a swipe away.
+                    Tip(tr("Outline")) {
+                        IconButton(onClick = onSide) { Icon(Icons.AutoMirrored.Outlined.FormatListBulleted, tr("Outline")) }
                     }
                 },
             )
@@ -185,12 +191,29 @@ private fun NoteText(model: Main, note: Note, source: Boolean, modifier: Modifie
     }
     if (saved == null) return
 
+    // The outline's headings, as typed.
+    LaunchedEffect(Unit) {
+        snapshotFlow { state.text.toString() }.debounce(300).collect { t ->
+            model.headings.value = withContext(Dispatchers.Default) { noteHeadings(t) }
+        }
+    }
+    DisposableEffect(Unit) { onDispose { model.headings.value = emptyList() } }
+
     val colors = MaterialTheme.colorScheme
     val styled = !source && state.text.length <= MAX_STYLED
     val spans = remember(styled) { SpanCache() }
     // Not a state: written on every layout, it would recompose the field, which lays it out again.
     val layout = remember { arrayOfNulls<TextLayoutResult>(1) }
     val scroll = rememberScrollState()
+    // A heading picked in the outline: the cursor there, its line at the top.
+    LaunchedEffect(Unit) {
+        model.jump.collect { to ->
+            val at = to.coerceIn(0, state.text.length)
+            state.edit { selection = androidx.compose.ui.text.TextRange(at) }
+            val l = layout[0] ?: return@collect
+            scroll.animateScrollTo(l.getLineTop(l.getLineForOffset(at)).toInt())
+        }
+    }
     // The characters styled in full: all of a short note, else around what is on screen, moved
     // as it scrolls past (see `MarkdownStyles`).
     var window by remember { mutableStateOf(0..Int.MAX_VALUE) }

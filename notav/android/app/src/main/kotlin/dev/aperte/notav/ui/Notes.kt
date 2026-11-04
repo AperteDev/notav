@@ -112,35 +112,9 @@ import dev.aperte.notav.tr
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** The narrowest window that shows the tree and the note side by side. */
-private val TWO_PANES = 600.dp
-private val TREE_WIDTH = 360.dp
-
-/**
- * The notes: on a phone the tree, then the note opened from it on a page of its own; on a wider
- * screen both side by side.
- */
+/** The notes: the tree, the open note and its side panel, swiped between (`Panes`). */
 @Composable
-fun Home(model: Main, screen: Screen) {
-    val open by model.open.collectAsStateWithLifecycle()
-    val note = screen.notes.firstOrNull { it.id == open }
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        if (maxWidth >= TWO_PANES) {
-            Row(Modifier.fillMaxSize()) {
-                Box(Modifier.width(TREE_WIDTH).fillMaxHeight()) { TreePane(model, screen) }
-                VerticalDivider()
-                Box(Modifier.weight(1f).fillMaxHeight()) {
-                    if (note != null) NotePane(model, note, back = false) else NoNote()
-                }
-            }
-        } else if (note != null) {
-            BackHandler { model.open.value = null }
-            NotePane(model, note, back = true)
-        } else {
-            TreePane(model, screen)
-        }
-    }
-}
+fun Home(model: Main, screen: Screen) = Panes(model, screen)
 
 /**
  * `content` (the notes or a settings page) with the model's messages over it: an undo, a failed
@@ -210,7 +184,7 @@ private sealed interface Ask {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun TreePane(model: Main, screen: Screen) {
+internal fun TreePane(model: Main, screen: Screen) {
     val sync by model.notav.syncState.collectAsStateWithLifecycle()
     val found by model.found.collectAsStateWithLifecycle()
     var ask by remember { mutableStateOf<Ask?>(null) }
@@ -595,7 +569,7 @@ private fun MoveDialog(model: Main, screen: Screen, item: Item, onDismiss: () ->
 
 /** No note open beside the tree. */
 @Composable
-private fun NoNote() = androidx.compose.material3.Surface(Modifier.fillMaxSize()) {
+internal fun NoNote() =androidx.compose.material3.Surface(Modifier.fillMaxSize()) {
     Column(
         Modifier.fillMaxSize().padding(32.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),

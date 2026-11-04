@@ -8,7 +8,7 @@ export ANDROID_SERIAL := emulator-5580
 GRADLE = ./gradlew --console=plain
 APP = dev.aperte.notav
 
-.PHONY: setup emulator stop wipe fold unfold build release run logs uninstall
+.PHONY: setup emulator stop wipe fold unfold build release test run logs uninstall
 
 # SDK, NDK, emulator and the `apps` AVD in ~/Android/Sdk.
 setup:
@@ -37,6 +37,10 @@ build:
 
 release:
 	$(GRADLE) assembleRelease
+
+# The app's unit tests, on the JVM (the core for the emulator's ABI only).
+test:
+	$(GRADLE) testDebugUnitTest -Pnotav.abis=x86_64
 
 # Built for the emulator's ABI only, installed and started.
 run: emulator

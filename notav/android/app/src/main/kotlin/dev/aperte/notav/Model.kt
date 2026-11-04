@@ -35,27 +35,50 @@ sealed interface SignIn {
 /** What the app shows, read again on every change. */
 data class Screen(
     val accounts: List<Account>,
+    /** The notes of the accounts switched on. */
     val notes: List<Note>,
     /** A Nextcloud account added here whose notes folder is not chosen yet: its step shows. */
     val needsFolder: Account?,
+    /** Each account switched on with its folders. */
+    val folders: Map<Long, List<String>>,
+    val rows: List<Row>,
 )
+
+/** A snackbar's text, with the change its Undo reverts. */
+data class Message(val text: String, val undo: ULong? = null)
 
 class Main(app: Application) : AndroidViewModel(app) {
     val notav = app as NotavApp
     val core get() = notav.core
 
-    val screen: StateFlow<Screen?> = combine(notav.ready, notav.changes) { ready, _ -> ready }
-        .map { ready ->
+    /** The open folders and closed accounts (`folderKey`), kept on this device as on Linux. */
+    val expanded = MutableStateFlow<Set<String>>(emptySet())
+
+    val screen: StateFlow<Screen?> = combine(notav.ready, notav.changes, expanded) { ready, _, open -> ready to open }
+        .map { (ready, open) ->
             if (!ready) return@map null
             val accounts = core.accounts()
+            val shown = accounts.filter { it.enabled }
+            val folders = shown.associate { it.id to core.folders(it.id) }
+            val notes = core.notes()
             Screen(
                 accounts,
-                core.notes(),
+                notes,
                 accounts.firstOrNull { it.kind == AccountKind.NEXTCLOUD && core.chosenNotesFolder(it.id) == null },
+                folders,
+                tree(shown.map { it.id to folders.getValue(it.id) }, notes, open),
             )
         }
         .flowOn(Dispatchers.IO)
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** The note shown. */
+    val open = MutableStateFlow<Long?>(null)
+
+    /** Where a new note goes: the account and folder last opened in the tree, or the open note's. */
+    var target: Pair<Long, String>? = null
+
+    val messages = kotlinx.coroutines.flow.MutableSharedFlow<Message>(extraBufferCapacity = 8)
 
     val signIn = MutableStateFlow<SignIn>(SignIn.Idle)
     private var polling: Job? = null
@@ -195,5 +218,182 @@ class Main(app: Application) : AndroidViewModel(app) {
     fun dropAdded(id: Long) = act {
         runCatching { core.removeAccount(notav.passwords, id, true) }
         notav.changed()
+    }
+
+    // --- the tree ---------------------------------------------------------------------------
+
+    /** A change was made: the screens read again, and it goes to the server. */
+    private fun done(message: Message? = null) {
+        notav.changed()
+        notav.requestSync()
+        message?.let { messages.tryEmit(it) }
+    }
+
+    private fun failed(e: Exception, exists: String = tr("A note with this name exists already")) {
+        messages.tryEmit(
+            Message(
+                when (e) {
+                    is NotavException.Exists -> exists
+                    is NotavException.Invalid -> tr("Not a folder name")
+                    else -> reason(e)
+                },
+            ),
+        )
+    }
+
+    /** Open or close a folder (or an account's rows); new notes go there next. */
+    fun toggle(item: Item) {
+        val (account, folder) = item.place
+        val key = folderKey(account, folder)
+        expanded.value = if (key in expanded.value) expanded.value - key else expanded.value + key
+        target = item.place
+        act { core.setSetting("expanded_folders", expanded.value.sorted().joinToString("\n")) }
+    }
+
+    /** Open account `account` and its folders above `folder`, so a note in it shows. */
+    private fun reveal(account: Long, folder: String) {
+        val open = expanded.value.toMutableSet()
+        open -= folderKey(account, "")
+        var f = folder
+        while (f.isNotEmpty()) {
+            open += folderKey(account, f)
+            f = f.substringBeforeLast('/', "")
+        }
+        if (open != expanded.value) {
+            expanded.value = open
+            act { core.setSetting("expanded_folders", open.sorted().joinToString("\n")) }
+        }
+    }
+
+    fun openNote(note: Note) {
+        open.value = note.id
+        target = note.account to note.folder
+    }
+
+    /** Where something new goes without a place given: where the last one went, else the top of
+     * the first account switched on. */
+    fun newPlace(): Pair<Long, String>? = target?.takeIf { (a, _) -> screen.value?.folders?.containsKey(a) == true }
+        ?: screen.value?.accounts?.firstOrNull { it.enabled }?.let { it.id to "" }
+
+    /** A new, empty note in `place` (else `newPlace`), opened. */
+    fun newNote(place: Pair<Long, String>? = null) = act {
+        val (account, folder) = place ?: newPlace() ?: return@act
+        try {
+            val n = core.addNote(account, folder, tr("Untitled"), "")
+            reveal(account, folder)
+            openNote(n)
+            done()
+        } catch (e: Exception) {
+            failed(e)
+        }
+    }
+
+    /** A new folder `name` in `place`, shown open. */
+    fun newFolder(place: Pair<Long, String>, name: String) = act {
+        val (account, parent) = place
+        val clean = name.trim().trim('/')
+        val path = if (parent.isEmpty()) clean else "$parent/$clean"
+        if (path in core.folders(account)) {
+            messages.tryEmit(Message(tr("A folder with this name exists already")))
+            return@act
+        }
+        try {
+            core.addFolder(account, path)
+            reveal(account, path)
+            target = account to path
+            done()
+        } catch (e: Exception) {
+            failed(e)
+        }
+    }
+
+    fun renameFolder(folder: Item.Folder, name: String) = act {
+        try {
+            core.renameFolder(folder.account, folder.path, name.trim())
+            done()
+        } catch (e: Exception) {
+            failed(e, tr("A folder with this name exists already"))
+        }
+    }
+
+    fun renameNote(note: Note, title: String) = act {
+        try {
+            core.moveNote(note.id, note.folder, title.trim())
+            done()
+        } catch (e: Exception) {
+            failed(e)
+        }
+    }
+
+    /** Move a note or folder into `folder` of its account; the snackbar can undo it. */
+    fun move(item: Item, folder: String) = act {
+        try {
+            when (item) {
+                is Item.NoteRow -> {
+                    core.moveNote(item.note.id, folder, item.note.title)
+                    reveal(item.note.account, folder)
+                }
+                is Item.Folder -> {
+                    core.moveFolder(item.account, item.path, folder)
+                    reveal(item.account, folder)
+                }
+                is Item.Account -> return@act
+            }
+            done(Message(tr("Moved"), core.lastChange()))
+        } catch (e: NotavException.Exists) {
+            messages.tryEmit(
+                Message(
+                    if (item is Item.Folder) {
+                        tr("A folder with this name exists in that folder already")
+                    } else {
+                        tr("A note with this name exists in that folder already")
+                    },
+                ),
+            )
+        } catch (e: Exception) {
+            failed(e)
+        }
+    }
+
+    /** Delete a note or a folder with everything in it; the snackbar can undo it. */
+    fun delete(item: Item) = act {
+        try {
+            val name = when (item) {
+                is Item.NoteRow -> item.note.title.also {
+                    core.deleteNote(item.note.id)
+                    if (open.value == item.note.id) open.value = null
+                }
+                is Item.Folder -> item.name.also { core.deleteFolder(item.account, item.path) }
+                is Item.Account -> return@act
+            }
+            done(Message(tr("“{title}” deleted").replace("{title}", name), core.lastChange()))
+        } catch (e: Exception) {
+            failed(e)
+        }
+    }
+
+    fun setFavorite(note: Note, on: Boolean) = act {
+        try {
+            core.setFavorite(note.id, on)
+            done()
+        } catch (e: Exception) {
+            failed(e)
+        }
+    }
+
+    fun undo(change: ULong?) = act {
+        try {
+            core.undo(change)
+            done()
+        } catch (e: Exception) {
+            failed(e)
+        }
+    }
+
+    init {
+        act {
+            notav.awaitReady()
+            expanded.value = core.setting("expanded_folders").orEmpty().lines().filter { it.isNotEmpty() }.toSet()
+        }
     }
 }

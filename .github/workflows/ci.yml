@@ -94,8 +94,9 @@ jobs:
           cargo install cargo-ndk --locked --version "$(prop notav.cargoNdk)"
           sudo apt-get install -y --no-install-recommends gettext
       - uses: gradle/actions/setup-gradle@v6
-      # Unsigned release APK for both ABIs: the core, its bindings and catalogs, the app.
-      - run: ./gradlew --console=plain assembleRelease
+      # The app's unit tests on the JVM, then an unsigned release APK for both ABIs: the core,
+      # its bindings and catalogs, the app.
+      - run: ./gradlew --console=plain testDebugUnitTest assembleRelease
         working-directory: notav/android
 
   flatpak:

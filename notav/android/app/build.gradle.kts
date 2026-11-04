@@ -65,4 +65,5 @@ dependencies {
     implementation(libs.coroutines.android)
     implementation(libs.browser)
     implementation(libs.work.runtime)
+    testImplementation(libs.junit)
 }

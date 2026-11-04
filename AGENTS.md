@@ -42,7 +42,7 @@
   | Bindings: UniFFI, errors, mirrored types, UTF-16 positions, the smoke test | `ffi/`, `scripts/bindings.sh` | One object over the core, no service; Kotlin only |
   | `.mo` catalogs for Android | `app/src/i18n.rs` | `ffi/src/i18n.rs` |
   | Android build: the `core` module (cargo-ndk, bindings, catalogs), versions, `sdk.sh`, Makefile, CI job | `android/` | No widgets, push or reminders; no signing yet |
-  | Android app: `I18n.kt`, theme, trusted certificates, the app's process, `Passwords.kt`, sign-in (welcome page, browser and password), row helpers | `android/app/src/main/kotlin/…/` (`I18n.kt`, `ui/Theme.kt`, `TodavApp.kt`, `Passwords.kt`, `Model.kt`, `ui/TodavUi.kt`, `ui/Common.kt`) | The icon's yellows as the fallback colours; the Linux app's sync worker and notes folder step; no Nextcloud app accounts yet |
+  | Android app: `I18n.kt`, theme, trusted certificates, the app's process, `Passwords.kt`, sign-in (welcome page, browser and password), row helpers | `android/app/src/main/kotlin/…/` (`I18n.kt`, `ui/Theme.kt`, `TodavApp.kt`, `Passwords.kt`, `Model.kt`, `ui/TodavUi.kt`, `ui/Common.kt`) | The icon's yellows as the fallback colours; the Linux app's sync worker and notes folder step; no Nextcloud app accounts yet. The tree (`Tree.kt`) is the Linux app's `tree`, `notes_in` and `moves`, with their tests: change both |
   | Error pages' text in HTTP errors (Todav after 2.4.0) | `html_text` in `core/src/lib.rs` | As is |
 ## Dependencies
 
@@ -84,8 +84,8 @@
   commits by SelfRef; a packaging change to them still goes in by hand. The metainfo must
   pass `appstreamcli validate` without warnings (Flathub treats them as errors).
 - CI (`.github/workflows/ci.yml`) runs on every push: `cargo fmt --check`, clippy with warnings
-  as errors, the unit tests, the bindings (`scripts/bindings.sh`), the Android release APK
-  (`assembleRelease`, both ABIs, unsigned), and the packages (Flatpak, tarball, `.deb`). Run the checks before
+  as errors, the unit tests, the bindings (`scripts/bindings.sh`), the Android app's unit tests
+  and release APK (`testDebugUnitTest`, `assembleRelease`, both ABIs, unsigned), and the packages (Flatpak, tarball, `.deb`). Run the checks before
   committing.
 
 ## Translations
@@ -139,7 +139,12 @@
 - `notav/android` is a Gradle project, as Todav's: `core` (notav-ffi built by cargo-ndk, its
   Kotlin bindings, the `.mo` catalogs as assets) and `app` (Jetpack Compose, Material 3
   Expressive). Build and run it with `make -C notav/android <target>` (Zed tasks "android: …"):
-  `setup`, `run`, `logs`, `build`, `stop`, `fold`, `unfold`, `wipe`.
+  `setup`, `run`, `logs`, `build`, `test` (the app's JVM unit tests, `app/src/test`), `stop`,
+  `fold`, `unfold`, `wipe`.
+- Driving it with adb, more than Todav's notes say: find what to tap in `uiautomator dump`
+  (Compose's text and content descriptions are there) rather than by place, as the keyboard
+  moves dialogs; a long press is `input motionevent DOWN x y`, a pause, then `UP` (a `swipe`
+  in place is not one).
 - The SDK (`~/Android/Sdk`) and the emulator (the `apps` AVD on `emulator-5580`, a foldable) are
   Todav's: its `AGENTS.md`, "Android", says how they are set up and driven (adb taps,
   screenshots per display). `gradle.properties` names the same versions as Todav's

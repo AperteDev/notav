@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notav\n"
 "Report-Msgid-Bugs-To: https://github.com/AperteDev/notav/issues\n"
-"POT-Creation-Date: 2026-11-04 01:46+0100\n"
+"POT-Creation-Date: 2026-11-04 01:56+0100\n"
 "PO-Revision-Date: 2026-10-24 20:03+0200\n"
 "Last-Translator: SelfRef\n"
 "Language-Team: Polish\n"
@@ -18,13 +18,13 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 "
 "|| n%100>=20) ? 1 : 2);\n"
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:80
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:103
 #: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:99
 #: notav/linux/app/src/main.rs:349
 msgid "Welcome to Notav"
 msgstr "Witaj w Notav"
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:82
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:105
 #: notav/linux/app/src/main.rs:351
 msgid ""
 "Your notes stay on this device. They are written in Markdown: # starts a "
@@ -33,41 +33,78 @@ msgstr ""
 "Twoje notatki zostają na tym urządzeniu. Pisze się je w Markdown: # zaczyna "
 "nagłówek, - listę, - [ ] zadanie, a [[Tytuł]] to link do innej notatki."
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:94
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:132
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:117
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:155
 #: notav/linux/app/src/window.rs:3111
 msgid "Enter the Nextcloud server first"
 msgstr "Najpierw podaj serwer Nextcloud"
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:103
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:126
 #: notav/linux/app/src/window.rs:3147
 #, rust-format
 msgid "Cannot start login: {error}"
 msgstr "Nie można rozpocząć logowania: {error}"
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:115
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:138
 #: notav/linux/app/src/window.rs:3175
 #, rust-format
 msgid "Login failed: {error}"
 msgstr "Logowanie nie powiodło się: {error}"
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:125
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:148
 #: notav/linux/app/src/window.rs:3180
 msgid "Login timed out"
 msgstr "Upłynął czas na zalogowanie"
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:142
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:165
 #: notav/linux/app/src/window.rs:3230
 #, rust-format
 msgid "Sign-in failed: {error}"
 msgstr "Logowanie nie powiodło się: {error}"
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:178
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:201
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:237
 #: notav/linux/app/src/add_account.rs:325 notav/linux/app/src/settings.rs:142
 #: notav/linux/app/src/settings.rs:384 notav/linux/app/src/window.rs:2679
 #: notav/linux/app/src/window.rs:2711
 msgid "Not a folder name"
 msgstr "To nie jest poprawna nazwa folderu"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:232
+#: notav/linux/app/src/window.rs:2582
+msgid "A note with this name exists already"
+msgstr "Notatka o tej nazwie już istnieje"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:282
+#: notav/linux/app/src/window.rs:2633
+msgid "Untitled"
+msgstr "Bez tytułu"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:297
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:315
+#: notav/linux/app/src/window.rs:2669 notav/linux/app/src/window.rs:2709
+msgid "A folder with this name exists already"
+msgstr "Folder o tej nazwie już istnieje"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:342
+msgid "Moved"
+msgstr "Przeniesiono"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:347
+#: notav/linux/app/src/window.rs:3007
+msgid "A folder with this name exists in that folder already"
+msgstr "Folder o tej nazwie już istnieje w tym folderze"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:349
+#: notav/linux/app/src/window.rs:3004
+msgid "A note with this name exists in that folder already"
+msgstr "Notatka o tej nazwie już istnieje w tym folderze"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:369
+#: notav/linux/app/src/window.rs:2727 notav/linux/app/src/window.rs:2746
+#, rust-format
+msgid "“{title}” deleted"
+msgstr "Usunięto „{title}”"
 
 #: notav/android/app/src/main/kotlin/dev/aperte/notav/Words.kt:11
 #: notav/linux/app/src/main.rs:275
@@ -116,10 +153,146 @@ msgstr "Nie można najpierw wysłać oczekujących zmian: {error}"
 msgid "It has changes not uploaded yet: sign in again to upload them"
 msgstr "Ma niewysłane zmiany: zaloguj się ponownie, aby je wysłać"
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/NotavUi.kt:74
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/NotavUi.kt:59
 #: notav/linux/app/src/main.rs:460
 msgid "Notav Cannot Open Its Data"
 msgstr "Notav nie może otworzyć swoich danych"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:144
+#: notav/linux/app/src/window.rs:486 notav/linux/app/ui/shortcuts.blp:89
+msgid "Undo"
+msgstr "Cofnij"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:157
+#: notav/linux/app/src/window.rs:532
+#, rust-format
+msgid "Sync failed: {error}"
+msgstr "Synchronizacja nie powiodła się: {error}"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:166
+#: notav/linux/app/src/window.rs:554
+#, rust-format
+msgid ""
+"“{title}” was changed elsewhere too: your version is kept next to it as a "
+"copy"
+msgstr ""
+"Notatka „{title}” została zmieniona także gdzie indziej: twoja wersja "
+"została zachowana obok jako kopia"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:170
+#: notav/linux/app/src/window.rs:558
+#, rust-format
+msgid ""
+"{n} note was changed elsewhere too: your version is kept next to it as a copy"
+msgid_plural ""
+"{n} notes were changed elsewhere too: your versions are kept next to them as "
+"copies"
+msgstr[0] ""
+"{n} notatka została zmieniona także gdzie indziej: twoja wersja została "
+"zachowana obok jako kopia"
+msgstr[1] ""
+"{n} notatki zostały zmienione także gdzie indziej: twoje wersje zostały "
+"zachowane obok jako kopie"
+msgstr[2] ""
+"{n} notatek zostało zmienionych także gdzie indziej: twoje wersje zostały "
+"zachowane obok jako kopie"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:209
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:211
+#: notav/linux/app/ui/settings.blp:213
+msgid "Add"
+msgstr "Dodaj"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:218
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:348
+#: notav/linux/app/src/window.rs:2793 notav/linux/app/ui/shortcuts.blp:10
+msgid "New Note"
+msgstr "Nowa notatka"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:223
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:252
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:349
+#: notav/linux/app/src/window.rs:2795 notav/linux/app/ui/new-folder.blp:6
+msgid "New Folder"
+msgstr "Nowy folder"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:231
+#: notav/linux/app/ui/window.blp:84
+msgid "No Notes"
+msgstr "Brak notatek"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:252
+#: notav/linux/app/ui/new-folder.blp:12
+msgid "Create"
+msgstr "Utwórz"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:258
+#: notav/linux/app/src/window.rs:2690
+msgid "Rename Folder"
+msgstr "Zmień nazwę folderu"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:259
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:262
+#: notav/linux/app/src/window.rs:2691
+msgid "Rename"
+msgstr "Zmień nazwę"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:340
+#: notav/linux/app/src/window.rs:1896
+msgid "Favorite"
+msgstr "Ulubiona"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:353
+#: notav/linux/app/src/window.rs:2809
+msgid "Add to Favorites"
+msgstr "Dodaj do ulubionych"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:353
+#: notav/linux/app/src/window.rs:2807
+msgid "Remove from Favorites"
+msgstr "Usuń z ulubionych"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:358
+#: notav/linux/app/src/window.rs:2825
+msgid "Rename…"
+msgstr "Zmień nazwę…"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:359
+msgid "Move…"
+msgstr "Przenieś…"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:360
+#: notav/linux/app/src/files.rs:193 notav/linux/app/src/window.rs:2818
+#: notav/linux/app/src/window.rs:2826
+msgid "Delete"
+msgstr "Usuń"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:386
+#: notav/linux/app/ui/account.blp:18 notav/linux/app/ui/new-folder.blp:17
+msgid "Name"
+msgstr "Nazwa"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:393
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:419
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:178
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:245
+#: notav/linux/app/src/files.rs:192 notav/linux/app/src/settings.rs:357
+#: notav/linux/app/src/settings.rs:982 notav/linux/app/src/window.rs:616
+#: notav/linux/app/ui/account.blp:34 notav/linux/app/ui/add-account.blp:185
+#: notav/linux/app/ui/new-folder.blp:11
+#: notav/linux/app/ui/password-login.blp:19
+msgid "Cancel"
+msgstr "Anuluj"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:405
+#: notav/linux/app/src/settings.rs:359
+msgid "Move"
+msgstr "Przenieś"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Notes.kt:431
+#: notav/linux/app/ui/window.blp:371
+msgid "No Note Selected"
+msgstr "Nie wybrano notatki"
 
 #: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:112
 #: notav/linux/app/ui/add-account.blp:22
@@ -164,16 +337,6 @@ msgstr "Serwer Nextcloud"
 #: notav/linux/app/src/settings.rs:891
 msgid "Waiting for Sign-In…"
 msgstr "Oczekiwanie na zalogowanie…"
-
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:178
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:245
-#: notav/linux/app/src/files.rs:192 notav/linux/app/src/settings.rs:357
-#: notav/linux/app/src/settings.rs:982 notav/linux/app/src/window.rs:616
-#: notav/linux/app/ui/account.blp:34 notav/linux/app/ui/add-account.blp:185
-#: notav/linux/app/ui/new-folder.blp:11
-#: notav/linux/app/ui/password-login.blp:19
-msgid "Cancel"
-msgstr "Anuluj"
 
 #: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:183
 #: notav/linux/app/ui/add-account.blp:167
@@ -422,11 +585,6 @@ msgstr "Usunąć na zawsze?"
 msgid "“{title}” cannot be restored afterwards"
 msgstr "Nie będzie można potem przywrócić „{title}”"
 
-#: notav/linux/app/src/files.rs:193 notav/linux/app/src/window.rs:2818
-#: notav/linux/app/src/window.rs:2826
-msgid "Delete"
-msgstr "Usuń"
-
 #: notav/linux/app/src/files.rs:225
 #, rust-format
 msgid "Restored the version of {date}"
@@ -465,10 +623,6 @@ msgstr ""
 #: notav/linux/app/src/settings.rs:358
 msgid "Leave Them"
 msgstr "Zostaw"
-
-#: notav/linux/app/src/settings.rs:359
-msgid "Move"
-msgstr "Przenieś"
 
 #: notav/linux/app/src/settings.rs:382
 #, rust-format
@@ -662,41 +816,6 @@ msgstr "_Wsparcie"
 msgid "Support"
 msgstr "Wsparcie"
 
-#: notav/linux/app/src/window.rs:486 notav/linux/app/ui/shortcuts.blp:89
-msgid "Undo"
-msgstr "Cofnij"
-
-#: notav/linux/app/src/window.rs:532
-#, rust-format
-msgid "Sync failed: {error}"
-msgstr "Synchronizacja nie powiodła się: {error}"
-
-#: notav/linux/app/src/window.rs:554
-#, rust-format
-msgid ""
-"“{title}” was changed elsewhere too: your version is kept next to it as a "
-"copy"
-msgstr ""
-"Notatka „{title}” została zmieniona także gdzie indziej: twoja wersja "
-"została zachowana obok jako kopia"
-
-#: notav/linux/app/src/window.rs:558
-#, rust-format
-msgid ""
-"{n} note was changed elsewhere too: your version is kept next to it as a copy"
-msgid_plural ""
-"{n} notes were changed elsewhere too: your versions are kept next to them as "
-"copies"
-msgstr[0] ""
-"{n} notatka została zmieniona także gdzie indziej: twoja wersja została "
-"zachowana obok jako kopia"
-msgstr[1] ""
-"{n} notatki zostały zmienione także gdzie indziej: twoje wersje zostały "
-"zachowane obok jako kopie"
-msgstr[2] ""
-"{n} notatek zostało zmienionych także gdzie indziej: twoje wersje zostały "
-"zachowane obok jako kopie"
-
 #: notav/linux/app/src/window.rs:584
 #, rust-format
 msgid "Something in “{title}” is locked on the server"
@@ -755,10 +874,6 @@ msgstr "{percent}%"
 msgid "No Headings"
 msgstr "Brak nagłówków"
 
-#: notav/linux/app/src/window.rs:1896
-msgid "Favorite"
-msgstr "Ulubiona"
-
 #: notav/linux/app/src/window.rs:2040
 #, rust-format
 msgid "{at} of {count}"
@@ -785,66 +900,13 @@ msgstr[2] "{count} notatek linkuje tutaj"
 msgid "Cannot save the note: {error}"
 msgstr "Nie można zapisać notatki: {error}"
 
-#: notav/linux/app/src/window.rs:2582
-msgid "A note with this name exists already"
-msgstr "Notatka o tej nazwie już istnieje"
-
-#: notav/linux/app/src/window.rs:2633
-msgid "Untitled"
-msgstr "Bez tytułu"
-
-#: notav/linux/app/src/window.rs:2669 notav/linux/app/src/window.rs:2709
-msgid "A folder with this name exists already"
-msgstr "Folder o tej nazwie już istnieje"
-
-#: notav/linux/app/src/window.rs:2690
-msgid "Rename Folder"
-msgstr "Zmień nazwę folderu"
-
-#: notav/linux/app/src/window.rs:2691
-msgid "Rename"
-msgstr "Zmień nazwę"
-
-#: notav/linux/app/src/window.rs:2727 notav/linux/app/src/window.rs:2746
-#, rust-format
-msgid "“{title}” deleted"
-msgstr "Usunięto „{title}”"
-
-#: notav/linux/app/src/window.rs:2793 notav/linux/app/ui/shortcuts.blp:10
-msgid "New Note"
-msgstr "Nowa notatka"
-
-#: notav/linux/app/src/window.rs:2795 notav/linux/app/ui/new-folder.blp:6
-msgid "New Folder"
-msgstr "Nowy folder"
-
 #: notav/linux/app/src/window.rs:2804
 msgid "Open in New Tab"
 msgstr "Otwórz w nowej karcie"
 
-#: notav/linux/app/src/window.rs:2807
-msgid "Remove from Favorites"
-msgstr "Usuń z ulubionych"
-
-#: notav/linux/app/src/window.rs:2809
-msgid "Add to Favorites"
-msgstr "Dodaj do ulubionych"
-
 #: notav/linux/app/src/window.rs:2816
 msgid "Versions…"
 msgstr "Wersje…"
-
-#: notav/linux/app/src/window.rs:2825
-msgid "Rename…"
-msgstr "Zmień nazwę…"
-
-#: notav/linux/app/src/window.rs:3004
-msgid "A note with this name exists in that folder already"
-msgstr "Notatka o tej nazwie już istnieje w tym folderze"
-
-#: notav/linux/app/src/window.rs:3007
-msgid "A folder with this name exists in that folder already"
-msgstr "Folder o tej nazwie już istnieje w tym folderze"
 
 #: notav/linux/app/src/window.rs:3146
 msgid "Cannot start login"
@@ -871,10 +933,6 @@ msgid "Off hides its notes and stops syncing them; nothing is deleted"
 msgstr ""
 "Wyłączenie ukrywa jego notatki i zatrzymuje ich synchronizację; nic nie jest "
 "usuwane"
-
-#: notav/linux/app/ui/account.blp:18 notav/linux/app/ui/new-folder.blp:17
-msgid "Name"
-msgstr "Nazwa"
 
 #: notav/linux/app/ui/account.blp:26
 msgid "Connection"
@@ -928,10 +986,6 @@ msgstr "Synchronizuj ustawienia z tym kontem"
 #: notav/linux/app/ui/add-account.blp:144
 msgid "Use the same settings on all devices"
 msgstr "Te same ustawienia na wszystkich urządzeniach"
-
-#: notav/linux/app/ui/new-folder.blp:12
-msgid "Create"
-msgstr "Utwórz"
 
 #: notav/linux/app/ui/password-login.blp:24
 msgid "Sign In"
@@ -1108,10 +1162,6 @@ msgstr "Dzisiejsza notatka"
 msgid "Accounts"
 msgstr "Konta"
 
-#: notav/linux/app/ui/settings.blp:213
-msgid "Add"
-msgstr "Dodaj"
-
 #: notav/linux/app/ui/settings.blp:223
 msgid "Sync settings with"
 msgstr "Synchronizuj ustawienia z"
@@ -1282,10 +1332,6 @@ msgstr "Szukaj w notatkach (Ctrl+Shift+F)"
 msgid "Search notes"
 msgstr "Szukaj w notatkach"
 
-#: notav/linux/app/ui/window.blp:84
-msgid "No Notes"
-msgstr "Brak notatek"
-
 #: notav/linux/app/ui/window.blp:85
 msgid "Add one with Ctrl+N"
 msgstr "Dodaj ją skrótem Ctrl+N"
@@ -1374,10 +1420,6 @@ msgstr "_Zastąp"
 #: notav/linux/app/ui/window.blp:331
 msgid "Replace _All"
 msgstr "Zastąp _wszystkie"
-
-#: notav/linux/app/ui/window.blp:371
-msgid "No Note Selected"
-msgstr "Nie wybrano notatki"
 
 #: notav/linux/app/ui/window.blp:372
 msgid "Pick a note or add one with Ctrl+N"

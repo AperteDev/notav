@@ -73,6 +73,10 @@ import dev.aperte.notav.titleOf
 import java.text.DateFormat
 import java.util.Date
 import kotlinx.coroutines.delay
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingActionButtonMenu
 import androidx.compose.material3.FloatingActionButtonMenuItem
@@ -424,11 +428,15 @@ internal fun TreePane(model: Main, screen: Screen) {
                 enabled = canPull && (fromTop || pulling),
                 indicator = { PullToRefreshDefaults.LoadingIndicator(pull, pulling, Modifier.align(Alignment.TopCenter)) },
             ) {
-                // The note opened (a new one too) scrolled into view.
+                // The note opened scrolled into view, once its row is there (a new one's comes a
+                // moment later); not again as other rows come and go (a folder opened).
                 val open by model.open.collectAsStateWithLifecycle()
-                LaunchedEffect(open, screen.rows.size) {
-                    val i = screen.rows.indexOfFirst { (it.item as? Item.NoteRow)?.note?.id == open }
-                    if (i >= 0 && list.layoutInfo.visibleItemsInfo.none { it.index == i && it.offset >= 0 }) {
+                val rows by rememberUpdatedState(screen.rows)
+                LaunchedEffect(open) {
+                    val i = withTimeoutOrNull(2000) {
+                        snapshotFlow { rows.indexOfFirst { (it.item as? Item.NoteRow)?.note?.id == open } }.first { it >= 0 }
+                    } ?: return@LaunchedEffect
+                    if (list.layoutInfo.visibleItemsInfo.none { it.index == i && it.offset >= 0 }) {
                         list.animateScrollToItem(i)
                     }
                 }

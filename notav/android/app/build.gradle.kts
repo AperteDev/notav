@@ -63,4 +63,6 @@ dependencies {
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.core.ktx)
     implementation(libs.coroutines.android)
+    implementation(libs.browser)
+    implementation(libs.work.runtime)
 }

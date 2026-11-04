@@ -124,23 +124,21 @@ An Android app in Jetpack Compose with Material 3 Expressive, built as Todav's i
 release key setup (Notav's own key, alias `notav`, in this repository's `ANDROID_KEYSTORE`
 secrets), in `notav/android` over the core's bindings (`notav/ffi`). Steps, each a commit:
 
-1. **Accounts**: Login Flow v2 in a Custom Tab, a login name and app password, the local account;
-   the notes folder step and the first sync; passwords under an Android Keystore key.
-2. **Notes**: the tree (folders, counts, favorites first) beside the note on wide screens, the
+1. **Notes**: the tree (folders, counts, favorites first) beside the note on wide screens, the
    note alone on a phone; new, rename, move, delete from a long press, with Undo in a snackbar.
-3. **Editor**: saving as you type, Source mode, then Editor mode (`markdown::spans` as styles of a
+2. **Editor**: saving as you type, Source mode, then Editor mode (`markdown::spans` as styles of a
    `BasicTextField`, alerts, quotes and code blocks drawn behind the text; a tap ticks a task;
    Enter by `markdown::enter`; tables tidied as the cursor leaves them).
-4. **The rest**: search, Today's note, Trash, versions, unlocking, Preferences, text shared to
-   Notav as a new note.
-5. **Release**: the APK signed in the Release workflow (as Todav's CI signs it) and published
+3. **The rest**: search, Today's note, Trash, versions, unlocking, Preferences (accounts: adding
+   more, signing in again, removing), text shared to Notav as a new note.
+4. **Release**: the APK signed in the Release workflow (as Todav's CI signs it) and published
    with the release, fastlane metadata for F-Droid; then F-Droid (after three months of
    history, from about 2027-01-24) and Google Play, as Todav.
 
-Sync runs while the app is open and, as the Linux app does when it quits, once more when it is
-left (WorkManager). A periodic sync in the background is optional: a device-only switch in
-Preferences, off by default. Later: table handles and menus, find and replace, widgets, a Quick
-Settings tile.
+A periodic sync in the background is optional: a device-only switch in Preferences, off by
+default (now it syncs while the app is open, and once more when it is left). Later: signing in
+through the Nextcloud app's accounts (as Todav), table handles and menus, find and replace,
+widgets, a Quick Settings tile.
 
 ## Distribution
 

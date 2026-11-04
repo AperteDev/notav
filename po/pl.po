@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notav\n"
 "Report-Msgid-Bugs-To: https://github.com/AperteDev/notav/issues\n"
-"POT-Creation-Date: 2026-11-04 01:38+0100\n"
+"POT-Creation-Date: 2026-11-04 01:46+0100\n"
 "PO-Revision-Date: 2026-10-24 20:03+0200\n"
 "Last-Translator: SelfRef\n"
 "Language-Team: Polish\n"
@@ -18,21 +18,14 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 "
 "|| n%100>=20) ? 1 : 2);\n"
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/NotavUi.kt:71
-#: notav/linux/app/ui/add-account.blp:22
-msgid ""
-"Notes and a journal kept as Markdown files in your Nextcloud, or on this "
-"device"
-msgstr ""
-"Notatki i dziennik w plikach Markdown w twoim Nextcloud lub na tym urządzeniu"
-
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/NotavUi.kt:80
-#: notav/linux/app/src/main.rs:353
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:80
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:99
+#: notav/linux/app/src/main.rs:349
 msgid "Welcome to Notav"
 msgstr "Witaj w Notav"
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/NotavUi.kt:82
-#: notav/linux/app/src/main.rs:355
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:82
+#: notav/linux/app/src/main.rs:351
 msgid ""
 "Your notes stay on this device. They are written in Markdown: # starts a "
 "heading, - a list, - [ ] a task, and [[Title]] links another note."
@@ -40,24 +33,244 @@ msgstr ""
 "Twoje notatki zostają na tym urządzeniu. Pisze się je w Markdown: # zaczyna "
 "nagłówek, - listę, - [ ] zadanie, a [[Tytuł]] to link do innej notatki."
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/NotavUi.kt:89
-#: notav/linux/app/ui/add-account.blp:70
-msgid "On This Device Only"
-msgstr "Tylko na tym urządzeniu"
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:94
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:132
+#: notav/linux/app/src/window.rs:3111
+msgid "Enter the Nextcloud server first"
+msgstr "Najpierw podaj serwer Nextcloud"
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/NotavUi.kt:97
-#: notav/linux/app/src/main.rs:496
-msgid "Notav Cannot Open Its Data"
-msgstr "Notav nie może otworzyć swoich danych"
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:103
+#: notav/linux/app/src/window.rs:3147
+#, rust-format
+msgid "Cannot start login: {error}"
+msgstr "Nie można rozpocząć logowania: {error}"
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/NotavUi.kt:100
-#: notav/linux/app/src/main.rs:488
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:115
+#: notav/linux/app/src/window.rs:3175
+#, rust-format
+msgid "Login failed: {error}"
+msgstr "Logowanie nie powiodło się: {error}"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:125
+#: notav/linux/app/src/window.rs:3180
+msgid "Login timed out"
+msgstr "Upłynął czas na zalogowanie"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:142
+#: notav/linux/app/src/window.rs:3230
+#, rust-format
+msgid "Sign-in failed: {error}"
+msgstr "Logowanie nie powiodło się: {error}"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Model.kt:178
+#: notav/linux/app/src/add_account.rs:325 notav/linux/app/src/settings.rs:142
+#: notav/linux/app/src/settings.rs:384 notav/linux/app/src/window.rs:2679
+#: notav/linux/app/src/window.rs:2711
+msgid "Not a folder name"
+msgstr "To nie jest poprawna nazwa folderu"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Words.kt:11
+#: notav/linux/app/src/main.rs:275
+msgid "On This Device"
+msgstr "Na tym urządzeniu"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Words.kt:17
+#: notav/linux/app/src/window.rs:3229
+msgid "Wrong login name or password"
+msgstr "Błędna nazwa użytkownika lub hasło"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Words.kt:18
+#: notav/linux/app/src/main.rs:253
+msgid "This account is already added"
+msgstr "To konto jest już dodane"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Words.kt:25
+#: notav/linux/app/src/main.rs:452
 msgid ""
 "It was saved by a newer version of Notav. Update Notav to open it; this "
 "version leaves it as it is."
 msgstr ""
 "Zapisała je nowsza wersja Notav. Zaktualizuj Notav, aby je otworzyć; ta "
 "wersja ich nie zmienia."
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Words.kt:26
+#: notav/linux/app/src/main.rs:254 notav/linux/app/src/main.rs:331
+#: notav/linux/app/src/main.rs:380
+msgid "Connecting failed"
+msgstr "Nie udało się połączyć"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Words.kt:27
+#: notav/linux/app/src/main.rs:256
+#, rust-format
+msgid "Cannot save password: {error}"
+msgstr "Nie można zapisać hasła: {error}"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Words.kt:29
+#: notav/linux/app/src/main.rs:258
+#, rust-format
+msgid "Cannot upload pending changes first: {error}"
+msgstr "Nie można najpierw wysłać oczekujących zmian: {error}"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/Words.kt:31
+#: notav/linux/app/src/main.rs:261
+msgid "It has changes not uploaded yet: sign in again to upload them"
+msgstr "Ma niewysłane zmiany: zaloguj się ponownie, aby je wysłać"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/NotavUi.kt:74
+#: notav/linux/app/src/main.rs:460
+msgid "Notav Cannot Open Its Data"
+msgstr "Notav nie może otworzyć swoich danych"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:112
+#: notav/linux/app/ui/add-account.blp:22
+msgid ""
+"Notes and a journal kept as Markdown files in your Nextcloud, or on this "
+"device"
+msgstr ""
+"Notatki i dziennik w plikach Markdown w twoim Nextcloud lub na tym urządzeniu"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:114
+#: notav/linux/app/src/add_account.rs:129 notav/linux/app/ui/add-account.blp:53
+msgid "Nextcloud Server"
+msgstr "Serwer Nextcloud"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:114
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:159
+#: notav/linux/app/ui/add-account.blp:54
+msgid "Sign in with the browser or an app password"
+msgstr "Zaloguj się w przeglądarce lub hasłem aplikacji"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:118
+msgid "Notes that stay on this device"
+msgstr "Notatki, które zostają na tym urządzeniu"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:118
+#: notav/linux/app/ui/add-account.blp:70
+msgid "On This Device Only"
+msgstr "Tylko na tym urządzeniu"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:125
+#: notav/linux/app/ui/add-account.blp:88
+msgid "You can add more accounts later in Preferences"
+msgstr "Kolejne konta możesz dodać później w Preferencjach"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:164
+#: notav/linux/app/src/settings.rs:692 notav/linux/app/ui/account.blp:51
+#: notav/linux/app/ui/add-account.blp:127
+msgid "Nextcloud server"
+msgstr "Serwer Nextcloud"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:177
+#: notav/linux/app/src/settings.rs:891
+msgid "Waiting for Sign-In…"
+msgstr "Oczekiwanie na zalogowanie…"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:178
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:245
+#: notav/linux/app/src/files.rs:192 notav/linux/app/src/settings.rs:357
+#: notav/linux/app/src/settings.rs:982 notav/linux/app/src/window.rs:616
+#: notav/linux/app/ui/account.blp:34 notav/linux/app/ui/add-account.blp:185
+#: notav/linux/app/ui/new-folder.blp:11
+#: notav/linux/app/ui/password-login.blp:19
+msgid "Cancel"
+msgstr "Anuluj"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:183
+#: notav/linux/app/ui/add-account.blp:167
+msgid "Sign In with Browser"
+msgstr "Zaloguj się w przeglądarce"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:186
+#: notav/linux/app/ui/account.blp:105 notav/linux/app/ui/add-account.blp:178
+msgid "Sign In with Password…"
+msgstr "Zaloguj się hasłem…"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:206
+#: notav/linux/app/ui/password-login.blp:6
+msgid "Sign In with Password"
+msgstr "Logowanie hasłem"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:209
+#: notav/linux/app/ui/password-login.blp:38
+msgid "Create an app password in Nextcloud under Settings → Security"
+msgstr "Utwórz hasło aplikacji w Nextcloud w Ustawienia → Bezpieczeństwo"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:214
+#: notav/linux/app/ui/password-login.blp:45
+msgid "Login name"
+msgstr "Nazwa użytkownika"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:223
+#: notav/linux/app/ui/password-login.blp:50
+msgid "App password"
+msgstr "Hasło aplikacji"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:226
+msgid "Hide Password"
+msgstr "Ukryj hasło"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:226
+msgid "Show Password"
+msgstr "Pokaż hasło"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:243
+#: notav/linux/app/ui/add-account.blp:154
+msgid "Connect"
+msgstr "Połącz"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:272
+#: notav/linux/app/ui/add-account.blp:201
+#: notav/linux/app/ui/add-account.blp:209
+msgid "Notes Folder"
+msgstr "Folder notatek"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:276
+#: notav/linux/app/ui/add-account.blp:210
+msgid ""
+"The folder in Nextcloud Files your notes are kept in. The Nextcloud Notes "
+"app uses the same one; it is created if it does not exist."
+msgstr ""
+"Folder w plikach Nextcloud, w którym są twoje notatki. Aplikacja Nextcloud "
+"Notes używa tego samego; zostanie utworzony, jeśli nie istnieje."
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:284
+#: notav/linux/app/ui/add-account.blp:222 notav/linux/app/ui/settings.blp:170
+msgid "Folder"
+msgstr "Folder"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:294
+#: notav/linux/app/ui/add-account.blp:227
+msgid "Continue"
+msgstr "Dalej"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:304
+#: notav/linux/app/ui/add-account.blp:241
+#: notav/linux/app/ui/add-account.blp:250
+msgid "Downloading Notes"
+msgstr "Pobieranie notatek"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:307
+#: notav/linux/app/ui/add-account.blp:251
+msgid ""
+"Your notes are copied to this device, to work on them offline too. Later "
+"syncs bring only what changed."
+msgstr ""
+"Notatki są kopiowane na to urządzenie, aby można było z nich korzystać także "
+"offline. Kolejne synchronizacje pobierają tylko zmiany."
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:313
+#: notav/linux/app/src/add_account.rs:342
+msgid "Looking for notes…"
+msgstr "Wyszukiwanie notatek…"
+
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Welcome.kt:317
+#: notav/linux/app/src/add_account.rs:374
+#, rust-format
+msgid "{done} of {total} note"
+msgid_plural "{done} of {total} notes"
+msgstr[0] "{done} z {total} notatki"
+msgstr[1] "{done} z {total} notatek"
+msgstr[2] "{done} z {total} notatek"
 
 #: notav/linux/app/src/add_account.rs:89
 msgid "Its Nextcloud accounts are all added"
@@ -85,32 +298,10 @@ msgstr "Konta online GNOME"
 msgid "Connect with a Nextcloud account from GNOME Settings"
 msgstr "Połącz się z kontem Nextcloud z Ustawień GNOME"
 
-#: notav/linux/app/src/add_account.rs:129 notav/linux/app/ui/add-account.blp:53
-msgid "Nextcloud Server"
-msgstr "Serwer Nextcloud"
-
 #: notav/linux/app/src/add_account.rs:132
 msgid "Sign in to your Nextcloud; Notav gets an app password of its own"
 msgstr ""
 "Zaloguj się do swojego Nextcloud; Notav dostanie własne hasło aplikacji"
-
-#: notav/linux/app/src/add_account.rs:325 notav/linux/app/src/settings.rs:142
-#: notav/linux/app/src/settings.rs:384 notav/linux/app/src/window.rs:2679
-#: notav/linux/app/src/window.rs:2711
-msgid "Not a folder name"
-msgstr "To nie jest poprawna nazwa folderu"
-
-#: notav/linux/app/src/add_account.rs:342
-msgid "Looking for notes…"
-msgstr "Wyszukiwanie notatek…"
-
-#: notav/linux/app/src/add_account.rs:374
-#, rust-format
-msgid "{done} of {total} note"
-msgid_plural "{done} of {total} notes"
-msgstr[0] "{done} z {total} notatki"
-msgstr[1] "{done} z {total} notatek"
-msgstr[2] "{done} z {total} notatek"
 
 #: notav/linux/app/src/editor.rs:582 notav/linux/app/src/editor.rs:1099
 msgid "Row"
@@ -231,14 +422,6 @@ msgstr "Usunąć na zawsze?"
 msgid "“{title}” cannot be restored afterwards"
 msgstr "Nie będzie można potem przywrócić „{title}”"
 
-#: notav/linux/app/src/files.rs:192 notav/linux/app/src/settings.rs:357
-#: notav/linux/app/src/settings.rs:982 notav/linux/app/src/window.rs:616
-#: notav/linux/app/ui/account.blp:34 notav/linux/app/ui/add-account.blp:185
-#: notav/linux/app/ui/new-folder.blp:11
-#: notav/linux/app/ui/password-login.blp:19
-msgid "Cancel"
-msgstr "Anuluj"
-
 #: notav/linux/app/src/files.rs:193 notav/linux/app/src/window.rs:2818
 #: notav/linux/app/src/window.rs:2826
 msgid "Delete"
@@ -253,38 +436,11 @@ msgstr "Przywrócono wersję z {date}"
 msgid "Current version"
 msgstr "Bieżąca wersja"
 
-#: notav/linux/app/src/main.rs:245
-msgid "On This Device"
-msgstr "Na tym urządzeniu"
-
-#: notav/linux/app/src/main.rs:285
-#, rust-format
-msgid "Cannot upload pending changes first: {error}"
-msgstr "Nie można najpierw wysłać oczekujących zmian: {error}"
-
-#: notav/linux/app/src/main.rs:302
+#: notav/linux/app/src/main.rs:321
 msgid "Online Accounts has no password for this account"
 msgstr "Konta online nie mają hasła do tego konta"
 
-#: notav/linux/app/src/main.rs:317
-msgid "This account is already added"
-msgstr "To konto jest już dodane"
-
-#: notav/linux/app/src/main.rs:325 notav/linux/app/src/main.rs:386
-#, rust-format
-msgid "Cannot save password: {error}"
-msgstr "Nie można zapisać hasła: {error}"
-
-#: notav/linux/app/src/main.rs:335 notav/linux/app/src/main.rs:383
-#: notav/linux/app/src/main.rs:401
-msgid "Connecting failed"
-msgstr "Nie udało się połączyć"
-
-#: notav/linux/app/src/main.rs:428
-msgid "It has changes not uploaded yet: sign in again to upload them"
-msgstr "Ma niewysłane zmiany: zaloguj się ponownie, aby je wysłać"
-
-#: notav/linux/app/src/main.rs:438
+#: notav/linux/app/src/main.rs:402
 msgid "Removing the account failed"
 msgstr "Nie udało się usunąć konta"
 
@@ -390,11 +546,6 @@ msgstr "Nie połączono"
 msgid "No notes folder chosen"
 msgstr "Nie wybrano folderu notatek"
 
-#: notav/linux/app/src/settings.rs:692 notav/linux/app/ui/account.blp:51
-#: notav/linux/app/ui/add-account.blp:127
-msgid "Nextcloud server"
-msgstr "Serwer Nextcloud"
-
 #: notav/linux/app/src/settings.rs:714
 msgctxt "settings sync"
 msgid "Off"
@@ -422,10 +573,6 @@ msgstr "Połączono jako {name}"
 #, rust-format
 msgid "Signed in as {name}: add that as another account"
 msgstr "Zalogowano jako {name}: dodaj to jako inne konto"
-
-#: notav/linux/app/src/settings.rs:891
-msgid "Waiting for Sign-In…"
-msgstr "Oczekiwanie na zalogowanie…"
 
 #: notav/linux/app/src/settings.rs:893
 msgid "Waiting for Browser…"
@@ -699,44 +846,17 @@ msgstr "Notatka o tej nazwie już istnieje w tym folderze"
 msgid "A folder with this name exists in that folder already"
 msgstr "Folder o tej nazwie już istnieje w tym folderze"
 
-#: notav/linux/app/src/window.rs:3111
-msgid "Enter the Nextcloud server first"
-msgstr "Najpierw podaj serwer Nextcloud"
-
 #: notav/linux/app/src/window.rs:3146
 msgid "Cannot start login"
 msgstr "Nie można rozpocząć logowania"
-
-#: notav/linux/app/src/window.rs:3147
-#, rust-format
-msgid "Cannot start login: {error}"
-msgstr "Nie można rozpocząć logowania: {error}"
 
 #: notav/linux/app/src/window.rs:3155
 msgid "Login link copied to clipboard"
 msgstr "Skopiowano odnośnik logowania do schowka"
 
-#: notav/linux/app/src/window.rs:3175
-#, rust-format
-msgid "Login failed: {error}"
-msgstr "Logowanie nie powiodło się: {error}"
-
 #: notav/linux/app/src/window.rs:3177
 msgid "Login failed"
 msgstr "Logowanie nie powiodło się"
-
-#: notav/linux/app/src/window.rs:3180
-msgid "Login timed out"
-msgstr "Upłynął czas na zalogowanie"
-
-#: notav/linux/app/src/window.rs:3229
-msgid "Wrong login name or password"
-msgstr "Błędna nazwa użytkownika lub hasło"
-
-#: notav/linux/app/src/window.rs:3230
-#, rust-format
-msgid "Sign-in failed: {error}"
-msgstr "Logowanie nie powiodło się: {error}"
 
 #: notav/linux/app/src/window.rs:3231
 msgid "Sign-in failed"
@@ -797,18 +917,6 @@ msgstr "Usuń konto"
 msgid "Copy Login Link"
 msgstr "Skopiuj odnośnik logowania"
 
-#: notav/linux/app/ui/account.blp:105 notav/linux/app/ui/add-account.blp:178
-msgid "Sign In with Password…"
-msgstr "Zaloguj się hasłem…"
-
-#: notav/linux/app/ui/add-account.blp:54
-msgid "Sign in with the browser or an app password"
-msgstr "Zaloguj się w przeglądarce lub hasłem aplikacji"
-
-#: notav/linux/app/ui/add-account.blp:88
-msgid "You can add more accounts later in Preferences"
-msgstr "Kolejne konta możesz dodać później w Preferencjach"
-
 #: notav/linux/app/ui/add-account.blp:122
 msgid "Account"
 msgstr "Konto"
@@ -821,71 +929,13 @@ msgstr "Synchronizuj ustawienia z tym kontem"
 msgid "Use the same settings on all devices"
 msgstr "Te same ustawienia na wszystkich urządzeniach"
 
-#: notav/linux/app/ui/add-account.blp:154
-msgid "Connect"
-msgstr "Połącz"
-
-#: notav/linux/app/ui/add-account.blp:167
-msgid "Sign In with Browser"
-msgstr "Zaloguj się w przeglądarce"
-
-#: notav/linux/app/ui/add-account.blp:201
-#: notav/linux/app/ui/add-account.blp:209
-msgid "Notes Folder"
-msgstr "Folder notatek"
-
-#: notav/linux/app/ui/add-account.blp:210
-msgid ""
-"The folder in Nextcloud Files your notes are kept in. The Nextcloud Notes "
-"app uses the same one; it is created if it does not exist."
-msgstr ""
-"Folder w plikach Nextcloud, w którym są twoje notatki. Aplikacja Nextcloud "
-"Notes używa tego samego; zostanie utworzony, jeśli nie istnieje."
-
-#: notav/linux/app/ui/add-account.blp:222 notav/linux/app/ui/settings.blp:170
-msgid "Folder"
-msgstr "Folder"
-
-#: notav/linux/app/ui/add-account.blp:227
-msgid "Continue"
-msgstr "Dalej"
-
-#: notav/linux/app/ui/add-account.blp:241
-#: notav/linux/app/ui/add-account.blp:250
-msgid "Downloading Notes"
-msgstr "Pobieranie notatek"
-
-#: notav/linux/app/ui/add-account.blp:251
-msgid ""
-"Your notes are copied to this device, to work on them offline too. Later "
-"syncs bring only what changed."
-msgstr ""
-"Notatki są kopiowane na to urządzenie, aby można było z nich korzystać także "
-"offline. Kolejne synchronizacje pobierają tylko zmiany."
-
 #: notav/linux/app/ui/new-folder.blp:12
 msgid "Create"
 msgstr "Utwórz"
 
-#: notav/linux/app/ui/password-login.blp:6
-msgid "Sign In with Password"
-msgstr "Logowanie hasłem"
-
 #: notav/linux/app/ui/password-login.blp:24
 msgid "Sign In"
 msgstr "Zaloguj się"
-
-#: notav/linux/app/ui/password-login.blp:38
-msgid "Create an app password in Nextcloud under Settings → Security"
-msgstr "Utwórz hasło aplikacji w Nextcloud w Ustawienia → Bezpieczeństwo"
-
-#: notav/linux/app/ui/password-login.blp:45
-msgid "Login name"
-msgstr "Nazwa użytkownika"
-
-#: notav/linux/app/ui/password-login.blp:50
-msgid "App password"
-msgstr "Hasło aplikacji"
 
 #: notav/linux/app/ui/settings.blp:8 notav/linux/app/ui/shortcuts.blp:7
 msgid "General"

@@ -42,7 +42,7 @@
   | Bindings: UniFFI, errors, mirrored types, UTF-16 positions, the smoke test | `ffi/`, `scripts/bindings.sh` | One object over the core, no service; Kotlin only |
   | `.mo` catalogs for Android | `app/src/i18n.rs` | `ffi/src/i18n.rs` |
   | Android build: the `core` module (cargo-ndk, bindings, catalogs), versions, `sdk.sh`, Makefile, CI job | `android/` | No widgets, push or reminders; no signing yet |
-  | Android app: `I18n.kt`, theme, trusted certificates, the app's process, `Passwords.kt`, sign-in (welcome page, browser and password), row helpers, connected toggle buttons (`Connected`), grouped menus (`Menu`, after the task menu) | `android/app/src/main/kotlin/…/` (`I18n.kt`, `ui/Theme.kt`, `TodavApp.kt`, `Passwords.kt`, `Model.kt`, `ui/TodavUi.kt`, `ui/Common.kt`) | The icon's yellows as the fallback colours; the Linux app's sync worker and notes folder step; no Nextcloud app accounts yet. The tree (`Tree.kt`) is the Linux app's `tree`, `notes_in` and `moves`, with their tests: change both |
+  | Android app: `I18n.kt`, theme, trusted certificates, the app's process, `Passwords.kt`, sign-in (welcome page, browser and password), row helpers, connected toggle buttons (`Connected`), grouped menus (`Menu`, after the task menu), pull to refresh (`TasksPane`) | `android/app/src/main/kotlin/…/` (`I18n.kt`, `ui/Theme.kt`, `TodavApp.kt`, `Passwords.kt`, `Model.kt`, `ui/TodavUi.kt`, `ui/Common.kt`) | The icon's yellows as the fallback colours; the Linux app's sync worker and notes folder step; no Nextcloud app accounts yet. The tree (`Tree.kt`) is the Linux app's `tree`, `notes_in` and `moves`, with their tests: change both |
   | Error pages' text in HTTP errors (Todav after 2.4.0) | `html_text` in `core/src/lib.rs` | As is |
 ## Dependencies
 

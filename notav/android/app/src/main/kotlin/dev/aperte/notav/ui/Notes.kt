@@ -54,6 +54,18 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.runtime.derivedStateOf
+import dev.aperte.notav.core.AccountKind
+import kotlinx.coroutines.delay
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingActionButtonMenu
 import androidx.compose.material3.FloatingActionButtonMenuItem
@@ -192,6 +204,34 @@ private fun TreePane(model: Main, screen: Screen) {
     val sync by model.notav.syncState.collectAsStateWithLifecycle()
     val found by model.found.collectAsStateWithLifecycle()
     var ask by remember { mutableStateOf<Ask?>(null) }
+    // Pulled to refresh (as Todav's list): shown until the sync it asked for has run, once,
+    // without dropping in between (the sync starts a moment after the pull ends).
+    var pulling by remember { mutableStateOf(false) }
+    var started by remember { mutableStateOf(false) }
+    LaunchedEffect(sync, pulling) {
+        when {
+            !pulling -> started = false
+            sync == SyncState.Syncing -> started = true
+            started -> pulling = false
+            else -> {
+                // No sync came of it: not held up for good.
+                delay(3000)
+                pulling = false
+            }
+        }
+    }
+    val canPull = screen.accounts.any { it.kind == AccountKind.NEXTCLOUD && it.enabled }
+    val pull = rememberPullToRefreshState()
+    val list = rememberLazyListState()
+    // Only from a gesture that starts with the tree at its top and pulls straight down: one that
+    // scrolled the tree on its way (down, then back up to the top) stops there.
+    var fromTop by remember { mutableStateOf(true) }
+    // Felt as it is pulled far enough to sync once let go.
+    val haptics = LocalHapticFeedback.current
+    val armed by remember { derivedStateOf { pull.distanceFraction >= 1f } }
+    LaunchedEffect(armed) {
+        if (armed && !pulling) haptics.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
+    }
     Scaffold(
         topBar = {
             val results = found
@@ -231,7 +271,7 @@ private fun TreePane(model: Main, screen: Screen) {
                 TopAppBar(
                     title = { Text("Notav") },
                     actions = {
-                        if (sync == SyncState.Syncing) LoadingIndicator(Modifier.padding(end = 4.dp).size(32.dp))
+                        if (sync == SyncState.Syncing && !pulling) LoadingIndicator(Modifier.padding(end = 4.dp).size(32.dp))
                         Tip(tr("Today’s Note")) {
                             IconButton(onClick = { model.today() }) { Icon(Icons.Outlined.Today, tr("Today’s Note")) }
                         }
@@ -300,25 +340,50 @@ private fun TreePane(model: Main, screen: Screen) {
                     }
                 }
             }
-        } else if (screen.rows.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(padding), Alignment.Center) {
-                Text(tr("No Notes"), style = MaterialTheme.typography.titleLarge)
-            }
         } else {
-            // The note opened (a new one too) scrolled into view.
-            val list = rememberLazyListState()
-            val open by model.open.collectAsStateWithLifecycle()
-            LaunchedEffect(open, screen.rows.size) {
-                val i = screen.rows.indexOfFirst { (it.item as? Item.NoteRow)?.note?.id == open }
-                if (i >= 0 && list.layoutInfo.visibleItemsInfo.none { it.index == i && it.offset >= 0 }) {
-                    list.animateScrollToItem(i)
+            PullToRefreshBox(
+                isRefreshing = pulling,
+                onRefresh = {
+                    pulling = true
+                    model.notav.syncNow()
+                },
+                modifier = Modifier.fillMaxSize().padding(padding).pointerInput(Unit) {
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                        fromTop = !list.canScrollBackward
+                        do {
+                            val e = awaitPointerEvent(PointerEventPass.Initial)
+                            if (list.canScrollBackward) fromTop = false
+                        } while (e.changes.any { it.pressed })
+                    }
+                },
+                state = pull,
+                enabled = canPull && (fromTop || pulling),
+                indicator = { PullToRefreshDefaults.LoadingIndicator(pull, pulling, Modifier.align(Alignment.TopCenter)) },
+            ) {
+                // The note opened (a new one too) scrolled into view.
+                val open by model.open.collectAsStateWithLifecycle()
+                LaunchedEffect(open, screen.rows.size) {
+                    val i = screen.rows.indexOfFirst { (it.item as? Item.NoteRow)?.note?.id == open }
+                    if (i >= 0 && list.layoutInfo.visibleItemsInfo.none { it.index == i && it.offset >= 0 }) {
+                        list.animateScrollToItem(i)
+                    }
                 }
-            }
-            LazyColumn(Modifier.fillMaxSize().padding(padding), state = list) {
-                items(screen.rows, key = { r -> rowKey(r.item) }) { r ->
-                    TreeRow(model, screen, r.depth, r.item) { ask = it }
+                // Empty, a list too: pulled the same.
+                LazyColumn(Modifier.fillMaxSize(), state = list) {
+                    if (screen.rows.isEmpty()) {
+                        item {
+                            Box(Modifier.fillParentMaxSize(), Alignment.Center) {
+                                Text(tr("No Notes"), style = MaterialTheme.typography.titleLarge)
+                            }
+                        }
+                    } else {
+                        items(screen.rows, key = { r -> rowKey(r.item) }) { r ->
+                            TreeRow(model, screen, r.depth, r.item) { ask = it }
+                        }
+                        item { Spacer(Modifier.height(96.dp)) } // room under the button
+                    }
                 }
-                item { Spacer(Modifier.height(96.dp)) } // room under the button
             }
         }
     }

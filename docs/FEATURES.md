@@ -75,7 +75,8 @@ What Notav can do, in short. The details of each release are in the
 - The same notes, accounts and synced settings, in Material 3 Expressive.
 - The tree, the note and its outline (with the notes linking to it) swiped between: one at a
   time on a phone, two side by side on a wide screen.
-- Editor mode's styles, ticking tasks, continuing lists, tables kept aligned, links followed.
+- Editor mode's styles, ticking tasks, continuing lists, tables kept aligned, links followed;
+  tables and code blocks unwrapped, each scrolled sideways on its own (a tap edits it).
 - Find and replace in the open note, the matches highlighted and counted.
 - Search, Today's note, and text shared from other apps as a note.
 - A note locked on the server waits with its change; a message says who locked it, and
@@ -91,6 +92,7 @@ What Notav can do, in short. The details of each release are in the
 ## Planned
 
 - On Android: widgets.
+- On Linux: wide tables and code blocks scrolled sideways each on its own, as on Android.
 - Notes moved between accounts; the journal in an account of your choice.
 - Notes in GNOME Shell's search.
 - Emptying the Trash of notes at once; a version's changes shown against the note.

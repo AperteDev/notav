@@ -13,7 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and synced settings. Sign in with the browser or an app password, or keep notes on this
   device; the tree of folders and notes, the note and its outline (with the notes linking to
   it) swiped between, one at a time on a phone, two side by side on wide screens (an unfolded
-  foldable, a tablet); Editor mode's styles, ticking tasks, lists and tables; find and replace;
+  foldable, a tablet); Editor mode's styles, ticking tasks, lists and tables
+  (tables and code blocks unwrapped, each scrolled sideways on its own); find and replace;
   search, Today's note, text shared from other apps as a note; a note locked on the server
   told about, with Unlock…; the Trash and a note's versions. It syncs while open, when the
   tree is pulled down and once more when left; Settings can add a sync in the background,

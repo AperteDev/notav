@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Notav\n"
 "Report-Msgid-Bugs-To: https://github.com/AperteDev/notav/issues\n"
-"POT-Creation-Date: 2026-11-04 10:06+0100\n"
+"POT-Creation-Date: 2026-11-04 10:48+0100\n"
 "PO-Revision-Date: 2026-10-24 20:03+0200\n"
 "Last-Translator: SelfRef\n"
 "Language-Team: Polish\n"
@@ -191,48 +191,48 @@ msgstr "Nie można najpierw wysłać oczekujących zmian: {error}"
 msgid "It has changes not uploaded yet: sign in again to upload them"
 msgstr "Ma niewysłane zmiany: zaloguj się ponownie, aby je wysłać"
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:129
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:130
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:136
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:137
 #: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Panes.kt:170
 #: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Settings.kt:162
 #: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Settings.kt:163
 msgid "Back"
 msgstr "Wstecz"
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:136
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:143
 #: notav/linux/app/ui/window.blp:202
 msgid "Editor Mode"
 msgstr "Tryb edytora"
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:136
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:143
 #: notav/linux/app/ui/window.blp:208
 msgid "Source Mode"
 msgstr "Tryb źródłowy"
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:142
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:143
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:149
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:150
 msgid "Find in Note"
 msgstr "Znajdź w notatce"
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:146
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:147
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:153
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:154
 #: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Panes.kt:168
 #: notav/linux/app/ui/settings.blp:149 notav/linux/app/ui/window.blp:145
 msgid "Outline"
 msgstr "Konspekt"
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:213
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:220
 #: notav/linux/app/ui/window.blp:281
 msgid "Find in note"
 msgstr "Znajdź w notatce"
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:219
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:226
 #: notav/linux/app/src/window.rs:2040
 #, rust-format
 msgid "{at} of {count}"
 msgstr "{at} z {count}"
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:220
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:227
 #: notav/linux/app/src/window.rs:2043
 #, rust-format
 msgid "{count} match"
@@ -241,35 +241,35 @@ msgstr[0] "{count} dopasowanie"
 msgstr[1] "{count} dopasowania"
 msgstr[2] "{count} dopasowań"
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:228
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:229
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:235
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:236
 #: notav/linux/app/ui/shortcuts.blp:114
 msgid "Previous Match"
 msgstr "Poprzednie dopasowanie"
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:231
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:232
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:238
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:239
 #: notav/linux/app/ui/shortcuts.blp:109
 msgid "Next Match"
 msgstr "Następne dopasowanie"
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:234
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:235
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:244
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:241
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:242
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:251
 msgid "Replace"
 msgstr "Zastąp"
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:237
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:238
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:244
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:245
 msgid "Close"
 msgstr "Zamknij"
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:243
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:250
 #: notav/linux/app/ui/window.blp:316 notav/linux/app/ui/window.blp:320
 msgid "Replace with"
 msgstr "Zastąp przez"
 
-#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:245
+#: notav/android/app/src/main/kotlin/dev/aperte/notav/ui/Editor.kt:252
 msgid "Replace All"
 msgstr "Zastąp wszystkie"
 

@@ -25,6 +25,9 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
    - Enter after a code fence's opening ` ``` ` adds the closing one (as Typora and Obsidian
      do), next to the lists', quotes' and tables' Enter.
    - "Insert Alert" in the right-click menu, next to Insert Table, with GitHub's five kinds.
+   - Tables and code blocks wider than the note scrolled sideways each on its own, as on
+     Android, instead of the whole text: out of the cursor, their text shrunk to one line per
+     line in the view and a scrolled strip showing them over it (`TextView::add_overlay`).
    - Spell checking with libspelling (as Iotas, Apostrophe and GNOME Text Editor have it):
      underlined words, suggestions in the right-click menu (see
      [Open questions](#open-questions-and-risks)).
@@ -127,9 +130,8 @@ The Android app (`notav/android`) still lacks, next:
 
 Later: signing in through the Nextcloud app's accounts (as Todav), dragging notes and folders
 in the tree (a long press opens their menu now, with Move…), table handles and menus, a
-table's cells keeping their padding as they are typed in (`table::padding_taken`), tables
-wider than the note scrolling sideways (they wrap now), the text's size, widgets, a Quick
-Settings tile.
+table's cells keeping their padding as they are typed in (`table::padding_taken`), the text's
+size, widgets, a Quick Settings tile.
 
 ## Distribution
 
@@ -165,7 +167,7 @@ Settings tile.
   crate) or measuring with Pango, and fallback fonts may not be exactly two columns wide anyway.
   Tables (and code blocks) wider than the text column do not wrap: the note widens for them,
   and past the window's width the whole text scrolls sideways with them; scrolling only the
-  table, as Obsidian does, would need it out of the text view. Tidying
+  table, as Obsidian and the Android app do, is planned (see Editor mode). Tidying
   changes the file's text, which other devices and apps see.
 
 - **Notes on this device as files**: the local account keeps its notes in the database only,

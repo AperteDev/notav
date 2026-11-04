@@ -85,6 +85,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.SideEffect
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Alignment
@@ -449,31 +456,159 @@ private fun NoteText(model: Main, note: Note, source: Boolean, find: FindState, 
             is NoteLink.Note -> model.followLink(note, link.target, link.wiki)
         }
     }
+    val textStyle = MaterialTheme.typography.bodyLarge.copy(
+        color = colors.onSurface,
+        fontFamily = when {
+            source || editorFont == "Monospace" -> FontFamily.Monospace
+            editorFont == "Serif" -> FontFamily.Serif
+            else -> null
+        },
+    )
+    // Tables and code blocks never wrap: each scrolls sideways on its own. Out of the cursor,
+    // the field keeps their text shrunk to nothing (each line one line, the positions as they
+    // are) and a strip over it shows them; with the cursor in one, it is the field's to edit.
+    val fieldFocus = remember { FocusRequester() }
+    val selection = state.selection
+    val collapsed = if (!styled) {
+        emptyList()
+    } else {
+        spans.of(state.text)
+            .filter { it.style == NoteStyle.CodeBlock || it.style == NoteStyle.Table }
+            .map { it.start.toInt() until it.end.toInt().coerceAtMost(state.text.length) }
+            .filter { !(focused && selection.start in it.first..it.last + 1) }
+            // The find bar's current match shows in the field, the rest in the strips.
+            .filter { r -> found.getOrNull(find.at)?.let { it in r } != true }
+    }
+    // Where each strip goes, from the field's layout: written only when it changes, and read
+    // by the strips alone (the field laid out again for each write would never settle).
+    var strips by remember { mutableStateOf(emptyList<Strip>()) }
+    val collapsedNow by rememberUpdatedState(collapsed)
     BasicTextField(
         state,
         modifier.fillMaxSize().imePadding().verticalScroll(scroll)
-            .then(if (styled) Modifier.tickTasks(state, spans, { editing }, open) { layout[0] } else Modifier)
+            .then(
+                if (styled) {
+                    Modifier.tickTasks(state, spans, { editing }, open, { at -> collapsedNow.any { at in it } }) { layout[0] }
+                } else {
+                    Modifier
+                },
+            )
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .then(if (styled) Modifier.blocks(state, spans, colors) { layout[0] } else Modifier)
+            .focusRequester(fieldFocus)
             .onFocusChanged { focused = it.isFocused },
-        textStyle = MaterialTheme.typography.bodyLarge.copy(
-            color = colors.onSurface,
-            fontFamily = when {
-                source || editorFont == "Monospace" -> FontFamily.Monospace
-                editorFont == "Serif" -> FontFamily.Serif
-                else -> null
-            },
-        ),
+        textStyle = textStyle,
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
         inputTransformation = if (styled) ContinueLists else null,
         outputTransformation = if (styled || found.isNotEmpty()) {
-            MarkdownStyles(spans, colors, window, styled, found, query.length, find.at)
+            MarkdownStyles(spans, colors, window, styled, found, query.length, find.at, collapsed)
         } else {
             null
         },
-        onTextLayout = { layout[0] = it() },
+        onTextLayout = {
+            val l = it()
+            layout[0] = l
+            if (l != null) {
+                val s = strips(state.text, collapsedNow, l)
+                if (s != strips) strips = s
+            }
+        },
         cursorBrush = SolidColor(colors.primary),
+        decorator = { field ->
+            Box {
+                field()
+                if (styled) {
+                    Strips({ strips }, state, spans, colors, textStyle.copy(fontFamily = FontFamily.Monospace), found, query.length) { at ->
+                        // A tap in one: the cursor there, the block the field's to edit.
+                        state.edit { this.selection = androidx.compose.ui.text.TextRange(at) }
+                        fieldFocus.requestFocus()
+                    }
+                }
+            }
+        },
     )
+}
+
+/** A table or a code block shown over the field: where its lines start in the text, and their
+ * tops in the field's layout. */
+private data class Strip(val lines: List<Int>, val tops: List<Float>, val bottom: Float, val width: Int)
+
+/** Where the strips of the `collapsed` blocks go in layout `l`. */
+private fun strips(text: CharSequence, collapsed: List<IntRange>, l: TextLayoutResult): List<Strip> = collapsed.mapNotNull { r ->
+    if (r.isEmpty() || r.last >= text.length) return@mapNotNull null
+    val lines = buildList {
+        add(r.first)
+        for (i in r) if (text[i] == '\n' && i + 1 <= r.last) add(i + 1)
+    }
+    val tops = lines.map { l.getLineTop(l.getLineForOffset(it)) }
+    val last = l.getLineForOffset(r.last.coerceAtLeast(r.first))
+    Strip(lines, tops, l.getLineBottom(last), l.size.width)
+}
+
+/**
+ * The strips: each block's lines with Editor mode's styles, unwrapped, at their lines' places,
+ * scrolled sideways on their own. A tap gives `onTap` where in the text it was.
+ */
+@Composable
+private fun Strips(
+    strips: () -> List<Strip>,
+    state: TextFieldState,
+    spans: SpanCache,
+    colors: ColorScheme,
+    style: androidx.compose.ui.text.TextStyle,
+    /** The find bar's matches, highlighted as in the field. */
+    found: List<Int>,
+    matchLength: Int,
+    onTap: (Int) -> Unit,
+) {
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    // Each keeps its own sideways scroll, by where it starts.
+    for (s in strips()) key(s.lines.first()) {
+        val top = s.tops.first()
+        val text = state.text
+        val all = spans.of(text)
+        // Each line with the styles of the spans over it, as the field would show it.
+        val lines = s.lines.map { start ->
+            val end = text.indexOf('\n', start).let { if (it < 0) text.length else it }
+            androidx.compose.ui.text.buildAnnotatedString {
+                append(text.substring(start, end))
+                for (span in all) {
+                    val (a, b) = span.start.toInt().coerceAtLeast(start) to span.end.toInt().coerceAtMost(end)
+                    if (a >= b) continue
+                    look(span.style, colors)?.let { addStyle(it, a - start, b - start) }
+                }
+                for (f in found) {
+                    val (a, b) = f.coerceAtLeast(start) to (f + matchLength).coerceAtMost(end)
+                    if (a < b) addStyle(SpanStyle(background = colors.tertiaryContainer, color = colors.onTertiaryContainer), a - start, b - start)
+                }
+            }
+        }
+        val layouts = remember(s) { arrayOfNulls<TextLayoutResult>(s.lines.size) }
+        androidx.compose.foundation.layout.Box(
+            Modifier.offset { androidx.compose.ui.unit.IntOffset(0, top.toInt()) }
+                .width(with(density) { s.width.toDp() })
+                .height(with(density) { (s.bottom - top).toDp() })
+                .horizontalScroll(rememberScrollState()),
+        ) {
+            androidx.compose.ui.layout.Layout(
+                content = { lines.forEachIndexed { i, t -> Text(t, style = style, softWrap = false, maxLines = 1, onTextLayout = { layouts[i] = it }) } },
+                modifier = Modifier.pointerInput(s) {
+                    detectTapGestures { p ->
+                        // The line under the tap, then the character.
+                        val i = s.tops.indexOfLast { it - top <= p.y }.coerceAtLeast(0)
+                        val col = layouts[i]?.getOffsetForPosition(Offset(p.x, 0f)) ?: 0
+                        onTap(s.lines[i] + col)
+                    }
+                },
+            ) { measurables, constraints ->
+                val placeables = measurables.map { it.measure(androidx.compose.ui.unit.Constraints()) }
+                val width = maxOf(placeables.maxOfOrNull { it.width } ?: 0, constraints.minWidth)
+                layout(width, (s.bottom - top).toInt()) {
+                    placeables.forEachIndexed { i, p -> p.place(0, (s.tops[i] - top).toInt()) }
+                }
+            }
+        }
+    }
 }
 
 /** The spans of the text last asked for: parsed once per text, for the styles and the boxes. */
@@ -550,9 +685,15 @@ private class MarkdownStyles(
     val found: List<Int>,
     val matchLength: Int,
     val current: Int,
+    /** Tables and code blocks shown by their strips: here shrunk to nothing, one line each. */
+    val collapsed: List<IntRange> = emptyList(),
 ) : OutputTransformation {
     override fun TextFieldBuffer.transformOutput() {
         if (styled) markdown()
+        for (r in collapsed) {
+            if (r.isEmpty() || r.last >= length) continue
+            addStyle(COLLAPSED, r.first, r.last + 1)
+        }
         found.forEachIndexed { i, s ->
             val end = s + matchLength
             if (end < window.first || s > window.last || end > length) return@forEachIndexed
@@ -585,9 +726,14 @@ private class MarkdownStyles(
 
     override fun equals(other: Any?) =
         other is MarkdownStyles && other.spans === spans && other.colors == colors && other.window == window &&
-            other.styled == styled && other.found == found && other.matchLength == matchLength && other.current == current
+            other.styled == styled && other.found == found && other.matchLength == matchLength && other.current == current &&
+            other.collapsed == collapsed
     override fun hashCode() = (spans.hashCode() * 31 + window.hashCode()) * 31 + found.hashCode() + current
 }
+
+/** A collapsed block's text: too small to wrap (a few hundred characters fit in a line's
+ * width), not seen; its lines keep the text's line height. */
+private val COLLAPSED = SpanStyle(fontSize = 0.5.sp, color = Color.Transparent, background = Color.Transparent)
 
 /** Notes up to this long are styled whole: a few hundred styles, laid out at once. */
 private const val STYLED_WHOLE = 10_000
@@ -626,6 +772,8 @@ private fun Modifier.tickTasks(
     spans: SpanCache,
     editing: () -> Boolean,
     open: (NoteLink) -> Unit,
+    /** Whether a place is in a block its strip shows (the strip takes the taps there). */
+    stripped: (Int) -> Boolean,
     layout: () -> TextLayoutResult?,
 ) =
     pointerInput(state) {
@@ -634,6 +782,7 @@ private fun Modifier.tickTasks(
             val l = layout() ?: return@awaitEachGesture
             // The field's text starts 16dp in and 8dp down (its padding).
             val at = l.getOffsetForPosition(down.position - Offset(16.dp.toPx(), 8.dp.toPx()))
+            if (stripped(at)) return@awaitEachGesture
             val all = spans.of(state.text)
             val link = all.firstOrNull { it.style == NoteStyle.Link && at >= it.start.toInt() && at < it.end.toInt() }
             if (link != null && !editing()) {

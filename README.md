@@ -70,7 +70,13 @@ sudo apt install ./notav_<version>_amd64.deb
 sudo tar -xzf notav-<version>-x86_64.tar.gz -C /
 ```
 
-On Android (10 and newer), install `notav-<version>.apk` from the same release.
+On Android (10 and newer), install `notav-<version>.apk` from the same release. With
+[Obtainium](https://obtainium.imranr.dev/) it updates itself from the releases.
+
+<p align="center">
+  <a href="https://github.com/AperteDev/notav/releases/latest"><img src="https://raw.githubusercontent.com/Kunzisoft/Github-badge/main/get-it-on-github.png" alt="Get it on GitHub" height="60"></a>
+  <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/AperteDev/notav"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="60"></a>
+</p>
 
 Or [build and install](#building-and-installing) Notav from source. Then open Notav, sign in to
 your Nextcloud and pick the folder your notes are in, or keep your notes on this device only.

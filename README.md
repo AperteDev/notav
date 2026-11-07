@@ -8,10 +8,10 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="License: GPL-3.0-or-later"></a>
-  <a href="https://github.com/AperteDev/notav/actions/workflows/ci.yml"><img src="https://github.com/AperteDev/notav/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/AperteDev/notav/releases/latest"><img src="https://img.shields.io/github/v/release/AperteDev/notav" alt="Latest release"></a>
+  <a href="https://github.com/AperteDev/notav/releases"><img src="https://img.shields.io/github/downloads/AperteDev/notav/total" alt="GitHub downloads"></a>
   <a href="https://aur.archlinux.org/packages/notav-bin"><img src="https://img.shields.io/aur/version/notav-bin" alt="AUR version"></a>
-  <a href="https://copr.fedorainfracloud.org/coprs/selfref/notav/"><img src="https://copr.fedorainfracloud.org/coprs/selfref/notav/package/notav/status_image/last_build.png" alt="COPR build status"></a>
+  <a href="https://copr.fedorainfracloud.org/coprs/selfref/notav/"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcopr.fedorainfracloud.org%2Fapi_3%2Fpackage%3Fownername%3Dselfref%26projectname%3Dnotav%26packagename%3Dnotav%26with_latest_succeeded_build%3Dtrue&amp;query=%24.builds.latest_succeeded.source_package.version&amp;label=copr&amp;prefix=v&amp;color=51A2DA" alt="COPR version"></a>
 </p>
 
 Notav is a notes app for the GNOME desktop and Android, with an Obsidian-style journal. Your notes

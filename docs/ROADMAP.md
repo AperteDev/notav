@@ -130,10 +130,9 @@ The Android app (`notav/android`) still lacks, next:
 - List items moved by dragging, as on Linux: a long press on an item's marker picks it up, the
   core's `markdown::list_at` and `move_item` (exported through the bindings) placing it.
 
-Later: signing in through the Nextcloud app's accounts (as Todav), dragging notes and folders
-in the tree (a long press opens their menu now, with Move…), table handles and menus, a
-table's cells keeping their padding as they are typed in (`table::padding_taken`), the text's
-size, widgets, a Quick Settings tile.
+Later: dragging notes and folders in the tree (a long press opens their menu now, with Move…),
+table handles and menus, a table's cells keeping their padding as they are typed in
+(`table::padding_taken`), the text's size, widgets, a Quick Settings tile.
 
 ## Distribution
 

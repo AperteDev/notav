@@ -157,7 +157,7 @@ class Main(app: Application) : AndroidViewModel(app) {
     }
 
     /** Sign in with the browser (Login Flow v2): `SignIn.Browser` asks the UI to open it. */
-    fun signInWithBrowser(server: String) {
+    fun signInWithBrowser(server: String, user: String = "") {
         if (server.isBlank()) {
             signIn.value = SignIn.Failed(tr("Enter the Nextcloud server first"))
             return
@@ -171,7 +171,9 @@ class Main(app: Application) : AndroidViewModel(app) {
                 signIn.value = SignIn.Failed(tr("Cannot start login: {error}").replace("{error}", reason(e)))
                 return@launch
             }
-            signIn.value = SignIn.Browser(flow.loginUrl)
+            // Nextcloud fills in a login name passed along (`user`) on its login page.
+            val url = if (user.isEmpty()) flow.loginUrl else flow.loginUrl + "?user=" + java.net.URLEncoder.encode(user, "UTF-8")
+            signIn.value = SignIn.Browser(url)
             // Nextcloud keeps a login flow for 20 minutes.
             var failures = 0
             repeat(20 * 60 / 2) {

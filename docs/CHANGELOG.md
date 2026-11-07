@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Android: an account of the Nextcloud app on the device fills in the server and login name
+  of a sign-in.
+
 ## [0.5.0] - 2026-11-07
 
 ### Added

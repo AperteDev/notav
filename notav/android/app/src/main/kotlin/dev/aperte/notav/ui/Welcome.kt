@@ -1,6 +1,8 @@
 package dev.aperte.notav.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,6 +26,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Key
@@ -63,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.aperte.notav.Main
+import dev.aperte.notav.NextcloudApp
 import dev.aperte.notav.SignIn
 import dev.aperte.notav.accountName
 import dev.aperte.notav.core.Account
@@ -101,17 +105,35 @@ fun Welcome(model: Main) = StepPage {
 }
 
 /**
- * The kind of account to add, then that account: a server to sign in to, or notes on this device
- * only. On the welcome page and in Preferences → Accounts.
+ * The kind of account to add, then that account: the Nextcloud app's accounts, a server to sign
+ * in to, or notes on this device only. On the welcome page and in Preferences → Accounts.
  */
 @Composable
 fun AccountChoice(model: Main, welcome: Boolean) {
+    val context = LocalContext.current
     var server by rememberSaveable { mutableStateOf<String?>(null) }
+    var login by rememberSaveable { mutableStateOf("") }
+    // An account of the Nextcloud app: its server and login name, then the browser at once.
+    val pick = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
+        NextcloudApp.server(r.data)?.let { (url, user) ->
+            server = url
+            login = user
+            model.signInWithBrowser(url, user)
+        }
+    }
     val entered = server
     if (entered == null) {
         Text(tr("Notes and a journal kept as Markdown files in your Nextcloud, or on this device"))
         Group {
+            if (remember { NextcloudApp.installed(context) }) {
+                Choice(
+                    tr("Account of the Nextcloud App"),
+                    tr("Sign in to the server of an account the Nextcloud app on this device has"),
+                    Icons.Outlined.AccountCircle,
+                ) { pick.launch(NextcloudApp.chooser(context)) }
+            }
             Choice(tr("Nextcloud Server"), tr("Sign in with the browser or an app password"), Icons.Outlined.Cloud) {
+                login = ""
                 server = ""
             }
             if (model.screen.value?.accounts.orEmpty().none { it.kind == AccountKind.LOCAL }) {
@@ -132,7 +154,7 @@ fun AccountChoice(model: Main, welcome: Boolean) {
             model.cancelSignIn()
             server = null
         }
-        SignInForm(model, entered) { server = it }
+        SignInForm(model, entered, login) { server = it }
     }
 }
 
@@ -148,7 +170,7 @@ private fun Choice(title: String, description: String, icon: ImageVector, onClic
 /** A server to sign in to, with the browser or an app password. Todav's SignInForm. */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun SignInForm(model: Main, server: String, onServer: (String) -> Unit) {
+fun SignInForm(model: Main, server: String, login: String = "", onServer: (String) -> Unit) {
     val state by model.signIn.collectAsStateWithLifecycle()
     var password by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -165,7 +187,7 @@ fun SignInForm(model: Main, server: String, onServer: (String) -> Unit) {
             icon = Icons.Outlined.Cloud,
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
-            keyboardActions = KeyboardActions(onGo = { model.signInWithBrowser(server) }),
+            keyboardActions = KeyboardActions(onGo = { model.signInWithBrowser(server, login) }),
         )
     }
     when (s) {
@@ -179,7 +201,7 @@ fun SignInForm(model: Main, server: String, onServer: (String) -> Unit) {
         }
         else -> {
             if (s is SignIn.Failed) Text(s.message, color = MaterialTheme.colorScheme.error)
-            Button(onClick = { model.signInWithBrowser(server) }, Modifier.fillMaxWidth()) {
+            Button(onClick = { model.signInWithBrowser(server, login) }, Modifier.fillMaxWidth()) {
                 Text(tr("Sign In with Browser"))
             }
             OutlinedButton(onClick = { password = true }, Modifier.fillMaxWidth()) {
@@ -187,15 +209,15 @@ fun SignInForm(model: Main, server: String, onServer: (String) -> Unit) {
             }
         }
     }
-    if (password) PasswordDialog(onDismiss = { password = false }) { name, secret ->
+    if (password) PasswordDialog(login, onDismiss = { password = false }) { name, secret ->
         password = false
         model.signInWithPassword(server, name, secret)
     }
 }
 
 @Composable
-private fun PasswordDialog(onDismiss: () -> Unit, onConnect: (String, String) -> Unit) {
-    var login by rememberSaveable { mutableStateOf("") }
+private fun PasswordDialog(initial: String, onDismiss: () -> Unit, onConnect: (String, String) -> Unit) {
+    var login by rememberSaveable { mutableStateOf(initial) }
     var secret by remember { mutableStateOf("") }
     var shown by remember { mutableStateOf(false) }
     val ready = login.isNotBlank() && secret.isNotEmpty()

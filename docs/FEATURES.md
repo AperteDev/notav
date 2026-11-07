@@ -77,6 +77,8 @@ What Notav can do, in short. The details of each release are in the
 **Android**
 
 - The same notes, accounts and synced settings, in Material 3 Expressive.
+- Sign in with the browser or an app password; the Nextcloud app's accounts fill in the
+  server and login name.
 - The tree, the note and its outline (with the notes linking to it) swiped between: one at a
   time on a phone, two side by side on a wide screen.
 - Editor mode's styles, ticking tasks, continuing lists, tables kept aligned, links followed;

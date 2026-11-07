@@ -7,7 +7,7 @@ outdir ?= $(CURDIR)/target/rpm
 top := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
 
 srpm:
-	command -v cargo git rpmbuild xz >/dev/null || dnf -y install cargo git rpm-build xz
+	for c in cargo git rpmbuild xz; do command -v $$c >/dev/null || { dnf -y install cargo git rpm-build xz; break; }; done
 	version=$$(sed -n 's/^Version: *//p' $(spec)); \
 	work=$$(mktemp -d); \
 	set -e; \

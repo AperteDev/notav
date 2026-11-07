@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-07
+
 ### Added
 
 - An Android app (an APK with each release), in Material 3 Expressive: the same notes, accounts
@@ -211,6 +213,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and Liberapay
 - An RPM spec for Fedora, built on COPR from `.copr/Makefile`; Notav uses the system's SQLite
 
-[Unreleased]: https://github.com/AperteDev/notav/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/AperteDev/notav/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/AperteDev/notav/compare/v0.2.0...v0.5.0
 [0.2.0]: https://github.com/AperteDev/notav/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/AperteDev/notav/releases/tag/v0.1.0

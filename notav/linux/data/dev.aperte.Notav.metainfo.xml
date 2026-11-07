@@ -40,6 +40,47 @@
     <control>touch</control>
   </supports>
   <releases>
+    <release version="0.5.0" date="2026-11-07">
+      <url type="details">https://github.com/AperteDev/notav/releases/tag/v0.5.0</url>
+      <description translate="no">
+        <p>Added</p>
+        <ul>
+          <li>An Android app (an APK with each release), in Material 3 Expressive: the same notes, accounts and synced settings. Sign in with the browser or an app password, or keep notes on this device; the tree of folders and notes, the note and its outline (with the notes linking to it) swiped between, one at a time on a phone, two side by side on wide screens (an unfolded foldable, a tablet); Editor mode's styles, ticking tasks, lists and tables (tables and code blocks unwrapped, each scrolled sideways on its own, shaded at the edge where more is hidden); find and replace; search, Today's note, text shared from other apps as a note; a note locked on the server told about, with Unlock…; the Trash and a note's versions. It syncs while open, when the tree is pulled down and once more when left; Settings can add a sync in the background, from every 15 minutes to once a day. Settings has the Linux app's pages: the style, the tree's density and icons, restoring the note left open, Editor mode's font, table formatting, the journal's daily notes, the accounts' order and each one's page (on or off, name, sign in again, notes folder, server status, remove), settings sync, and About with the Support links</li>
+          <li>Tabs, as in Obsidian: a click on a note opens it in the selected tab, Ctrl+click or a middle click (or "Open in New Tab" in its menu) in a new one; the tabs show above the note once there are two. Each keeps where its cursor was; Ctrl+Page Down and Ctrl+Page Up go through them, Ctrl+W closes one (the window once none is left)</li>
+          <li>Restore Session, on by default (Preferences, General): the tabs open when Notav closed, and the one selected, open again as it starts; kept for each device</li>
+          <li>GitHub's alerts in Editor mode: a quote starting with <code>[!NOTE]</code>, <code>[!TIP]</code>, <code>[!IMPORTANT]</code>, <code>[!WARNING]</code> or <code>[!CAUTION]</code> is a box tinted in its colour (blue, green, purple, yellow, red), its <code>[!NOTE]</code> and <code>&gt;</code> bold in that colour; light and dark</li>
+          <li>Enter in a quote (an alert too) starts the next line with its <code>&gt;</code>; on an empty quote line it leaves the quote, with a blank line after it</li>
+          <li>Find and replace in the open note: Ctrl+F (or the Find in Note button) opens a bar above it that highlights the matches and counts them ("2 of 11"), Enter and Shift+Enter (or Ctrl+G and Ctrl+Shift+G) go through them; Ctrl+H adds a row to replace one or all. Escape goes back to the note</li>
+          <li>Back from the Notes Folder step of adding an account (on the welcome page too): the account just connected goes, to connect another</li>
+          <li>The outline shows by itself for a note with two headings or more, and hides for others, while it is not switched on with its button; at once, without sliding. Preferences, Editor → Outline turns it off</li>
+          <li>The welcome page waits for the first sync, with how many notes it has downloaded, and shows the notes once they are all here</li>
+          <li>A grip beside the list item under the pointer in Editor mode, as on GitHub: dragging it moves the item, its sub-items with it, among the items of its list (an ordered list's numbers stay in order)</li>
+        </ul>
+        <p>Changed</p>
+        <ul>
+          <li>Tables and code blocks wider than the note scroll sideways each on its own, the note keeping its width (it widened for them, and the whole text scrolled sideways): edited in place, they follow the cursor; a shade at an edge shows that more of one is hidden that way; their scrollbar stays at the bottom of the window while they go on below it, and a touchpad's sideways move or Shift and the wheel over them scrolls them too. Without Wrap Lines the whole text still scrolls</li>
+          <li>The sidebar, as in Todav: the Toggle Sidebar button (F9) hides and shows it; on a narrow window it hides by itself and shows over the note, going once a note is picked</li>
+          <li>Searching all notes is in the sidebar, with its button at the top, and Ctrl+Shift+F (Ctrl+F finds in the open note; with no note open it still searches all notes). The notes found show in the tree's place, in their folders, with how many each folder holds; a click or Enter opens one with the search left open for the next. Closed, the tree is as it was left, its folders and scroll unchanged</li>
+          <li>Syncing is faster when many notes changed on the server: they download six at a time, and the first sync lists the notes folder in one request. A first sync of 277 notes in 61 folders takes 5 s instead of 27</li>
+        </ul>
+        <p>Fixed</p>
+        <ul>
+          <li>A table's row with "fi" (or another ligature of the font) in a cell no longer goes out of line from there on in Editor mode: tables and code are shown without ligatures</li>
+          <li>A note changed while it is open in Nextcloud Text waits for its lock and goes up once unlocked, instead of becoming a conflict copy: Nextcloud gives a file a new ETag as it is locked and unlocked</li>
+          <li>A narrow window gives the note all its width: the sidebar never went away there, the outline folding instead</li>
+          <li>A table's handles show as the pointer comes near the table from outside it too: beside a row's first pipe (its row grip there), past the last column or under the last row (the bars that add one), not only once it has been over the table's text</li>
+          <li>The bar that adds a row no longer covers the line under a table: with text right after the table, Editor mode leaves room under it</li>
+          <li>A table wider than the note no longer wraps out of its columns in Editor mode, nor does a code block's line: the note widens to show them whole, as far as the window goes, and only past that the text scrolls sideways (its scrollbar under the note, as without Wrap Lines); a table's handles stay on it</li>
+          <li>The note's text no longer moves sideways a little as a table's handles show</li>
+          <li>Deleting in a table's cell (Backspace, Delete) no longer pulls the pipes after it to the left: what goes is given back as the cell's padding, as typing takes it</li>
+          <li>A task's empty box <code>[ ]</code> is as wide as a ticked one <code>[x]</code>, in monospace in Editor mode</li>
+          <li>Opening or closing a folder in the tree no longer scrolls it to the top; the folder keeps the keyboard focus</li>
+          <li>The outline says "No Headings" for a note without headings, instead of staying blank once a note was open</li>
+          <li>A server whose certificate comes from a certificate authority added to the system (a self-hosted Nextcloud's own CA) connects, instead of failing with "invalid peer certificate: UnknownIssuer": Notav trusts the system's certificate authorities, not only its built-in list</li>
+          <li>An error page from the server or a proxy shows as its text in error messages, not as its HTML</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.0" date="2026-10-30">
       <url type="details">https://github.com/AperteDev/notav/releases/tag/v0.2.0</url>
       <description translate="no">

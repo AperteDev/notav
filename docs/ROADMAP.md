@@ -25,6 +25,15 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
    - Enter after a code fence's opening ` ``` ` adds the closing one (as Typora and Obsidian
      do), next to the lists', quotes' and tables' Enter.
    - "Insert Alert" in the right-click menu, next to Insert Table, with GitHub's five kinds.
+   - A slash menu: `/` at the start of a line offers table, alert, task, code block, quote, rule
+     and the date, filtered as you type (as Obsidian's Slash commands and Notion's); it shares
+     its popover with `[[`, and replaces a menu or toolbar for what is inserted.
+   - Alt+Up and Alt+Down move the line (or the list item with its sub-items) up and down, as VS
+     Code and Obsidian do; dragging the item exists already.
+   - Ordered lists renumbered as items are added, moved or removed (Typora's, Obsidian's smart
+     lists).
+   - Typing `(`, `[`, `"` or `` ` `` adds the closing one (as Obsidian and Typora do), with a
+     switch in Preferences, Editor → Markdown, as it changes the text by itself.
    - Spell checking with libspelling (as Iotas, Apostrophe and GNOME Text Editor have it):
      underlined words, suggestions in the right-click menu (see
      [Open questions](#open-questions-and-risks)).
@@ -53,6 +62,27 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
 - **GNOME Shell search**: notes found from the Activities overview by title and text, as Iotas
   and Folio have it; Todav's search provider (`todav/linux/app/src/search.rs`, its `.ini`) over the
   core's search, under the app's own bus name.
+- **Quick switcher** (Ctrl+O): a list of notes' titles filtered as you type (fuzzy), Enter opens
+  one, and a title that matches none offers to create it (as Obsidian's; nextcloud/notes #1200);
+  Ctrl+Shift+F stays the full-text search. Recent notes first, with Alt+Left and Alt+Right
+  going back and forward through every note opened, not only a followed link.
+- **Notes' menu**, more: Copy Link (`[[title]]`), Duplicate, and Open in Nextcloud (the
+  browser, through the file's id); **Share** creates a Nextcloud public link (OCS share API,
+  with a password or expiry if asked) and copies it.
+- **Import**: Markdown files dropped from the file manager onto the tree are added to the folder
+  they land on (as Obsidian's Importer, for files exported from Joplin, Bear or others).
+- **Desktop entry actions** (New Note, Today's Note, from the app icon's menu) and a `notav://`
+  link (`new?title=&text=`) so a bookmarklet or browser extension can clip a page into a note,
+  without an HTML converter of our own to fetch pages (see Android's Later, its shortcuts).
+- **Link hover preview**: Ctrl+hover on a link to a note shows its first lines (Obsidian's Page
+  preview); needs links between notes.
+- **Notes' tree**, more: an excerpt and the modified date under each title, as a density option
+  (Bear, Joplin, Nextcloud Notes' list); folders hidden from the tree and search (an archive,
+  nextcloud/notes #295; Obsidian's excluded files).
+- **Extract and merge** (Obsidian's Note composer): the selection moved into a new note, a
+  link left in its place; one note merged into another.
+- **Split view**: a second note beside the open one (Obsidian's panes, Joplin's horizontal
+  split), to read one while writing the other; the tabs' notes, one in each side.
 - **Preview mode**, more: find in the page (Ctrl+F, over WebKit's `FindController`, the find
   bar without Replace), the backlinks under the note as in Editor mode, the scroll kept when the
   note or its look changes (it loads again at its top now), images from the note's folder (with
@@ -65,7 +95,9 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
   `{{yesterday}}`-style placeholders.
 - **Tags**: `#tag` and front matter's `tags`, computed locally from the files, to list the notes
   with one. Backlinks read every note each time a note opens; an index of links (and tags) when
-  that gets slow.
+  that gets slow. Front matter's `aliases` too: `[[` offers them and links to one open the
+  note. A table of the notes of a folder by their front matter (Obsidian's Bases) only after
+  this, if at all.
 - **Side panel**: the outline at the right of the note (the Outline button) gets more views, as
   Obsidian's: buttons at its top switch between them.
   - **Outline**: each level folding; the heading the cursor is under marked.
@@ -85,7 +117,8 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
   line under it; folders there closing (all open now, and not kept); a result opens at
   its first match, highlighted (as Obsidian and Joplin), with the find bar's text filled in.
   Find and replace in the note with case, whole words and regular expressions, as GNOME Text
-  Editor's options.
+  Editor's options. Searches saved by name and listed above the tree (Obsidian's Bookmarks,
+  Bear), and a filter for open tasks (`- [ ]`) over every note.
 - **Trash and versions**, more: "Delete All" in the Trash (each note, not the whole trash bin,
   which holds other files too); a version's changes against the note's text rather than the
   whole text.
@@ -95,7 +128,9 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
   `notav/core/src/journal.rs`): both should fill in the same way.
 - **Links to Todav's tasks**: a note links a task as `todav://task/<uid>`. Todav opens it (it
   handles the `todav` URI scheme), and Notav shows the task's title and state through Todav's
-  D-Bus API (`GetTask`, to be added in Todav). Without Todav the link stays a plain link.
+  D-Bus API (`GetTask`, to be added in Todav). Without Todav the link stays a plain link. The
+  other way too: "Send to Todav" on a task's line makes a task there through its D-Bus API
+  (and leaves the link), which wants a `CreateTask` call in Todav.
 - **Notebooks**: categories above folders, as Joplin's and OneNote's notebooks (see
   [Open questions](#open-questions-and-risks)).
 - **Client Push**: Nextcloud's Client Push app (`notify_push`), which the desktop sync client
@@ -139,9 +174,17 @@ The Android app (`notav/android`) still lacks, next:
   `html::to_markdown`, spreadsheet rows as a table (`table::from_tsv`), both exported through
   the bindings; Compose's text field pastes plain text now, so this needs its own paste.
 
+- What Linux gets above, in the same words, once built: the quick switcher, the slash menu, the
+  notes' menu's items (Share through the share sheet too), link preview (a sheet), excerpts in
+  the tree, extract and merge, saved searches; and the editor's keys that apply to a keyboard.
+- App lock: the app asks for the device's biometrics or PIN to open (Joplin #289), a setting on
+  this device only.
+
 Later: dragging notes and folders in the tree (a long press opens their menu now, with Move…),
 table handles and menus, a table's cells keeping their padding as they are typed in
-(`table::padding_taken`), the text's size, widgets, a Quick Settings tile.
+(`table::padding_taken`), the text's size, widgets, a Quick Settings tile, launcher shortcuts
+(New Note, Today's Note; the Linux app's desktop entry actions), split view (a wide screen's
+two panes already show the tree and the note).
 
 ## Distribution
 
@@ -192,6 +235,9 @@ table handles and menus, a table's cells keeping their padding as they are typed
   or the time first seen here.
 - **Client Push**: its WebSocket needs a client: a minimal hand-written one over the TLS `ureq`
   already brings, or a crate (justified as `AGENTS.md` asks).
+- **Embeds**: `![[note]]` showing another note's text in place (Obsidian) needs the text
+  drawn from elsewhere and not editable there; maybe with Preview mode only, as with images
+  (see Attachments).
 - **Attachments**: Nextcloud Notes keeps them in `.attachments.<fileid>/` next to the note,
   Obsidian in a folder of its own.
 - **Drawings' format**: SVG (strokes as paths) opens in any app and in Nextcloud's previews, and
@@ -228,3 +274,11 @@ table handles and menus, a table's cells keeping their padding as they are typed
   highlights one language per buffer, the note's.
 - **Folding headings** (Obsidian, Logseq), for now: it hides text, which the `invisible` tag
   bug blocks (see [Open questions](#open-questions-and-risks)).
+- **Encrypting notes** (a password per note, as Joplin's and Standard Notes'; Nextcloud's
+  end-to-end encrypted folders, nextcloud/notes #476): the files stop being Markdown other apps
+  open, and Nextcloud's encrypted folders cannot be reached over WebDAV.
+- **Block references** (`^id`, Obsidian and Logseq): they write ids into the notes' files.
+- **Diagrams** (Mermaid) and **fetching a link's title when a URL is pasted**: the first needs
+  a renderer beyond Preview mode's page, the second a network request on every paste.
+- **A graph view** (Obsidian): heavy in GTK for what the side panel's Backlinks and Outgoing
+  links already answer; a local graph could follow them if asked for.

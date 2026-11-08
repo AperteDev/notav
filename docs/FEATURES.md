@@ -121,6 +121,14 @@ What Notav can do, in short. The details of each release are in the
 - Tags, outgoing links and unlinked mentions in the side panel.
 - Templates, sorting the tree, a journal calendar.
 - Focus mode and word count.
+- A quick switcher (Ctrl+O) and recent notes; a slash menu; Alt+Up/Down moving lines; ordered
+  lists renumbered; closing brackets and quotes added.
+- Copy Link, Duplicate, Open in Nextcloud and Share (a public link) in a note's menu; Markdown
+  files dropped on the tree imported; desktop actions and a `notav://` link for clipping.
+- Link previews; excerpts in the tree; folders hidden (an archive); extract a selection into a
+  note and merge notes; a second note beside the first.
+- Saved searches and a filter for open tasks; tags' aliases; sending a task line to Todav.
+- On Android: an app lock, and the above as on Linux; launcher shortcuts later.
 - An editor toolbar; Markdown marks hidden outside the line being edited.
 - Links to Todav's tasks.
 - Changes from other devices within seconds (Nextcloud's Client Push).

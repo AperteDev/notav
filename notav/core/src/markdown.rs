@@ -887,9 +887,178 @@ fn to_chars(text: &str, ranges: Vec<(Range<usize>, Style)>) -> Vec<Span> {
         .collect()
 }
 
+/// The note as HTML for Preview mode, as GitHub renders it: links to notes point to
+/// `notav:note/<target>` (`notav:wiki/` for a wiki link; the target percent-encoded, the heading
+/// after `#`), which `preview_link` reads; the headings have the ids `h0`, `h1`… in the order
+/// of `headings`.
+pub fn html(text: &str) -> String {
+    let mut n = 0;
+    let events = Parser::new_ext(text, options()).map(|event| match event {
+        Event::Start(Tag::Heading {
+            level,
+            classes,
+            attrs,
+            ..
+        }) => {
+            n += 1;
+            Event::Start(Tag::Heading {
+                level,
+                id: Some(format!("h{}", n - 1).into()),
+                classes,
+                attrs,
+            })
+        }
+        Event::Start(Tag::Link {
+            link_type,
+            dest_url,
+            title,
+            id,
+        }) => {
+            let dest_url = match link(link_type, &dest_url) {
+                Some(Link::Note {
+                    target,
+                    heading,
+                    wiki,
+                }) => {
+                    let kind = if wiki { "wiki" } else { "note" };
+                    let mut href =
+                        format!("notav:{kind}/{}", crate::dav::percent_encode_path(&target));
+                    if let Some(h) = heading {
+                        href.push('#');
+                        href.push_str(&crate::dav::percent_encode_path(&h));
+                    }
+                    href.into()
+                }
+                _ => dest_url,
+            };
+            Event::Start(Tag::Link {
+                link_type,
+                dest_url,
+                title,
+                id,
+            })
+        }
+        e => e,
+    });
+    // Bare URLs linked, as GitHub does (not in links, images and code blocks).
+    let mut inside = 0;
+    let mut linked = Vec::new();
+    for event in events {
+        match &event {
+            Event::Start(Tag::Link { .. } | Tag::Image { .. } | Tag::CodeBlock(_)) => inside += 1,
+            Event::End(TagEnd::Link | TagEnd::Image | TagEnd::CodeBlock) => inside -= 1,
+            Event::Text(t) if inside == 0 => {
+                let mut from = 0;
+                for url in bare_urls(t) {
+                    linked.push(Event::Text(t[from..url.start].to_string().into()));
+                    let address = &t[url.clone()];
+                    let dest_url = if address.starts_with("www.") {
+                        format!("https://{address}")
+                    } else {
+                        address.to_string()
+                    };
+                    linked.push(Event::Start(Tag::Link {
+                        link_type: LinkType::Autolink,
+                        dest_url: dest_url.into(),
+                        title: "".into(),
+                        id: "".into(),
+                    }));
+                    linked.push(Event::Text(address.to_string().into()));
+                    linked.push(Event::End(TagEnd::Link));
+                    from = url.end;
+                }
+                if from > 0 {
+                    linked.push(Event::Text(t[from..].to_string().into()));
+                    continue;
+                }
+            }
+            _ => {}
+        }
+        linked.push(event);
+    }
+    let mut out = String::with_capacity(text.len() * 3 / 2);
+    pulldown_cmark::html::push_html(&mut out, linked.into_iter());
+    out
+}
+
+/// What a link clicked in Preview mode points to (`html`'s `href`): a note, or an address with
+/// a scheme.
+pub fn preview_link(href: &str) -> Option<Link> {
+    let Some(rest) = href.strip_prefix("notav:") else {
+        return has_scheme(href).then(|| Link::Address(href.to_string()));
+    };
+    let (kind, rest) = rest.split_once('/')?;
+    let (target, heading) = match rest.split_once('#') {
+        Some((t, h)) => (t, Some(crate::dav::percent_decode(h))),
+        None => (rest, None),
+    };
+    Some(Link::Note {
+        target: crate::dav::percent_decode(target),
+        heading,
+        wiki: kind == "wiki",
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn preview() {
+        let text = "# Plan\n\n[next](Other%20note.md#Step%201) [[Ideas/Big one#Why?]] \
+            <https://x.org> [same](#Plan)\n\n## Done\n\n- [x] it\n\n> [!NOTE]\n> Hi";
+        let html = html(text);
+        assert!(html.contains("<h1 id=\"h0\">Plan</h1>"), "{html}");
+        assert!(html.contains("<h2 id=\"h1\">Done</h2>"), "{html}");
+        assert!(
+            html.contains("<blockquote class=\"markdown-alert-note\">"),
+            "{html}"
+        );
+        assert!(html.contains("checked=\"\""), "{html}");
+        let bare = super::html("See www.a.b/c, [https://d.e](https://d.e) `https://f.g`");
+        assert_eq!(
+            bare,
+            "<p>See <a href=\"https://www.a.b/c\">www.a.b/c</a>, <a href=\"https://d.e\">\
+             https://d.e</a> <code>https://f.g</code></p>\n"
+        );
+        let hrefs: Vec<&str> = html
+            .split("href=\"")
+            .skip(1)
+            .map(|h| &h[..h.find('"').unwrap()])
+            .collect();
+        assert_eq!(
+            hrefs,
+            [
+                // The heading as `link` gives it, not decoded.
+                "notav:note/Other%20note.md#Step%25201",
+                "notav:wiki/Ideas/Big%20one#Why%3F",
+                "https://x.org",
+                "notav:note/#Plan"
+            ]
+        );
+        let note = |target: &str, heading: &str, wiki| Link::Note {
+            target: target.into(),
+            heading: Some(heading.into()),
+            wiki,
+        };
+        assert_eq!(
+            preview_link(hrefs[0]),
+            Some(note("Other note.md", "Step%201", false))
+        );
+        assert_eq!(
+            preview_link(hrefs[1]),
+            Some(note("Ideas/Big one", "Why?", true))
+        );
+        assert_eq!(
+            preview_link(hrefs[2]),
+            Some(Link::Address("https://x.org".into()))
+        );
+        assert_eq!(preview_link(hrefs[3]), Some(note("", "Plan", false)));
+        assert_eq!(
+            preview_link("about:blank#1"),
+            Some(Link::Address("about:blank#1".into()))
+        );
+    }
 
     /// The pieces of `text` with `style`.
     fn of(text: &str, style: Style) -> Vec<String> {

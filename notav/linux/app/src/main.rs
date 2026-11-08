@@ -6,6 +6,7 @@ mod editor;
 mod files;
 mod goa;
 mod i18n;
+mod preview;
 mod settings;
 mod strips;
 mod update;

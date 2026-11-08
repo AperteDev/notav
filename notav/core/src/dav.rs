@@ -184,7 +184,7 @@ pub(crate) fn percent_decode(s: &str) -> String {
     String::from_utf8_lossy(&out).into_owned()
 }
 
-fn percent_encode_path(s: &str) -> String {
+pub(crate) fn percent_encode_path(s: &str) -> String {
     let mut out = String::new();
     for &c in s.as_bytes() {
         if c.is_ascii_alphanumeric() || b"/-._~@!$&'()*+,;=:".contains(&c) {

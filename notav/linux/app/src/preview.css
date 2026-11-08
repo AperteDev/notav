@@ -1,0 +1,175 @@
+/* Preview mode's page (src/preview.rs), after GitHub's look for Markdown: its colours, light
+   and dark, on the app's background. The fonts, the width and the alerts' titles are added in
+   code. */
+
+:root {
+  --fg: #1f2328;
+  --muted: #59636e;
+  --border: #d1d9e0;
+  --border-muted: #d1d9e0b3;
+  --code-bg: #818b981f;
+  --block-bg: #f6f8fa;
+  --row-bg: #f6f8fa;
+  --link: #0969da;
+  --note: #0969da;
+  --tip: #1a7f37;
+  --important: #8250df;
+  --warning: #9a6700;
+  --caution: #d1242f;
+  color-scheme: light;
+}
+
+html.dark {
+  --fg: #f0f6fc;
+  --muted: #9198a1;
+  --border: #3d444d;
+  --border-muted: #3d444db3;
+  --code-bg: #656c7633;
+  --block-bg: #151b23;
+  --row-bg: #151b23;
+  --link: #4493f8;
+  --note: #4493f8;
+  --tip: #3fb950;
+  --important: #ab7df8;
+  --warning: #d29922;
+  --caution: #f85149;
+  color-scheme: dark;
+}
+
+html, body {
+  margin: 0;
+  background: transparent;
+  color: var(--fg);
+}
+
+.markdown-body {
+  box-sizing: border-box;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 18px 24px 48px;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+}
+
+.markdown-body > :first-child { margin-top: 0 !important; }
+
+.markdown-body .note-title {
+  font-size: 2em;
+  border: 0;
+  margin-bottom: 16px;
+}
+
+p, blockquote, ul, ol, dl, table, pre, details, .footnote-definition {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+h1, h2, h3, h4, h5, h6 {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+h1 { font-size: 2em; padding-bottom: .3em; border-bottom: 1px solid var(--border-muted); }
+h2 { font-size: 1.5em; padding-bottom: .3em; border-bottom: 1px solid var(--border-muted); }
+h3 { font-size: 1.25em; }
+h4 { font-size: 1em; }
+h5 { font-size: .875em; }
+h6 { font-size: .85em; color: var(--muted); }
+
+hr {
+  height: .25em;
+  margin: 24px 0;
+  padding: 0;
+  border: 0;
+  background: var(--border);
+}
+
+blockquote {
+  margin-left: 0;
+  margin-right: 0;
+  padding: 0 1em;
+  color: var(--muted);
+  border-left: .25em solid var(--border);
+}
+blockquote > :last-child { margin-bottom: 0; }
+
+ul, ol { padding-left: 2em; }
+li + li { margin-top: .25em; }
+li > p { margin-top: 16px; }
+ul ul, ul ol, ol ol, ol ul { margin-top: 0; margin-bottom: 0; }
+li:has(> input[type="checkbox"]) { list-style: none; }
+li > input[type="checkbox"] { margin: 0 .2em .25em -1.4em; vertical-align: middle; }
+
+code, kbd, pre, samp, tt { font-size: 85%; }
+code, tt {
+  padding: .2em .4em;
+  margin: 0;
+  border-radius: 6px;
+  background: var(--code-bg);
+  white-space: break-spaces;
+}
+pre {
+  padding: 16px;
+  overflow: auto;
+  line-height: 1.45;
+  border-radius: 6px;
+  background: var(--block-bg);
+}
+pre code {
+  padding: 0;
+  font-size: 100%;
+  background: transparent;
+  white-space: pre;
+  word-break: normal;
+}
+kbd {
+  padding: 3px 5px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  background: var(--block-bg);
+}
+
+table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow: auto;
+  border-spacing: 0;
+  border-collapse: collapse;
+}
+th { font-weight: 600; }
+th, td { padding: 6px 13px; border: 1px solid var(--border); }
+tr:nth-child(2n) { background: var(--row-bg); }
+
+img { max-width: 100%; box-sizing: content-box; }
+
+mark { background: #fff8c5; color: inherit; }
+html.dark mark { background: #bb800926; }
+
+.footnote-definition { font-size: 85%; color: var(--muted); display: flex; gap: .5em; }
+.footnote-definition-label { font-weight: 600; }
+.footnote-definition > p { margin: 0; }
+
+/* GitHub's alerts: a coloured bar and title (its text from the app, translated). */
+blockquote[class^="markdown-alert-"] { color: inherit; }
+blockquote[class^="markdown-alert-"]::before {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 500;
+  line-height: 1;
+}
+.markdown-alert-note { border-left-color: var(--note); }
+.markdown-alert-note::before { color: var(--note); }
+.markdown-alert-tip { border-left-color: var(--tip); }
+.markdown-alert-tip::before { color: var(--tip); }
+.markdown-alert-important { border-left-color: var(--important); }
+.markdown-alert-important::before { color: var(--important); }
+.markdown-alert-warning { border-left-color: var(--warning); }
+.markdown-alert-warning::before { color: var(--warning); }
+.markdown-alert-caution { border-left-color: var(--caution); }
+.markdown-alert-caution::before { color: var(--caution); }

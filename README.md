@@ -91,8 +91,8 @@ it in an [issue](https://github.com/AperteDev/notav/issues), or translate it you
 
 ### Building and installing
 
-**Dependencies:** Rust (stable), GTK 4.14+, libadwaita 1.8+, GtkSourceView 5, libsecret,
-SQLite, `blueprint-compiler`, `glib-compile-resources` (GLib) and gettext's `msgfmt`.
+**Dependencies:** Rust (stable), GTK 4.14+, libadwaita 1.8+, GtkSourceView 5, WebKitGTK 6.0,
+libsecret, SQLite, `blueprint-compiler`, `glib-compile-resources` (GLib) and gettext's `msgfmt`.
 
 ```sh
 # The app: binary, desktop file and icons in ~/.local

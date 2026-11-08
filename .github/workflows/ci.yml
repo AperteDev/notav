@@ -27,7 +27,7 @@ jobs:
       - name: Install the build dependencies
         run: >-
           dnf install -y --setopt=install_weak_deps=False
-          git gcc gtk4-devel libadwaita-devel gtksourceview5-devel libsecret-devel glib2-devel
+          git gcc gtk4-devel libadwaita-devel gtksourceview5-devel webkitgtk6.0-devel libsecret-devel glib2-devel
           sqlite-devel blueprint-compiler gettext
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -169,7 +169,7 @@ jobs:
       - name: Install the build dependencies
         run: >-
           dnf install -y --setopt=install_weak_deps=False
-          git gcc make python3 gtk4-devel libadwaita-devel gtksourceview5-devel libsecret-devel glib2-devel
+          git gcc make python3 gtk4-devel libadwaita-devel gtksourceview5-devel webkitgtk6.0-devel libsecret-devel glib2-devel
           sqlite-devel blueprint-compiler gettext
       - uses: actions/checkout@v7
       - name: Set the release version
@@ -202,7 +202,7 @@ jobs:
       - name: Install the packaging tools and the libraries the app links to
         run: >-
           apt-get update && apt-get install -y --no-install-recommends
-          dpkg-dev libgtk-4-1 libadwaita-1-0 libgtksourceview-5-0 libsecret-1-0 libsqlite3-0
+          dpkg-dev libgtk-4-1 libadwaita-1-0 libgtksourceview-5-0 libwebkitgtk-6.0-4 libsecret-1-0 libsqlite3-0
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
         with:

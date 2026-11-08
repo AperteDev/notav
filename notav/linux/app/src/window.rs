@@ -1,7 +1,7 @@
 //! Main window: the welcome page (sign-in, then the notes folder), the notes sidebar and the
 //! editor.
 
-use crate::i18n::{gettext, gettext_noop, ngettext};
+use crate::i18n::{gettext, gettext_noop, ngettext, pgettext};
 use crate::{Event, core, request_sync};
 use adw::prelude::*;
 use gtk::{gio, glib};
@@ -183,6 +183,10 @@ struct Ui {
     text_css: gtk::CssProvider,
     buffer: sourceview5::Buffer,
     editor: sourceview5::View,
+    /// The note rendered in Preview mode, and whether it is shown again before it is drawn
+    /// next (`refresh_preview`).
+    preview: Rc<crate::preview::Preview>,
+    preview_pending: Cell<bool>,
     current: RefCell<Option<Note>>,
     /// The editor holds text not given to the core yet.
     unsaved: Cell<bool>,
@@ -777,6 +781,8 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         text_css: gtk::CssProvider::new(),
         buffer,
         editor,
+        preview: crate::preview::Preview::new(),
+        preview_pending: Cell::new(false),
         current: RefCell::new(None),
         unsaved: Cell::new(false),
         restyle_pending: Cell::new(false),
@@ -786,6 +792,7 @@ fn build(app: &adw::Application) -> Rc<Ui> {
         last_error: RefCell::new(String::new()),
         last_locked: RefCell::new(Vec::new()),
     });
+    get::<adw::Bin>(&b, "preview_bin").set_child(Some(&ui.preview.view));
     let zoom: gtk::Box = get(&b, "zoom_box");
     if zoom.parent().is_none() {
         get::<gtk::PopoverMenu>(&b, "view_popover").add_child(&zoom, "zoom");
@@ -888,6 +895,7 @@ fn apply_text_look(ui: &Ui) {
         glib::ControlFlow::Break
     });
     show_side_scroll(ui);
+    refresh_preview(ui);
 }
 
 /// The note's width: a line of about 80 characters, or with Full Width all the window's (no
@@ -965,6 +973,83 @@ fn font_css(
 /// The device-only `source_mode` setting: Source mode instead of Editor mode.
 fn source_mode() -> bool {
     core().setting("source_mode".into()).as_deref() == Some("true")
+}
+
+/// The device-only `preview_mode` setting: the note rendered, read only, instead of the mode
+/// `source_mode` says.
+fn preview_mode() -> bool {
+    core().setting("preview_mode".into()).as_deref() == Some("true")
+}
+
+/// The header's toggle for the mode the note is in.
+fn mode_name() -> &'static str {
+    match (preview_mode(), source_mode()) {
+        (true, _) => "preview",
+        (false, true) => "source",
+        (false, false) => "editor",
+    }
+}
+
+/// Render the open note again in Preview mode, once the changes made now are done.
+fn refresh_preview(ui: &Ui) {
+    if !preview_mode() || ui.preview_pending.replace(true) {
+        return;
+    }
+    glib::idle_add_local_once(|| {
+        let Some(ui) = self::ui() else { return };
+        ui.preview_pending.set(false);
+        if ui.current.borrow().is_none() {
+            return;
+        }
+        let (start, end) = ui.buffer.bounds();
+        let text = ui.buffer.text(&start, &end, true);
+        ui.preview.show(&ui.title.text(), &text, &preview_look());
+    });
+}
+
+/// Preview mode's page in the note's fonts (Editor mode's and Source mode's), size and width,
+/// in the app's light or dark style.
+fn preview_look() -> crate::preview::Look {
+    let interface = gtk::Settings::default()
+        .and_then(|s| s.gtk_font_name())
+        .and_then(|f| gtk::pango::FontDescription::from_string(&f).family())
+        .map(|f| f.to_string());
+    let mut fonts = font_css(
+        ".markdown-body",
+        crate::settings::font("editor_font"),
+        interface.as_deref(),
+        text_zoom(),
+    );
+    // Twice: `monospace` alone makes a browser shrink the text (to 13 of 16 pixels).
+    let code = crate::settings::font("source_font")
+        .and_then(|f| f.family())
+        .map_or("monospace, monospace".to_string(), |f| {
+            format!("\"{}\", monospace, monospace", f.replace('"', ""))
+        });
+    fonts.push_str(&format!(
+        "code, kbd, pre, samp, tt {{ font-family: {code}; }}\n"
+    ));
+    crate::preview::Look {
+        dark: adw::StyleManager::default().is_dark(),
+        fonts,
+        full_width: full_width(),
+        alerts: [
+            pgettext("alert", "Note"),
+            pgettext("alert", "Tip"),
+            pgettext("alert", "Important"),
+            pgettext("alert", "Warning"),
+            pgettext("alert", "Caution"),
+        ],
+    }
+}
+
+/// Scroll to the heading starting at character `at` of the open note, in Preview mode.
+fn preview_heading(ui: &Ui, at: usize) {
+    let (start, end) = ui.buffer.bounds();
+    let headings = notav_core::markdown::headings(&ui.buffer.text(&start, &end, true));
+    if let Some(i) = headings.iter().position(|h| h.at == at) {
+        ui.preview.show_heading(i, ui.preview_pending.get());
+    }
 }
 
 /// Style the note again for its mode, once the changes made now are done and before it is
@@ -1209,30 +1294,50 @@ fn connect(ui: &Rc<Ui>) {
         });
         ui.window.add_action(&a);
     }
-    // Source mode or Editor mode, from the header's toggles.
-    let source = gio::SimpleAction::new_stateful("source-mode", None, &source_mode().to_variant());
+    // Editor, Source or Preview mode ("editor", "source", "preview"), from the header's toggles.
+    let mode = gio::SimpleAction::new_stateful(
+        "note-mode",
+        Some(glib::VariantTy::STRING),
+        &mode_name().to_variant(),
+    );
     let weak = Rc::downgrade(ui);
-    source.connect_change_state(move |a, state| {
-        let (Some(ui), Some(on)) = (weak.upgrade(), state.and_then(|s| s.get::<bool>())) else {
+    mode.connect_change_state(move |a, state| {
+        let (Some(ui), Some(name)) = (weak.upgrade(), state.and_then(|s| s.get::<String>())) else {
             return;
         };
-        a.set_state(&on.to_variant());
-        let _ = core().set_setting("source_mode".into(), on.to_string());
-        ui.note_mode
-            .set_active_name(Some(if on { "source" } else { "editor" }));
-        apply_text_look(&ui); // the mode's font
+        a.set_state(&name.to_variant());
+        let preview = name == "preview";
+        let _ = core().set_setting("preview_mode".into(), preview.to_string());
+        if !preview {
+            let _ = core().set_setting("source_mode".into(), (name == "source").to_string());
+        }
+        ui.note_mode.set_active_name(Some(mode_name()));
+        apply_text_look(&ui); // the mode's font, and the note rendered
         restyle(&ui);
+        show_page(&ui);
     });
-    ui.window.add_action(&source);
-    ui.note_mode
-        .set_active_name(Some(if source_mode() { "source" } else { "editor" }));
+    ui.window.add_action(&mode);
+    ui.note_mode.set_active_name(Some(mode_name()));
     let window = ui.window.downgrade();
     ui.note_mode.connect_active_name_notify(move |g| {
-        let on = g.active_name().as_deref() == Some("source");
-        if let Some(w) = window.upgrade()
-            && on != source_mode()
+        if let (Some(w), Some(name)) = (window.upgrade(), g.active_name())
+            && name != mode_name()
         {
-            w.change_action_state("source-mode", &on.to_variant());
+            w.change_action_state("note-mode", &name.to_variant());
+        }
+    });
+    // In the app's light or dark style.
+    let weak = Rc::downgrade(ui);
+    adw::StyleManager::default().connect_dark_notify(move |_| {
+        if let Some(ui) = weak.upgrade() {
+            refresh_preview(&ui);
+        }
+    });
+    // A note opened or changed by a sync.
+    let weak = Rc::downgrade(ui);
+    ui.buffer.connect_changed(move |_| {
+        if let Some(ui) = weak.upgrade() {
+            refresh_preview(&ui);
         }
     });
     // The text's size and width, from the view menu.
@@ -1286,6 +1391,11 @@ fn connect(ui: &Rc<Ui>) {
         let Some(&at) = ui.outline_at.borrow().get(row.index() as usize) else {
             return;
         };
+        if preview_mode() {
+            return ui
+                .preview
+                .show_heading(row.index() as usize, ui.preview_pending.get());
+        }
         ui.buffer.place_cursor(&ui.buffer.iter_at_offset(at as i32));
         ui.editor.grab_focus();
         follow_cursor(&ui, true);
@@ -1979,9 +2089,11 @@ fn search_notes(ui: &Rc<Ui>) {
 /// The find bar of the open note (with its replace row: `replace`), the selection on one line
 /// as what to find; with no note shown, the search of all notes.
 fn open_find(ui: &Rc<Ui>, replace: bool) {
-    if ui.note_stack.visible_child_name().as_deref() != Some("note") {
-        search_notes(ui);
-        return;
+    match ui.note_stack.visible_child_name().as_deref() {
+        Some("note") => {}
+        // Not in the note rendered (yet; see docs/ROADMAP.md).
+        Some("preview") => return,
+        _ => return search_notes(ui),
     }
     if let Some((s, e)) = ui.buffer.selection_bounds()
         && s.line() == e.line()
@@ -2225,13 +2337,19 @@ fn refresh_results(ui: &Rc<Ui>) {
 /// The open note, or that none is; finding in it only while it is open.
 fn show_page(ui: &Ui) {
     let open = ui.current.borrow().is_some();
-    ui.note_stack
-        .set_visible_child_name(if open { "note" } else { "none" });
-    ui.find_button.set_sensitive(open);
-    if !open {
+    let preview = preview_mode();
+    ui.note_stack.set_visible_child_name(match (open, preview) {
+        (false, _) => "none",
+        (true, true) => "preview",
+        (true, false) => "note",
+    });
+    let find = open && !preview;
+    ui.find_button.set_sensitive(find);
+    if !find {
         ui.find_bar.set_search_mode(false);
     }
     show_side_scroll(ui);
+    refresh_preview(ui);
 }
 
 /// The note's sideways scrollbar, while its text is shown and has a line longer than the view:
@@ -2263,6 +2381,9 @@ pub fn follow_link(target: String, heading: Option<String>, wiki: bool) {
     if let Some(at) = heading.and_then(|h| notav_core::markdown::heading_at(&text, &h)) {
         ui.buffer.place_cursor(&ui.buffer.iter_at_offset(at as i32));
         follow_cursor(&ui, true);
+        if preview_mode() {
+            preview_heading(&ui, at);
+        }
     }
 }
 

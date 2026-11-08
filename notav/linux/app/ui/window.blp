@@ -191,7 +191,8 @@ Adw.ApplicationWindow window {
                   };
                 }
 
-                // Editor mode or Source mode (the device-only `source_mode` setting).
+                // Editor mode, Source mode (the device-only `source_mode` setting) or Preview mode
+                // (`preview_mode`, over either).
                 [end]
                 Adw.ToggleGroup note_mode {
                   valign: center;
@@ -206,6 +207,12 @@ Adw.ApplicationWindow window {
                     name: "source";
                     icon-name: "notav-source-mode-symbolic";
                     tooltip: _("Source Mode");
+                  }
+
+                  Adw.Toggle {
+                    name: "preview";
+                    icon-name: "view-reveal-symbolic";
+                    tooltip: _("Preview Mode");
                   }
                 }
 
@@ -370,6 +377,14 @@ Adw.ApplicationWindow window {
                       icon-name: "dev.aperte.Notav-symbolic";
                       title: _("No Note Selected");
                       description: _("Pick a note or add one with Ctrl+N");
+                    };
+                  }
+
+                  // The note rendered, read only (src/preview.rs): its web view, added in code.
+                  Gtk.StackPage {
+                    name: "preview";
+                    child: Adw.Bin preview_bin {
+                      styles ["view"]
                     };
                   }
 

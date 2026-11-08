@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Text copied from a web page, an email or a document is pasted in Editor mode as Markdown:
   headings, bold and italic, links, lists, quotes, code, images and tables kept, the page's
   layout left out (not in a table or a code block). Ctrl+Shift+V pastes the text as it is.
+- Preview mode, the third of the note's modes beside Editor and Source: the note rendered as
+  GitHub renders Markdown (alerts, tables, tasks, footnotes, bare URLs linked), read only, in
+  the light or dark style and the note's fonts and size; its links open notes or the browser,
+  the outline goes to its headings. Notav now needs WebKitGTK 6.0.
 
 ## [0.5.1] - 2026-11-07
 

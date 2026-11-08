@@ -25,6 +25,7 @@ BuildRequires:  blueprint-compiler
 BuildRequires:  pkgconfig(gtk4)
 BuildRequires:  pkgconfig(libadwaita-1) >= 1.8
 BuildRequires:  pkgconfig(gtksourceview-5)
+BuildRequires:  pkgconfig(webkitgtk-6.0)
 BuildRequires:  pkgconfig(libsecret-1)
 BuildRequires:  pkgconfig(sqlite3)
 BuildRequires:  glib2-devel

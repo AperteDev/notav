@@ -53,6 +53,10 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
 - **GNOME Shell search**: notes found from the Activities overview by title and text, as Iotas
   and Folio have it; Todav's search provider (`todav/linux/app/src/search.rs`, its `.ini`) over the
   core's search, under the app's own bus name.
+- **Preview mode**, more: find in the page (Ctrl+F, over WebKit's `FindController`, the find
+  bar without Replace), the backlinks under the note as in Editor mode, the scroll kept when the
+  note or its look changes (it loads again at its top now), images from the note's folder (with
+  attachments).
 - **View menu**, more: a focus mode keeping the cursor's line in the middle of the view (as iA
   Writer, Apostrophe and Iotas); the note's word count in the header's subtitle (as Bear's info
   panel and Obsidian's status bar).
@@ -109,7 +113,6 @@ Later (v2):
 - Audio notes: a recording made in the app, kept as an attachment and played from the note,
   with its transcription as the note's text, editable (as Joplin's and OneNote's recordings,
   Nextcloud Talk's transcripts); see [Open questions](#open-questions-and-risks).
-- A rendered Markdown preview next to the editor.
 - A three-way merge of a note changed here and on the server, from the text as of the last
   sync (`notes.base`), instead of a conflict copy.
 - A shared crate, in its own repository, for the code copied from Todav (listed in
@@ -129,6 +132,9 @@ The Android app (`notav/android`) still lacks, next:
   of its own, its changes put into the note's.
 - List items moved by dragging, as on Linux: a long press on an item's marker picks it up, the
   core's `markdown::list_at` and `move_item` (exported through the bindings) placing it.
+- Preview mode as on Linux: the core's `markdown::html` (exported through the bindings) in a
+  `WebView`, with the Linux app's stylesheet (`preview.css`), links opening notes, the third of
+  the mode buttons.
 - Paste as on Linux: HTML (`ClipData`'s HTML text) as Markdown with the core's
   `html::to_markdown`, spreadsheet rows as a table (`table::from_tsv`), both exported through
   the bindings; Compose's text field pastes plain text now, so this needs its own paste.
@@ -216,8 +222,8 @@ table handles and menus, a table's cells keeping their padding as they are typed
 - **Editor styles** not taken, for now: a monospace font by default (Apostrophe's Fira Mono,
   Iotas's; Preferences can choose one), a font size that grows with the window (Apostrophe), the
   `#` marks hanging in the margin (Iotas).
-- **Export to PDF, ODT or HTML** (Iotas, Typora): Notav leaves out `pulldown-cmark`'s HTML
-  writer, and the notes are Markdown files any app opens already.
+- **Export to PDF, ODT or HTML** (Iotas, Typora): the notes are Markdown files any app opens
+  already (Preview mode shows them rendered).
 - **Colours in fenced code blocks** by their language (Obsidian, Bear): GtkSourceView
   highlights one language per buffer, the note's.
 - **Folding headings** (Obsidian, Logseq), for now: it hides text, which the `invisible` tag

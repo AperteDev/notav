@@ -42,6 +42,7 @@ What Notav can do, in short. The details of each release are in the
 - Find and replace in the open note (Ctrl+F, Ctrl+H), the matches highlighted and counted.
 - Editor mode: Markdown styled as it reads (headings, emphasis, code, quotes, lists, tasks,
   tables, links, footnotes, front matter), the marks dimmed. Source mode: plain Markdown.
+  Preview mode: the note rendered as on GitHub, read only, its links and outline working.
 - GitHub's alerts (`> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`) as
   tinted boxes in their colours.
 - Click a task's box to tick it; Enter continues a list or a quote.
@@ -103,6 +104,8 @@ What Notav can do, in short. The details of each release are in the
 - On Android: a wide table or code block edited unwrapped, as on Linux.
 - On Android: list items moved by dragging, as on Linux.
 - On Android: web pages and spreadsheet rows pasted as Markdown, as on Linux.
+- On Android: Preview mode, as on Linux.
+- Preview mode: find in the page, backlinks, the scroll kept when the note changes.
 - Notes moved between accounts; the journal in an account of your choice.
 - Notes in GNOME Shell's search.
 - Emptying the Trash of notes at once; a version's changes shown against the note.

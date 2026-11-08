@@ -53,8 +53,9 @@
 
 - Standard library and platform SDKs first; a third-party crate only where it replaces real
   work, with the reason in its commit. Now: `ureq` (rustls, with the platform verifier), `rusqlite`, `quick-xml`,
-  `pulldown-cmark` (Markdown for Editor mode, without its HTML writer), `gtk4`, `libadwaita`,
-  `sourceview5`, `libsecret`, `libc`; for Android, `uniffi` in `notav/ffi`.
+  `pulldown-cmark` (Markdown for Editor mode; its HTML writer for Preview mode), `gtk4`,
+  `libadwaita`, `sourceview5`, `webkit6` (Preview mode's page: WebKitGTK, in the GNOME runtime),
+  `libsecret`, `libc`; for Android, `uniffi` in `notav/ffi`.
 - `rusqlite` stays within 0.38 to 0.40 on the system SQLite, not bundled: distributions
   (Fedora) require that, and Fedora packages 0.38. Search needs FTS5, which every SQLite Notav
   runs on has. Only the bindings bundle SQLite (Android has none to link to); their smoke test

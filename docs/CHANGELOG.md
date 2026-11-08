@@ -17,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the light or dark style and the note's fonts and size; its links open notes or the browser,
   the outline goes to its headings. Notav now needs WebKitGTK 6.0.
 
+### Changed
+
+- The view menu's text size, Wrap Lines and Full Width are each mode's own (Editor, Source,
+  Preview), all starting as they were set.
+
 ## [0.5.1] - 2026-11-07
 
 ### Added

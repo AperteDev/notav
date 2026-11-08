@@ -155,6 +155,12 @@ html.dark mark { background: #bb800926; }
 .footnote-definition-label { font-weight: 600; }
 .footnote-definition > p { margin: 0; }
 
+/* Without Wrap Lines nothing wraps: the page scrolls sideways as a whole. */
+html.nowrap :is(p, li, h1, h2, h3, h4, h5, h6, th, td, dt, dd, .note-title) { white-space: nowrap; }
+html.nowrap pre, html.nowrap table { overflow: visible; max-width: none; }
+html.nowrap pre { width: max-content; min-width: 100%; box-sizing: border-box; }
+html.nowrap code { white-space: pre; }
+
 /* GitHub's alerts: a coloured bar and title (its text from the app, translated). */
 blockquote[class^="markdown-alert-"] { color: inherit; }
 blockquote[class^="markdown-alert-"]::before {

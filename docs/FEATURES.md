@@ -69,7 +69,8 @@ What Notav can do, in short. The details of each release are in the
 
 **Look and app**
 
-- Text size (Ctrl+plus, Ctrl+minus, Ctrl+0), Wrap Lines and Full Width in the view menu.
+- Text size (Ctrl+plus, Ctrl+minus, Ctrl+0), Wrap Lines and Full Width in the view menu, each
+  mode (Editor, Source, Preview) with its own.
 - The sidebar hidden with F9, and by itself on a narrow window.
 - Fonts for Editor and Source mode; light, dark or the system's style.
 - A dense tree, and icons on notes, folders or neither.

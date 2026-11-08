@@ -17,12 +17,19 @@ pub const DEVICE_ONLY: &[&str] = &[
     // Source, Editor or Preview mode: switched for a moment on one device, not on all.
     "source_mode",
     "preview_mode",
-    // The text's font (fonts differ between devices), size and width suit the screen.
+    // The text's font (fonts differ between devices), size and width suit the screen; the
+    // size, width and wrapping are each mode's.
     "editor_font",
     "source_font",
-    "text_zoom",
-    "full_width",
-    "wrap_lines",
+    "editor_text_zoom",
+    "editor_full_width",
+    "editor_wrap_lines",
+    "source_text_zoom",
+    "source_full_width",
+    "source_wrap_lines",
+    "preview_text_zoom",
+    "preview_full_width",
+    "preview_wrap_lines",
     // UI state, and whether the tabs open (`open_tabs`, note ids: this device's) come back.
     "restore_session",
     "open_tabs",

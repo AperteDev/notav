@@ -828,24 +828,30 @@ pub fn update_banner() {
     }
 }
 
-/// The device-only `text_zoom` setting: the note's text size in percent, 50 to 300.
+/// The view menu's setting `name` of the mode the note is in: `editor_…`, `source_…` or
+/// `preview_…`, each device-only.
+fn view_key(name: &str) -> String {
+    format!("{}_{name}", mode_name())
+}
+
+/// The mode's `text_zoom` setting: the note's text size in percent, 50 to 300.
 fn text_zoom() -> i32 {
     core()
-        .setting("text_zoom".into())
+        .setting(view_key("text_zoom"))
         .and_then(|z| z.parse().ok())
         .unwrap_or(100)
         .clamp(50, 300)
 }
 
-/// The device-only `full_width` setting: the text across the window, but for a small margin.
+/// The mode's `full_width` setting: the text across the window, but for a small margin.
 fn full_width() -> bool {
-    core().setting("full_width".into()).as_deref() == Some("true")
+    core().setting(view_key("full_width")).as_deref() == Some("true")
 }
 
-/// The device-only `wrap_lines` setting (on unless "false"): long lines wrap, else the note
+/// The mode's `wrap_lines` setting (on unless "false"): long lines wrap, else the note
 /// scrolls sideways.
 fn wrap_lines() -> bool {
-    core().setting("wrap_lines".into()).as_deref() != Some("false")
+    core().setting(view_key("wrap_lines")).as_deref() != Some("false")
 }
 
 /// The note's text again after a setting of its look changed (Preferences).
@@ -870,6 +876,16 @@ fn apply_text_look(ui: &Ui) {
         ui.editor.add_css_class("source");
     } else {
         ui.editor.remove_css_class("source");
+    }
+    // The view menu's switches as the mode has them.
+    for (name, on) in [("full-width", full_width()), ("wrap-lines", wrap_lines())] {
+        if let Some(a) = ui
+            .window
+            .lookup_action(name)
+            .and_downcast::<gio::SimpleAction>()
+        {
+            a.set_state(&on.to_variant());
+        }
     }
     // Translators: the note's text size in the view menu, as "100%".
     let percent = gettext("{percent}%");
@@ -925,7 +941,7 @@ fn fit_width(ui: &Ui) {
 /// Wide tables and code blocks scrolled sideways each on its own: in Editor mode with Wrap
 /// Lines (without, the whole text scrolls; Source mode wraps them).
 fn show_strips(ui: &Ui) {
-    ui.strips.update(wrap_lines() && !source_mode());
+    ui.strips.update(wrap_lines() && mode_name() == "editor");
 }
 
 /// A CSS rule giving `selector` `font` (`family` without one, else the inherited one) at its
@@ -1033,6 +1049,7 @@ fn preview_look() -> crate::preview::Look {
         dark: adw::StyleManager::default().is_dark(),
         fonts,
         full_width: full_width(),
+        wrap: wrap_lines(),
         alerts: [
             pgettext("alert", "Note"),
             pgettext("alert", "Tip"),
@@ -1347,12 +1364,12 @@ fn connect(ui: &Rc<Ui>) {
         a.connect_activate(move |_, _| {
             let Some(ui) = weak.upgrade() else { return };
             let zoom = if step == 0 { 100 } else { text_zoom() + step };
-            let _ = core().set_setting("text_zoom".into(), zoom.clamp(50, 300).to_string());
+            let _ = core().set_setting(view_key("text_zoom"), zoom.clamp(50, 300).to_string());
             apply_text_look(&ui);
         });
         ui.window.add_action(&a);
     }
-    // The view menu's switches, each a device-only setting.
+    // The view menu's switches, each a device-only setting of the mode (`view_key`).
     for (name, key, on) in [
         ("full-width", "full_width", full_width()),
         ("wrap-lines", "wrap_lines", wrap_lines()),
@@ -1364,7 +1381,7 @@ fn connect(ui: &Rc<Ui>) {
                 return;
             };
             a.set_state(&on.to_variant());
-            let _ = core().set_setting(key.into(), on.to_string());
+            let _ = core().set_setting(view_key(key), on.to_string());
             apply_text_look(&ui);
         });
         ui.window.add_action(&a);

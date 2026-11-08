@@ -24,6 +24,9 @@ pub struct Look {
     /// CSS rules for the text's and the code's fonts and sizes.
     pub fonts: String,
     pub full_width: bool,
+    /// Wrap Lines: the text wrapped, wide blocks scrolled each on its own; else nothing wraps
+    /// and the page scrolls sideways.
+    pub wrap: bool,
     /// GitHub's alerts' titles, translated: Note, Tip, Important, Warning, Caution.
     pub alerts: [String; 5],
 }
@@ -109,10 +112,11 @@ impl Preview {
             ));
         }
         let page = format!(
-            "<!DOCTYPE html><html class=\"{}\"><head><meta charset=\"utf-8\"><style>{css}</style>\
+            "<!DOCTYPE html><html class=\"{}{}\"><head><meta charset=\"utf-8\"><style>{css}</style>\
              </head><body><article class=\"markdown-body\"><h1 class=\"note-title\">{}</h1>{}\
              </article></body></html>",
             if look.dark { "dark" } else { "light" },
+            if look.wrap { "" } else { " nowrap" },
             escape(title),
             markdown::html(text),
         );

@@ -3,9 +3,10 @@
 use crate::{Error, Result};
 use rusqlite::{Connection, OptionalExtension};
 
-/// The schema, then each change to it (none yet), applied in order from the database's
+/// The schema, then each change to it, applied in order from the database's
 /// `user_version`. Released steps are never edited: a change is a new step (see `AGENTS.md`).
-const MIGRATIONS: &[&str] = &[r#"
+const MIGRATIONS: &[&str] = &[
+    r#"
 CREATE TABLE kv (key TEXT PRIMARY KEY, value TEXT);
 -- Where notes are kept (`account.rs`).
 CREATE TABLE accounts (
@@ -68,7 +69,18 @@ CREATE TABLE moves (
   src TEXT NOT NULL,
   dst TEXT NOT NULL
 );
-"#];
+"#,
+    r#"
+-- The view menu's text size, Wrap Lines and Full Width, per mode (Editor, Source, Preview):
+-- each mode starts with what the one setting was.
+INSERT OR REPLACE INTO kv (key, value)
+  SELECT 'setting_' || mode || '_' || substr(key, 9), value
+  FROM kv, (SELECT 'editor' AS mode UNION ALL SELECT 'source' UNION ALL SELECT 'preview')
+  WHERE key IN ('setting_text_zoom', 'setting_wrap_lines', 'setting_full_width');
+DELETE FROM kv WHERE key IN ('setting_text_zoom', 'setting_wrap_lines', 'setting_full_width',
+  'settime_text_zoom', 'settime_wrap_lines', 'settime_full_width');
+"#,
+];
 
 pub const CLEAN: i64 = 0;
 pub const MODIFIED: i64 = 1;
@@ -179,6 +191,53 @@ pub fn kv_set(db: &Connection, key: &str, value: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A database made by the steps before `step` (from 1), as an older Notav left it.
+    fn at_step(name: &str, step: usize) -> (String, Connection) {
+        let dir = std::env::temp_dir().join(format!("notav-test-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("notav.sqlite").to_string_lossy().to_string();
+        let db = Connection::open(&path).unwrap();
+        for m in &MIGRATIONS[..step - 1] {
+            db.execute_batch(m).unwrap();
+        }
+        db.pragma_update(None, "user_version", step as i64 - 1)
+            .unwrap();
+        (path, db)
+    }
+
+    #[test]
+    fn view_settings_go_to_each_mode() {
+        let (path, db) = at_step("view-settings", 2);
+        for (key, value) in [
+            ("setting_text_zoom", "130"),
+            ("settime_text_zoom", "5"),
+            ("setting_wrap_lines", "false"),
+            ("setting_source_mode", "true"),
+        ] {
+            kv_set(&db, key, value).unwrap();
+        }
+        drop(db);
+        let db = open(&path).unwrap();
+        for mode in ["editor", "source", "preview"] {
+            let get = |k: &str| kv_get(&db, &format!("setting_{mode}_{k}")).unwrap();
+            assert_eq!(get("text_zoom").as_deref(), Some("130"));
+            assert_eq!(get("wrap_lines").as_deref(), Some("false"));
+            assert_eq!(get("full_width"), None);
+        }
+        for gone in [
+            "setting_text_zoom",
+            "settime_text_zoom",
+            "setting_wrap_lines",
+        ] {
+            assert_eq!(kv_get(&db, gone).unwrap(), None);
+        }
+        assert_eq!(
+            kv_get(&db, "setting_source_mode").unwrap().as_deref(),
+            Some("true")
+        );
+    }
 
     #[test]
     fn a_newer_notavs_database_is_left_alone() {

@@ -16,8 +16,8 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
      link was followed from. A note dragged from the tree into the text is linked there, as in
      Obsidian.
    - Paste: a URL pasted over selected text links it (`[text](url)`), as VS Code's Markdown
-     extension and Obsidian's paste plugins do; Ctrl+Shift+V pastes plain text (no link, no
-     table from spreadsheet rows).
+     extension and Obsidian's paste plugins do (Ctrl+Shift+V, which pastes the text as it is,
+     not).
    - `*`, `_`, `` ` ``, `~`, `=` or `[` typed with text selected wraps it (as Typora and
      Obsidian do), which covers most of Ctrl+B and Ctrl+I without learning them.
    - Ctrl+Enter ticks or unticks the task on the cursor's line, and makes a list item a task
@@ -129,6 +129,9 @@ The Android app (`notav/android`) still lacks, next:
   of its own, its changes put into the note's.
 - List items moved by dragging, as on Linux: a long press on an item's marker picks it up, the
   core's `markdown::list_at` and `move_item` (exported through the bindings) placing it.
+- Paste as on Linux: HTML (`ClipData`'s HTML text) as Markdown with the core's
+  `html::to_markdown`, spreadsheet rows as a table (`table::from_tsv`), both exported through
+  the bindings; Compose's text field pastes plain text now, so this needs its own paste.
 
 Later: dragging notes and folders in the tree (a long press opens their menu now, with Move…),
 table handles and menus, a table's cells keeping their padding as they are typed in

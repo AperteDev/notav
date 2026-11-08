@@ -473,7 +473,12 @@ pub fn from_tsv(pasted: &str) -> Option<String> {
                 .collect()
         })
         .collect();
-    Some(Table::new(String::new(), rows, Vec::new()).format().0)
+    Some(from_rows(rows))
+}
+
+/// A table of `rows` of cells (their pipes escaped); the first row is the header.
+pub fn from_rows(rows: Vec<Vec<String>>) -> String {
+    Table::new(String::new(), rows, Vec::new()).format().0
 }
 
 /// Put `table` at character `cursor` as a block of its own (after the cursor's line if that has

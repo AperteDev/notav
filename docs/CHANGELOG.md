@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Text copied from a web page, an email or a document is pasted in Editor mode as Markdown:
+  headings, bold and italic, links, lists, quotes, code, images and tables kept, the page's
+  layout left out (not in a table or a code block). Ctrl+Shift+V pastes the text as it is.
+
 ## [0.5.1] - 2026-11-07
 
 ### Added

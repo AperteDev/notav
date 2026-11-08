@@ -2,6 +2,7 @@ mod account;
 pub mod accounts;
 pub mod dav;
 mod files;
+pub mod html;
 pub mod journal;
 pub mod json;
 mod login;

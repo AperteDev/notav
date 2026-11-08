@@ -197,6 +197,12 @@ pub fn connect(view: &sourceview5::View) {
         {
             return glib::Propagation::Stop;
         }
+        // The clipboard's text as it is: no table, no Markdown made of HTML.
+        let ctrl_shift = gtk::gdk::ModifierType::CONTROL_MASK | gtk::gdk::ModifierType::SHIFT_MASK;
+        if matches!(key, Key::v | Key::V) && mods == ctrl_shift {
+            buffer.paste_clipboard(&view.clipboard(), None, view.is_editable());
+            return glib::Propagation::Stop;
+        }
         let plain = mods.is_empty();
         let step = match key {
             Key::Tab | Key::KP_Tab if plain => table::Step::Next,
@@ -273,6 +279,13 @@ pub fn connect(view: &sourceview5::View) {
     view.add_controller(motion);
     tables(view);
     list_grip(view);
+    view.connect_paste_clipboard(|view| {
+        if !editor_mode(&view.buffer().downcast().unwrap()) {
+            return;
+        }
+        view.stop_signal_emission_by_name("paste-clipboard");
+        glib::spawn_future_local(paste(view.clone()));
+    });
 }
 
 /// Forget where text was changed: the buffer holds another note (or the same, reloaded).
@@ -283,7 +296,7 @@ pub fn forget(buffer: &sourceview5::Buffer) {
 }
 
 /// The context menu's table items (on a row or column, or a new table), tables tidied when
-/// the cursor leaves a changed row, and spreadsheet rows pasted as a table.
+/// the cursor leaves a changed row.
 fn tables(view: &sourceview5::View) {
     let group = gio::SimpleActionGroup::new();
     let weak = view.downgrade();
@@ -364,31 +377,72 @@ fn tables(view: &sourceview5::View) {
         glib::Propagation::Proceed
     });
     view.add_controller(keys);
+}
 
-    view.connect_paste_clipboard(|view| {
-        if !editor_mode(&view.buffer().downcast().unwrap()) {
-            return;
+/// Editor mode's paste: rows copied from a spreadsheet as a table, HTML (from a web page, an
+/// email, a document) as Markdown, the rest as it is. In a table or a code block, as it is.
+async fn paste(view: sourceview5::View) {
+    let clipboard = view.clipboard();
+    let editable = view.is_editable();
+    let pasted = clipboard.read_text_future().await.ok().flatten();
+    let (buffer, text, cursor) = state(&view);
+    if table::is_at(&text, cursor) {
+        return buffer.paste_clipboard(&clipboard, None, editable);
+    }
+    if let Some(rows) = pasted.and_then(|p| table::from_tsv(&p)) {
+        buffer.begin_user_action();
+        buffer.delete_selection(true, editable);
+        let (_, text, cursor) = state(&view);
+        if let Some(c) = table::insert(&text, cursor, &rows) {
+            change(&buffer, &c);
         }
-        view.stop_signal_emission_by_name("paste-clipboard");
-        let view = view.clone();
-        view.clipboard()
-            .read_text_async(gio::Cancellable::NONE, move |pasted| {
-                let (buffer, text, cursor) = state(&view);
-                let editable = view.is_editable();
-                let rows = pasted.ok().flatten().and_then(|p| table::from_tsv(&p));
-                let Some(rows) = rows.filter(|_| !table::is_at(&text, cursor)) else {
-                    buffer.paste_clipboard(&view.clipboard(), None, editable);
-                    return;
-                };
-                buffer.begin_user_action();
-                buffer.delete_selection(true, editable);
-                let (_, text, cursor) = state(&view);
-                if let Some(c) = table::insert(&text, cursor, &rows) {
-                    change(&buffer, &c);
-                }
-                buffer.end_user_action();
-            });
-    });
+        buffer.end_user_action();
+        return;
+    }
+    let in_code = buffer
+        .tag_table()
+        .lookup("md-code-block")
+        .is_some_and(|t| buffer.iter_at_offset(cursor as i32).has_tag(&t));
+    let html = if in_code || !clipboard.formats().contain_mime_type("text/html") {
+        None
+    } else {
+        clipboard_html(&clipboard).await
+    };
+    let Some(markdown) = html.and_then(|h| notav_core::html::to_markdown(&h)) else {
+        return buffer.paste_clipboard(&clipboard, None, editable);
+    };
+    buffer.begin_user_action();
+    buffer.delete_selection(true, editable);
+    buffer.insert_interactive_at_cursor(&markdown, editable);
+    buffer.end_user_action();
+    view.scroll_mark_onscreen(&buffer.get_insert());
+}
+
+async fn clipboard_html(clipboard: &gtk::gdk::Clipboard) -> Option<String> {
+    let (stream, _) = clipboard
+        .read_future(&["text/html"], glib::Priority::DEFAULT)
+        .await
+        .ok()?;
+    let out = gio::MemoryOutputStream::new_resizable();
+    let flags =
+        gio::OutputStreamSpliceFlags::CLOSE_SOURCE | gio::OutputStreamSpliceFlags::CLOSE_TARGET;
+    out.splice_future(&stream, flags, glib::Priority::DEFAULT)
+        .await
+        .ok()?;
+    let bytes = out.steal_as_bytes();
+    // Firefox has offered it in UTF-16, with a byte order mark.
+    let html = match bytes.strip_prefix(&[0xff, 0xfe]) {
+        Some(utf16) => String::from_utf16_lossy(
+            &utf16
+                .as_chunks::<2>()
+                .0
+                .iter()
+                .map(|c| u16::from_le_bytes(*c))
+                .collect::<Vec<_>>(),
+        ),
+        None => String::from_utf8_lossy(&bytes).into_owned(),
+    };
+    Some(html.trim_start_matches('\u{feff}').to_string())
 }
 
 /// How far past a table the pointer can go with its handles still shown, how thick the bars

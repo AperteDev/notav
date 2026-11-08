@@ -191,8 +191,8 @@ Adw.ApplicationWindow window {
                   };
                 }
 
-                // Editor mode, Source mode (the device-only `source_mode` setting) or Preview mode
-                // (`preview_mode`, over either).
+                // Editor mode, Preview mode (`preview_mode`, over either other) or Source mode
+                // (the device-only `source_mode` setting); Ctrl+1, 2 and 3 (`win.note-mode`).
                 [end]
                 Adw.ToggleGroup note_mode {
                   valign: center;
@@ -200,19 +200,19 @@ Adw.ApplicationWindow window {
                   Adw.Toggle {
                     name: "editor";
                     icon-name: "notav-editor-mode-symbolic";
-                    tooltip: _("Editor Mode");
-                  }
-
-                  Adw.Toggle {
-                    name: "source";
-                    icon-name: "notav-source-mode-symbolic";
-                    tooltip: _("Source Mode");
+                    tooltip: _("Editor Mode (Ctrl+1)");
                   }
 
                   Adw.Toggle {
                     name: "preview";
                     icon-name: "view-reveal-symbolic";
-                    tooltip: _("Preview Mode");
+                    tooltip: _("Preview Mode (Ctrl+2)");
+                  }
+
+                  Adw.Toggle {
+                    name: "source";
+                    icon-name: "notav-source-mode-symbolic";
+                    tooltip: _("Source Mode (Ctrl+3)");
                   }
                 }
 

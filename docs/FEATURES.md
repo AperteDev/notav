@@ -43,6 +43,7 @@ What Notav can do, in short. The details of each release are in the
 - Editor mode: Markdown styled as it reads (headings, emphasis, code, quotes, lists, tasks,
   tables, links, footnotes, front matter), the marks dimmed. Source mode: plain Markdown.
   Preview mode: the note rendered as on GitHub, read only, its links and outline working.
+  Ctrl+1, Ctrl+2 and Ctrl+3 switch between Editor, Preview and Source mode.
 - GitHub's alerts (`> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`) as
   tinted boxes in their colours.
 - Click a task's box to tick it; Enter continues a list or a quote.

@@ -279,6 +279,14 @@ pub fn setup_actions(app: &adw::Application) {
     );
     app.set_accels_for_action("win.zoom-out", &["<Control>minus", "<Control>KP_Subtract"]);
     app.set_accels_for_action("win.zoom-reset", &["<Control>0", "<Control>KP_0"]);
+    // The note's modes, as the header's toggles go.
+    for (n, mode) in ["editor", "preview", "source"].iter().enumerate() {
+        let n = n + 1;
+        app.set_accels_for_action(
+            &format!("win.note-mode::{mode}"),
+            &[&format!("<Control>{n}"), &format!("<Control>KP_{n}")],
+        );
+    }
 }
 
 /// Turns About's Details page into Support: a note and the donation links instead of the
@@ -1332,6 +1340,14 @@ fn connect(ui: &Rc<Ui>) {
         apply_text_look(&ui); // the mode's font, and the note rendered
         restyle(&ui);
         show_page(&ui);
+        // The keys to the text shown (its arrows and Page Down), as after a click on a note.
+        if ui.current.borrow().is_some() {
+            if preview {
+                ui.preview.view.grab_focus();
+            } else {
+                ui.editor.grab_focus();
+            }
+        }
     });
     ui.window.add_action(&mode);
     ui.note_mode.set_active_name(Some(mode_name()));

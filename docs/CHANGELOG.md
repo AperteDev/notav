@@ -15,7 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Preview mode, the third of the note's modes beside Editor and Source: the note rendered as
   GitHub renders Markdown (alerts, tables, tasks, footnotes, bare URLs linked), read only, in
   the light or dark style and the note's fonts and size; its links open notes or the browser,
-  the outline goes to its headings. Notav now needs WebKitGTK 6.0.
+  the outline goes to its headings; wide tables and code blocks scroll sideways each on its
+  own, their scrollbar in sight, as in Editor mode. Notav now needs WebKitGTK 6.0.
 
 ### Changed
 

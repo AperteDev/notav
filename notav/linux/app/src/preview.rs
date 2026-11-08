@@ -11,6 +11,8 @@ use webkit6::prelude::*;
 
 /// The page's style: GitHub's look for Markdown, in its light and dark colours.
 const CSS: &str = include_str!("preview.css");
+/// Wide tables and code blocks scrolled each on its own, as Editor mode's strips.
+const STRIPS: &str = include_str!("preview.js");
 
 pub struct Preview {
     pub view: webkit6::WebView,
@@ -38,6 +40,15 @@ impl Preview {
             // The note's scripts (in its HTML) never run; the app's own (scrolling) do.
             settings.set_enable_javascript_markup(false);
             settings.set_enable_developer_extras(false);
+        }
+        if let Some(content) = view.user_content_manager() {
+            content.add_script(&webkit6::UserScript::new(
+                STRIPS,
+                webkit6::UserContentInjectedFrames::TopFrame,
+                webkit6::UserScriptInjectionTime::End,
+                &[],
+                &[],
+            ));
         }
         view.set_background_color(&gtk::gdk::RGBA::TRANSPARENT);
         view.set_vexpand(true);

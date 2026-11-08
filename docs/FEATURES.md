@@ -65,7 +65,7 @@ What Notav can do, in short. The details of each release are in the
 - Rows copied from a spreadsheet are pasted as a table.
 - Tables and code blocks wider than the note scroll sideways each on its own, edited in place:
   a shade at the edge where more of one is hidden, their scrollbar in sight, and they follow
-  the cursor.
+  the cursor; in Preview mode too.
 
 **Look and app**
 

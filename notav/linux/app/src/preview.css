@@ -155,6 +155,43 @@ html.dark mark { background: #bb800926; }
 .footnote-definition-label { font-weight: 600; }
 .footnote-definition > p { margin: 0; }
 
+/* Wide tables and code blocks scrolled sideways each on its own (src/preview.js), as Editor
+   mode's strips: their own scrollbar hidden for one kept on screen, shades at the edges where
+   more is hidden. */
+.strip { position: relative; margin-bottom: 16px; }
+.strip > pre, .strip > table { margin-bottom: 0; scrollbar-width: none; }
+.strip > pre::-webkit-scrollbar, .strip > table::-webkit-scrollbar { display: none; }
+.strip-bar {
+  position: sticky;
+  bottom: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.strip-bar > div { height: 1px; }
+.strip-bar::-webkit-scrollbar { height: 8px; }
+.strip-bar::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: color-mix(in srgb, currentColor 35%, transparent);
+}
+.strip::before, .strip::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: var(--bar, 0px);
+  width: 16px;
+  pointer-events: none;
+  visibility: hidden;
+}
+.strip::before {
+  left: 0;
+  background: linear-gradient(to right, color-mix(in srgb, currentColor 15%, transparent), transparent);
+}
+.strip::after {
+  right: 0;
+  background: linear-gradient(to left, color-mix(in srgb, currentColor 15%, transparent), transparent);
+}
+.strip.more-left::before, .strip.more-right::after { visibility: visible; }
+
 /* Without Wrap Lines nothing wraps: the page scrolls sideways as a whole. */
 html.nowrap :is(p, li, h1, h2, h3, h4, h5, h6, th, td, dt, dd, .note-title) { white-space: nowrap; }
 html.nowrap pre, html.nowrap table { overflow: visible; max-width: none; }

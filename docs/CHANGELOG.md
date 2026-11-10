@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-10
+
 ### Added
 
 - Text copied from a web page, an email or a document is pasted in Editor mode as Markdown:
@@ -237,7 +239,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and Liberapay
 - An RPM spec for Fedora, built on COPR from `.copr/Makefile`; Notav uses the system's SQLite
 
-[Unreleased]: https://github.com/AperteDev/notav/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/AperteDev/notav/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/AperteDev/notav/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/AperteDev/notav/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/AperteDev/notav/compare/v0.2.0...v0.5.0
 [0.2.0]: https://github.com/AperteDev/notav/compare/v0.1.0...v0.2.0

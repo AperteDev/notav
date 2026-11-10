@@ -4,7 +4,7 @@
 %bcond check 1
 
 Name:           notav
-Version:        0.5.1
+Version:        0.6.0
 Release:        1%{?dist}
 Summary:        Notes and a journal kept in your Nextcloud
 
@@ -74,6 +74,9 @@ appstreamcli validate --no-net %{buildroot}%{_metainfodir}/dev.aperte.Notav.meta
 %{_datadir}/icons/hicolor/symbolic/apps/dev.aperte.Notav-symbolic.svg
 
 %changelog
+* Tue Nov 10 2026 SelfRef <git@selfref.dev> - 0.6.0-1
+- See CHANGELOG.md
+
 * Sat Nov 07 2026 SelfRef <git@selfref.dev> - 0.5.1-1
 - See CHANGELOG.md
 

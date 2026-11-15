@@ -166,7 +166,10 @@ private fun RailIcon(selected: Boolean, label: String, icon: ImageVector, onClic
     }
 }
 
-/** Where a new note goes by default, with the folder's name to show: the notes folder's own at the top. */
+/**
+ * Where a new note goes by default, with the folder's name to show: at the top, the notes folder's
+ * own name, not its path on the server.
+ */
 private data class Place(val account: Long, val folder: String, val name: String)
 
 /**
@@ -183,7 +186,7 @@ private fun AddNote(model: Main, screen: Screen, raised: Boolean) {
     // Read again as the setting or the folders change (synced from another device too).
     val default by produceState<Place?>(null, changes, screen.accounts) {
         value = withContext(Dispatchers.IO) {
-            model.defaultPlace()?.let { (a, f) -> Place(a, f, f.ifEmpty { model.core.notesFolder(a) }) }
+            model.defaultPlace()?.let { (a, f) -> Place(a, f, f.ifEmpty { model.core.notesFolder(a).trim('/').substringAfterLast('/') }) }
         }
     }
     val place = default ?: return

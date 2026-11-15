@@ -12,11 +12,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -37,8 +35,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.NoteAdd
 import androidx.compose.material.icons.automirrored.outlined.Notes
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.CreateNewFolder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Star
@@ -78,10 +74,7 @@ import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FloatingActionButtonMenu
-import androidx.compose.material3.FloatingActionButtonMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ToggleFloatingActionButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -100,7 +93,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -121,10 +113,6 @@ import dev.aperte.notav.ntr
 import dev.aperte.notav.tr
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-
-/** The notes: the tree, the open note and its side panel, swiped between (`Panes`). */
-@Composable
-fun Home(model: Main, screen: Screen) = Panes(model, screen)
 
 /**
  * `content` (the notes or a settings page) with the model's messages over it: an undo, a failed
@@ -246,9 +234,13 @@ private sealed interface Ask {
     data class Move(val item: Item) : Ask
 }
 
+/**
+ * The notes as a tree, or the notes opened last (`recent`, newest first) as a list; with `bar` (the
+ * navigation bar, on a phone) under it, but for a search.
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-internal fun TreePane(model: Main, screen: Screen) {
+internal fun TreePane(model: Main, screen: Screen, recent: Boolean, bar: (@Composable () -> Unit)?) {
     val sync by model.notav.syncState.collectAsStateWithLifecycle()
     val found by model.found.collectAsStateWithLifecycle()
     var ask by remember { mutableStateOf<Ask?>(null) }
@@ -321,7 +313,7 @@ internal fun TreePane(model: Main, screen: Screen) {
                 )
             } else {
                 TopAppBar(
-                    title = { Text("Notav") },
+                    title = { Text(if (recent) tr("Recent") else "Notav") },
                     actions = {
                         if (sync == SyncState.Syncing && !pulling) LoadingIndicator(Modifier.padding(end = 4.dp).size(32.dp))
                         Tip(tr("Today’s Note")) {
@@ -343,6 +335,11 @@ internal fun TreePane(model: Main, screen: Screen) {
                                 { more = false },
                                 listOf(
                                     listOfNotNull(
+                                        // Where the last folder or note was opened: new notes have
+                                        // the add button.
+                                        Entry(tr("New Folder"), Icons.Outlined.CreateNewFolder) {
+                                            model.newPlace()?.let { ask = Ask.NewFolder(it) }
+                                        },
                                         Entry(tr("Trash"), Icons.Outlined.Delete) { model.page.value = dev.aperte.notav.Page.Trash }
                                             .takeIf { trash },
                                         Entry(tr("Settings"), Icons.Outlined.Settings) { model.page.value = dev.aperte.notav.Page.Settings },
@@ -354,33 +351,7 @@ internal fun TreePane(model: Main, screen: Screen) {
                 )
             }
         },
-        floatingActionButton = {
-            // A new note or folder where the last one went (the folder last opened, or the open
-            // note's); a folder's menu puts one in that folder.
-            var adding by rememberSaveable { mutableStateOf(false) }
-            BackHandler(adding) { adding = false }
-            FloatingActionButtonMenu(
-                expanded = adding,
-                button = {
-                    Tip(tr("Add")) {
-                        ToggleFloatingActionButton(checked = adding, onCheckedChange = { adding = it }) {
-                            Icon(if (adding) Icons.Filled.Close else Icons.Filled.Add, tr("Add"))
-                        }
-                    }
-                },
-            ) {
-                FloatingActionButtonMenuItem(
-                    onClick = { adding = false; model.newNote() },
-                    text = { Text(tr("New Note")) },
-                    icon = { Icon(Icons.AutoMirrored.Outlined.NoteAdd, null) },
-                )
-                FloatingActionButtonMenuItem(
-                    onClick = { adding = false; model.newPlace()?.let { ask = Ask.NewFolder(it) } },
-                    text = { Text(tr("New Folder")) },
-                    icon = { Icon(Icons.Outlined.CreateNewFolder, null) },
-                )
-            }
-        },
+        bottomBar = { if (found == null) bar?.invoke() },
     ) { padding ->
         val results = found
         if (results != null) {
@@ -390,21 +361,8 @@ internal fun TreePane(model: Main, screen: Screen) {
                     Text(tr("No Results"), style = MaterialTheme.typography.titleLarge)
                 }
             } else {
-                val names = screen.accounts.associate { it.id to accountName(it) }
                 LazyColumn(Modifier.fillMaxSize().padding(padding)) {
-                    items(results, key = { it.id }) { n ->
-                        val where = listOfNotNull(
-                            names[n.account].takeIf { screen.folders.size > 1 },
-                            n.folder.takeIf { it.isNotEmpty() },
-                        ).joinToString(" · ")
-                        Item(
-                            headlineContent = { Text(n.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                            supportingContent = where.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
-                            leadingContent = { Icon(Icons.AutoMirrored.Outlined.Notes, null) },
-                            modifier = Modifier.clickable { model.openNote(n) },
-                            containerColor = MaterialTheme.colorScheme.surface,
-                        )
-                    }
+                    items(results, key = { it.id }) { n -> NoteItem(model, screen, n) }
                 }
             }
         } else {
@@ -432,7 +390,8 @@ internal fun TreePane(model: Main, screen: Screen) {
                 // moment later); not again as other rows come and go (a folder opened).
                 val open by model.open.collectAsStateWithLifecycle()
                 val rows by rememberUpdatedState(screen.rows)
-                LaunchedEffect(open) {
+                LaunchedEffect(open, recent) {
+                    if (recent) return@LaunchedEffect
                     val i = withTimeoutOrNull(2000) {
                         snapshotFlow { rows.indexOfFirst { (it.item as? Item.NoteRow)?.note?.id == open } }.first { it >= 0 }
                     } ?: return@LaunchedEffect
@@ -441,8 +400,22 @@ internal fun TreePane(model: Main, screen: Screen) {
                     }
                 }
                 // Empty, a list too: pulled the same.
+                val recents by model.recents.collectAsStateWithLifecycle()
                 LazyColumn(Modifier.fillMaxSize(), state = list) {
-                    if (screen.rows.isEmpty()) {
+                    if (recent) {
+                        // Notes gone since (deleted here or elsewhere) left out.
+                        val byId = screen.notes.associateBy { it.id }
+                        val shown = recents.mapNotNull { byId[it] }
+                        if (shown.isEmpty()) {
+                            item {
+                                Box(Modifier.fillParentMaxSize(), Alignment.Center) {
+                                    Text(tr("No Recent Notes"), style = MaterialTheme.typography.titleLarge)
+                                }
+                            }
+                        } else {
+                            items(shown, key = { it.id }) { n -> NoteItem(model, screen, n, selected = n.id == open) }
+                        }
+                    } else if (screen.rows.isEmpty()) {
                         item {
                             Box(Modifier.fillParentMaxSize(), Alignment.Center) {
                                 Text(tr("No Notes"), style = MaterialTheme.typography.titleLarge)
@@ -452,7 +425,6 @@ internal fun TreePane(model: Main, screen: Screen) {
                         items(screen.rows, key = { r -> rowKey(r.item) }) { r ->
                             TreeRow(model, screen, look, r.depth, r.item) { ask = it }
                         }
-                        item { Spacer(Modifier.height(96.dp)) } // room under the button
                     }
                 }
             }
@@ -484,6 +456,23 @@ internal fun TreePane(model: Main, screen: Screen) {
         }
         null -> {}
     }
+}
+
+/** A note as a list row (a search result, a recent note): its title over its folder, and its
+ * account's name with more than one; a tap opens it. */
+@Composable
+private fun NoteItem(model: Main, screen: Screen, n: dev.aperte.notav.core.Note, selected: Boolean = false) {
+    val where = listOfNotNull(
+        screen.accounts.firstOrNull { it.id == n.account }?.let(::accountName).takeIf { screen.folders.size > 1 },
+        n.folder.takeIf { it.isNotEmpty() },
+    ).joinToString(" · ")
+    Item(
+        headlineContent = { Text(n.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        supportingContent = where.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
+        leadingContent = { Icon(Icons.AutoMirrored.Outlined.Notes, null) },
+        modifier = Modifier.clickable { model.openNote(n) },
+        containerColor = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+    )
 }
 
 /**

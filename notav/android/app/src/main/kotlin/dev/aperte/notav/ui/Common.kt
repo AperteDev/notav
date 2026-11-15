@@ -17,8 +17,12 @@ import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenuPopup
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.ToggleButton
@@ -200,3 +204,17 @@ fun Tip(label: String, content: @Composable () -> Unit) = TooltipBox(
     state = rememberTooltipState(),
     content = content,
 )
+
+/**
+ * The add button: a floating button, flat in a navigation bar (`raised` false), `raised` in the
+ * bottom of a rail.
+ */
+@Composable
+fun AddButton(label: String, raised: Boolean, onClick: () -> Unit) = Tip(label) {
+    FloatingActionButton(
+        onClick = onClick,
+        elevation = if (raised) FloatingActionButtonDefaults.elevation() else FloatingActionButtonDefaults.bottomAppBarFabElevation(),
+    ) {
+        Icon(Icons.Default.Add, label)
+    }
+}

@@ -64,6 +64,7 @@ pub fn present(parent: &impl IsA<gtk::Widget>) {
         let _ = core().set_setting("restore_session".into(), s.is_active().to_string());
         crate::window::save_tabs_now();
     });
+    connect_default_folder(&b, &dialog);
     connect_journal(&b, &dialog);
     connect_font(&b, "editor_font");
     connect_font(&b, "source_font");
@@ -78,6 +79,48 @@ pub fn present(parent: &impl IsA<gtk::Widget>) {
         let _ = core().set_setting("auto_outline".into(), s.is_active().to_string());
     });
     dialog.present(Some(parent));
+}
+
+/// General's default folder, where a new note goes when none was opened: made when new, in the
+/// default account (the first switched on).
+fn connect_default_folder(b: &gtk::Builder, dialog: &adw::PreferencesDialog) {
+    let row: adw::EntryRow = get(b, "default_folder");
+    let show = {
+        let row = row.clone();
+        move || {
+            // Text set here is no edit to apply: the button is off meanwhile.
+            let text = core().default_folder_setting();
+            if row.text() != text {
+                row.set_show_apply_button(false);
+                row.set_text(&text);
+                row.set_show_apply_button(true);
+            }
+        }
+    };
+    show();
+    suggest(&row, || {
+        core()
+            .default_account()
+            .map(|a| core().folders(a))
+            .unwrap_or_default()
+    });
+    let dialog = dialog.clone();
+    row.connect_apply(move |row| {
+        let f = row.text().trim().trim_matches('/').to_string();
+        if !f.is_empty()
+            && let Some(account) = core().default_account()
+            && let Err(e) = core().add_folder(account, f.clone())
+        {
+            dialog.add_toast(crate::window::note(&match e {
+                notav_core::Error::Invalid(_) => gettext("Not a folder name"),
+                e => e.to_string(),
+            }));
+            return show();
+        }
+        let _ = core().set_setting("default_folder".into(), f);
+        crate::window::apply_tree_look(); // the folder, if new
+        show();
+    });
 }
 
 /// The Journal page: the daily notes' folder (made when new), template note and name format,

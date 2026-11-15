@@ -34,6 +34,8 @@ pub const DEVICE_ONLY: &[&str] = &[
     "restore_session",
     "open_tabs",
     "last_note",
+    // The notes opened last, newest first (note ids: this device's).
+    "recent_notes",
     "expanded_folders",
     "show_outline",
     "window_size",
@@ -59,6 +61,33 @@ impl Client {
         }
         store::kv_set(&db, &format!("setting_{key}"), &value)?;
         store::kv_set(&db, &format!("settime_{key}"), &crate::now().to_string())
+    }
+
+    /// The account a new note goes to without a place given, as the journal's: the first
+    /// switched on.
+    pub fn default_account(&self) -> Option<i64> {
+        self.accounts()
+            .into_iter()
+            .find(|a| a.enabled)
+            .map(|a| a.id)
+    }
+
+    /// The default folder's setting (`default_folder`, synced): where new notes go without a
+    /// place given, in the default account. Empty: the notes folder's top.
+    pub fn default_folder_setting(&self) -> String {
+        self.setting("default_folder".into())
+            .map(|f| f.trim().trim_matches('/').to_string())
+            .unwrap_or_default()
+    }
+
+    /// The default folder of the default account, as it is there: the setting's, or the top ("")
+    /// if that is not set or the folder is gone.
+    pub fn default_folder(&self) -> String {
+        let folder = self.default_folder_setting();
+        match self.default_account() {
+            Some(a) if self.folders(a).contains(&folder) => folder,
+            _ => String::new(),
+        }
     }
 
     /// Merge local and server settings (newer wins), uploading if this device has newer ones;
@@ -286,5 +315,31 @@ mod tests {
         );
         assert!(upload);
         assert_eq!(parse(&serialize(&merged)), merged);
+    }
+
+    #[test]
+    fn the_default_folder_is_the_setting_where_it_exists() {
+        let dir = std::env::temp_dir().join(format!("notav-test-default-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let c = Client::open(dir.to_string_lossy().into()).unwrap();
+        assert_eq!(c.default_account(), None);
+        let local = crate::AccountKind::Local;
+        let a = c
+            .add_account(local, "".into(), "".into(), "".into())
+            .unwrap();
+        assert_eq!(c.default_account(), Some(a));
+        // Not set: the top.
+        assert_eq!(c.default_folder(), "");
+        // Set to one that is not there (yet): the top, the setting kept.
+        c.set_setting("default_folder".into(), "/Inbox/".into())
+            .unwrap();
+        assert_eq!(c.default_folder_setting(), "Inbox");
+        assert_eq!(c.default_folder(), "");
+        c.add_folder(a, "Inbox".into()).unwrap();
+        assert_eq!(c.default_folder(), "Inbox");
+        // Synced, unlike the notes opened last.
+        assert!(!DEVICE_ONLY.contains(&"default_folder"));
+        assert!(DEVICE_ONLY.contains(&"recent_notes"));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

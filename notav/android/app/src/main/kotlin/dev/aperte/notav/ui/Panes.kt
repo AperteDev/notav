@@ -61,8 +61,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
-/** The narrowest window that shows the tree and the note side by side. */
-private val TWO_PANES = 600.dp
+/** The narrowest width that shows the tree and the note side by side (beside the rail). */
+internal val TWO_PANES = 600.dp
 
 /** The tree's width beside the note, and the side panel's. */
 private val SIDE_WIDTH = 360.dp
@@ -72,15 +72,15 @@ private enum class Pane { Tree, Note, Side }
 
 /**
  * The tree, the open note and its side panel in a row, swiped between: on a phone one at a time,
- * each the screen's width; on a wider screen the tree and the note, or the note and the side
- * panel. Opening a note slides to it; Back goes one pane left.
+ * each the screen's width; on a wider screen (`wide`, as `Home` decides) the tree and the note,
+ * or the note and the side panel. Opening a note slides to it; Back goes one pane left. The tree
+ * shows the notes or the recent ones (`recent`), `bar` (the navigation bar, on a phone) under it.
  */
 @Composable
-fun Panes(model: Main, screen: Screen) {
+fun Panes(model: Main, screen: Screen, wide: Boolean, recent: Boolean, bar: (@Composable () -> Unit)?) {
     val open by model.open.collectAsStateWithLifecycle()
     val note = screen.notes.firstOrNull { it.id == open }
     BoxWithConstraints(Modifier.fillMaxSize().clipToBounds()) {
-        val wide = maxWidth >= TWO_PANES
         val width = maxWidth
         val side = if (wide) SIDE_WIDTH else width
         val noteWidth = if (wide) width - SIDE_WIDTH else width
@@ -129,7 +129,7 @@ fun Panes(model: Main, screen: Screen) {
                 .offset { IntOffset(drag.offset.takeIf { !it.isNaN() }?.roundToInt() ?: 0, 0) }
                 .anchoredDraggable(drag, Orientation.Horizontal, enabled = note != null),
         ) {
-            Box(Modifier.width(side).fillMaxHeight()) { TreePane(model, screen) }
+            Box(Modifier.width(side).fillMaxHeight()) { TreePane(model, screen, recent, bar) }
             if (wide) VerticalDivider()
             Box(Modifier.width(noteWidth).fillMaxHeight()) {
                 if (note != null) {

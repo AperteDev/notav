@@ -75,6 +75,7 @@ What Notav can do, in short. The details of each release are in the
 - The sidebar hidden with F9, and by itself on a narrow window.
 - Fonts for Editor and Source mode; light, dark or the system's style.
 - A dense tree, and icons on notes, folders or neither.
+- A default folder for new notes, synced.
 - English and Polish.
 - Restart into a new version from a banner, when Notav is updated while it runs.
 
@@ -85,6 +86,9 @@ What Notav can do, in short. The details of each release are in the
   server and login name.
 - The tree, the note and its outline (with the notes linking to it) swiped between: one at a
   time on a phone, two side by side on a wide screen.
+- A bottom bar (a rail at the left on a wide screen) switching the tree between Notes and
+  Recent, the notes opened last; its add button makes a note in the default folder, or offers
+  it next to the open note.
 - Editor mode's styles, ticking tasks, continuing lists, tables kept aligned, links followed;
   tables and code blocks unwrapped, each scrolled sideways on its own, shaded at the edge where
   more is hidden (a tap edits it).
@@ -95,10 +99,10 @@ What Notav can do, in short. The details of each release are in the
 - The Trash (restore or delete for good) and a note's versions (look at one, restore it).
 - Syncs while open, when the tree is pulled down, and once more when left; in the background
   too, if chosen: from every 15 minutes to once a day.
-- Settings as the Linux app's Preferences: the style, the tree's density and icons, restoring
-  the note left open, Editor mode's font, table formatting, the journal's daily notes (with
-  suggestions), accounts in your order with a page each (name, notes folder, server status),
-  settings sync, and About with the Support links.
+- Settings as the Linux app's Preferences: the style, the tree's density and icons, the default
+  folder, restoring the note left open, Editor mode's font, table formatting, the journal's
+  daily notes (with suggestions), accounts in your order with a page each (name, notes folder,
+  server status), settings sync, and About with the Support links.
 
 ## Planned
 
@@ -108,7 +112,8 @@ What Notav can do, in short. The details of each release are in the
 - On Android: web pages and spreadsheet rows pasted as Markdown, as on Linux.
 - On Android: Preview mode, as on Linux.
 - Preview mode: find in the page, backlinks, the scroll kept when the note changes.
-- Notes moved between accounts; the journal in an account of your choice.
+- Notes moved between accounts; the journal and the default folder in an account of your
+  choice.
 - Notes in GNOME Shell's search.
 - Emptying the Trash of notes at once; a version's changes shown against the note.
 - Spell checking.

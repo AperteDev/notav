@@ -402,6 +402,20 @@ private fun General(model: Main) {
             )
         }
     }
+    // Synced, as on Linux: made in the first account switched on when new.
+    val folder = load(model) { model.core.defaultFolderSetting() }
+    Section(tr("Notes")) {
+        ApplyField(
+            folder, tr("Default folder"), Icons.Outlined.Folder,
+            suggestions = { model.core.defaultAccount()?.let { model.core.folders(it) }.orEmpty() },
+        ) { model.setDefaultFolder(it) }
+    }
+    Note(
+        tr(
+            "Where the Add button makes a new note when none is open (with one open, it offers this folder and the " +
+                "open note’s), and where text shared to Notav goes.",
+        ),
+    )
     // Kept on this device only, as on Linux.
     Section(tr("Session")) {
         SwitchRow(model, tr("Restore session"), "restore_session", tr("Reopen the note left open when Notav starts"))

@@ -57,8 +57,9 @@ Editor mode's. Useful features come before looks: the Markdown marks stay visibl
 ## Planned features
 
 - **Accounts**, more: notes and folders moved between accounts (dragged in the tree; now a
-  drag stays within its account), as a copy there and a deletion here; the journal's account
-  chosen in Preferences (now the first account switched on, `Client::journal_account`).
+  drag stays within its account), as a copy there and a deletion here; the journal's and the
+  default folder's account chosen in Preferences (now the first account switched on,
+  `Client::default_account`).
 - **GNOME Shell search**: notes found from the Activities overview by title and text, as Iotas
   and Folio have it; Todav's search provider (`todav/linux/app/src/search.rs`, its `.ini`) over the
   core's search, under the app's own bus name.
@@ -259,6 +260,10 @@ two panes already show the tree and the note).
 
 ## Ruled out
 
+- **On Linux, a navigation bar with Recent**: the tree stays in sight beside the note, so there
+  is nothing to switch between; recent notes come with the Quick switcher (see Planned
+  features). The Linux app's new note keeps going to the folder last opened, the default folder
+  only where there is none.
 - **On Android, "Show outline automatically"**: the outline is a swipe away, never hidden beside
   the note; and **a font for Source mode**: Android has one monospace font.
 - **A background service** (autostart, `HOLD`) in v1: notes have no reminders, so the app syncs

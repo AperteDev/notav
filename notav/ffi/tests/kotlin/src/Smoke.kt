@@ -39,6 +39,13 @@ fun main() {
     n.setSetting("journal_format", "YYYY/MM-DD")
     check(n.dailyPath(2026, 3u, 7u) == "Journal/2026/03-07") { "daily path: ${n.dailyPath(2026, 3u, 7u)}" }
 
+    // The default folder is the setting's where that folder exists, else the top.
+    check(n.defaultAccount() == account && n.defaultFolder() == "")
+    n.setSetting("default_folder", "/Inbox/")
+    check(n.defaultFolderSetting() == "Inbox" && n.defaultFolder() == "")
+    n.addFolder(account, "Inbox")
+    check(n.defaultFolder() == "Inbox")
+
     // A Nextcloud account with its password in the front-end's keyring, removed with it (nothing
     // waits for its server, so no sync is needed).
     val kept = mutableMapOf<String, String>()

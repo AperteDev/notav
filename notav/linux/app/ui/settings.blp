@@ -68,6 +68,18 @@ Adw.PreferencesDialog dialog {
       }
     }
 
+    // Synced.
+    Adw.PreferencesGroup {
+      title: _("Notes");
+      description: _("A new note goes to the folder last opened, or to the default folder when there is none.");
+
+      // Suggests the folders there are; another one is made. Empty: the notes folder itself.
+      Adw.EntryRow default_folder {
+        title: _("Default folder");
+        show-apply-button: true;
+      }
+    }
+
     // Kept on this device only.
     Adw.PreferencesGroup {
       title: _("Session");

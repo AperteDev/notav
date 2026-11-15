@@ -2767,15 +2767,15 @@ fn rename(ui: &Rc<Ui>) {
 }
 
 /// A new note in the folder last opened in the tree or the open note's (at the top of its
-/// account if that is gone, of the first account if that is), its title selected for typing
-/// over.
+/// account if that is gone), else in the default folder (Preferences), its title selected for
+/// typing over.
 fn new_note(ui: &Rc<Ui>) {
     let (account, folder) = ui.target_folder.borrow().clone();
     let place = match shown_accounts().iter().find(|a| a.id == account) {
         Some(_) if core().folders(account).contains(&folder) => (account, folder),
         Some(_) => (account, String::new()),
-        None => match shown_accounts().first() {
-            Some(a) => (a.id, String::new()),
+        None => match core().default_account() {
+            Some(a) => (a, core().default_folder()),
             None => return,
         },
     };

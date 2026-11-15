@@ -64,10 +64,7 @@ impl Client {
     /// The account the journal is kept in: the first switched on.
     // ponytail: the first account; a choice in Preferences when someone keeps it elsewhere.
     pub fn journal_account(&self) -> Option<i64> {
-        self.accounts()
-            .into_iter()
-            .find(|a| a.enabled)
-            .map(|a| a.id)
+        self.default_account()
     }
 
     /// The daily note of a day: the one there is, or a new one from the template note (its

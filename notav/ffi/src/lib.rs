@@ -386,6 +386,23 @@ impl Notav {
         Ok(self.0.daily_note(year, month, day)?)
     }
 
+    // --- default folder
+
+    /// The account new notes go to without a place given: the first switched on.
+    pub fn default_account(&self) -> Option<i64> {
+        self.0.default_account()
+    }
+
+    /// The default folder as set (`default_folder`), whether it exists yet or not.
+    pub fn default_folder_setting(&self) -> String {
+        self.0.default_folder_setting()
+    }
+
+    /// The default folder in it ("" is the notes folder's top): the setting where that exists.
+    pub fn default_folder(&self) -> String {
+        self.0.default_folder()
+    }
+
     // --- settings
 
     pub fn setting(&self, key: String) -> Option<String> {

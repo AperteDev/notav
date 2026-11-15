@@ -77,6 +77,9 @@ sealed interface Page {
 /** A snackbar's text, with the change its Undo reverts, or the lock its Unlock… removes. */
 data class Message(val text: String, val undo: ULong? = null, val unlock: dev.aperte.notav.core.Locked? = null)
 
+/** How many notes the Recent list keeps. */
+private const val RECENT_NOTES = 30
+
 /** A note's title from its path: the file name without its extension. */
 fun titleOf(path: String): String = path.substringAfterLast('/').let { f -> f.substringBeforeLast('.', f) }
 
@@ -108,6 +111,10 @@ class Main(app: Application) : AndroidViewModel(app) {
     /** The note shown. */
     val open = MutableStateFlow<Long?>(null)
 
+    /** The notes opened last, newest first (the device-only `recent_notes`, note ids), for the
+     * Recent list. */
+    val recents = MutableStateFlow<List<Long>>(emptyList())
+
     /** A note was opened (the same one again too): the panes slide to it, once they are there
      * (one opened as the app starts waits for them). */
     private val reveals = kotlinx.coroutines.channels.Channel<Unit>(kotlinx.coroutines.channels.Channel.CONFLATED)
@@ -119,7 +126,8 @@ class Main(app: Application) : AndroidViewModel(app) {
     /** The open note's headings as typed, for the outline. */
     val headings = MutableStateFlow<List<dev.aperte.notav.core.NoteHeading>>(emptyList())
 
-    /** Where a new note goes: the account and folder last opened in the tree, or the open note's. */
+    /** Where a new folder goes: the account and folder last opened in the tree, or the open
+     * note's. */
     var target: Pair<Long, String>? = null
 
     val messages = kotlinx.coroutines.flow.MutableSharedFlow<Message>(extraBufferCapacity = 8)
@@ -330,6 +338,11 @@ class Main(app: Application) : AndroidViewModel(app) {
         open.value = note.id
         target = note.account to note.folder
         reveals.trySend(Unit)
+        val ids = (listOf(note.id) + recents.value.filter { it != note.id }).take(RECENT_NOTES)
+        if (ids != recents.value) {
+            recents.value = ids
+            act { core.setSetting("recent_notes", ids.joinToString(",")) }
+        }
     }
 
     /** Where something new goes without a place given: where the last one went, else the top of
@@ -337,9 +350,18 @@ class Main(app: Application) : AndroidViewModel(app) {
     fun newPlace(): Pair<Long, String>? = target?.takeIf { (a, _) -> screen.value?.folders?.containsKey(a) == true }
         ?: screen.value?.accounts?.firstOrNull { it.enabled }?.let { it.id to "" }
 
+    /** Where a new note goes by default: the default folder (Settings) of the default account,
+     * the same on every device. Blocking. */
+    fun defaultPlace(): Pair<Long, String>? = core.defaultAccount()?.let { it to core.defaultFolder() }
+
     /** A new, empty note in `place` (else `newPlace`), opened. */
-    fun newNote(place: Pair<Long, String>? = null) = act {
-        val (account, folder) = place ?: newPlace() ?: return@act
+    fun newNote(place: Pair<Long, String>? = null) = act { create(place ?: newPlace() ?: return@act) }
+
+    /** A new, empty note in the default folder, opened. */
+    fun newDefaultNote() = act { create(defaultPlace() ?: return@act) }
+
+    private fun create(place: Pair<Long, String>) {
+        val (account, folder) = place
         try {
             val n = core.addNote(account, folder, tr("Untitled"), "")
             reveal(account, folder)
@@ -498,9 +520,16 @@ class Main(app: Application) : AndroidViewModel(app) {
     }
 
     /** The journal's folder, made in its account when there is none; empty, the default. */
-    fun setJournalFolder(folder: String) = act {
+    fun setJournalFolder(folder: String) = setFolder("journal_folder", folder)
+
+    /** The default folder for new notes, made in the default account when there is none; empty,
+     * the notes folder's top. */
+    fun setDefaultFolder(folder: String) = setFolder("default_folder", folder)
+
+    /** The folder setting `key` (the journal's and the default account are the same account). */
+    private fun setFolder(key: String, folder: String) = act {
         val f = folder.trim().trim('/')
-        val account = core.journalAccount()
+        val account = core.defaultAccount()
         if (f.isNotEmpty() && account != null) {
             try {
                 core.addFolder(account, f)
@@ -510,7 +539,7 @@ class Main(app: Application) : AndroidViewModel(app) {
                 return@act
             }
         }
-        core.setSetting("journal_folder", f)
+        core.setSetting(key, f)
         notav.changed()
     }
 
@@ -605,11 +634,11 @@ class Main(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Text shared from another app, as a new note where new notes go (`subject` its title, else
-     * its first line). */
+    /** Text shared from another app, as a new note in the default folder (`subject` its title,
+     * else its first line). */
     fun shared(subject: String?, text: String) = act {
         screen.first { it != null } // shared as the app starts: once its accounts are read
-        val (account, folder) = newPlace() ?: return@act
+        val (account, folder) = defaultPlace() ?: return@act
         val title = subject?.takeIf { it.isNotBlank() }
             ?: text.lineSequence().firstOrNull { it.isNotBlank() }?.trim()?.take(60)
             ?: tr("Untitled")
@@ -679,6 +708,7 @@ class Main(app: Application) : AndroidViewModel(app) {
     init {
         act {
             notav.awaitReady()
+            recents.value = core.setting("recent_notes").orEmpty().split(',').mapNotNull { it.toLongOrNull() }
             expanded.value = core.setting("expanded_folders").orEmpty().lines().filter { it.isNotEmpty() }.toSet()
             sourceMode.value = core.setting("source_mode") == "true"
             // Restore Session (the device-only `restore_session`, on unless "false"): the note

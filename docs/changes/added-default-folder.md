@@ -1,1 +1,0 @@
-A synced default folder for new notes in Preferences (General, Notes), made when new: the Linux app's new note goes there when no folder was opened yet, and Android's add button, and text shared to Notav, go there.

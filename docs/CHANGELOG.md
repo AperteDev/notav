@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The changes not released yet are in `docs/changes/`, one file each; the Release workflow
 writes them here.
 
+## [0.7.0] - 2026-11-15
+
+### Added
+
+- On Android, a bottom navigation bar switches the tree between Notes and Recent (the notes opened last), with the add button at its end; on a wide screen it is a rail at the left, the add button at its bottom. The add button makes a new note in the default folder when no note is open, and offers a new note next to the open one or in the default folder when one is; New Folder moved to the main menu.
+- A synced default folder for new notes in Preferences (General, Notes), made when new: the Linux app's new note goes there when no folder was opened yet, and Android's add button, and text shared to Notav, go there.
+
 ## [0.6.0] - 2026-11-10
 
 ### Added
@@ -242,7 +249,8 @@ writes them here.
   and Liberapay
 - An RPM spec for Fedora, built on COPR from `.copr/Makefile`; Notav uses the system's SQLite
 
-[Unreleased]: https://github.com/AperteDev/notav/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/AperteDev/notav/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/AperteDev/notav/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/AperteDev/notav/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/AperteDev/notav/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/AperteDev/notav/compare/v0.2.0...v0.5.0

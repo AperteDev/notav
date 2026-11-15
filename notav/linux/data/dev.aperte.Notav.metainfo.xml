@@ -40,6 +40,16 @@
     <control>touch</control>
   </supports>
   <releases>
+    <release version="0.7.0" date="2026-11-15">
+      <url type="details">https://github.com/AperteDev/notav/releases/tag/v0.7.0</url>
+      <description translate="no">
+        <p>Added</p>
+        <ul>
+          <li>On Android, a bottom navigation bar switches the tree between Notes and Recent (the notes opened last), with the add button at its end; on a wide screen it is a rail at the left, the add button at its bottom. The add button makes a new note in the default folder when no note is open, and offers a new note next to the open one or in the default folder when one is; New Folder moved to the main menu.</li>
+          <li>A synced default folder for new notes in Preferences (General, Notes), made when new: the Linux app's new note goes there when no folder was opened yet, and Android's add button, and text shared to Notav, go there.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.6.0" date="2026-11-10">
       <url type="details">https://github.com/AperteDev/notav/releases/tag/v0.6.0</url>
       <description translate="no">

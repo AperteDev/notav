@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The changes not released yet are in `docs/changes/`, one file each; the Release workflow
 writes them here.
 
+## [0.7.2] - 2026-11-15
+
+### Fixed
+
+- On a wide screen, Android's tree pane and the edge you drag to resize it share one background, so the edge no longer shows as a bar between the tree and the note.
+- On a wide screen, Android's outline opens as a column beside the note, which gets narrower, instead of sliding the note and the tree out of sight.
+
 ## [0.7.1] - 2026-11-15
 
 ### Changed
@@ -256,7 +263,8 @@ writes them here.
   and Liberapay
 - An RPM spec for Fedora, built on COPR from `.copr/Makefile`; Notav uses the system's SQLite
 
-[Unreleased]: https://github.com/AperteDev/notav/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/AperteDev/notav/compare/v0.7.2...HEAD
+[0.7.2]: https://github.com/AperteDev/notav/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/AperteDev/notav/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/AperteDev/notav/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/AperteDev/notav/compare/v0.5.1...v0.6.0

@@ -40,6 +40,16 @@
     <control>touch</control>
   </supports>
   <releases>
+    <release version="0.7.2" date="2026-11-15">
+      <url type="details">https://github.com/AperteDev/notav/releases/tag/v0.7.2</url>
+      <description translate="no">
+        <p>Fixed</p>
+        <ul>
+          <li>On a wide screen, Android's tree pane and the edge you drag to resize it share one background, so the edge no longer shows as a bar between the tree and the note.</li>
+          <li>On a wide screen, Android's outline opens as a column beside the note, which gets narrower, instead of sliding the note and the tree out of sight.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.7.1" date="2026-11-15">
       <url type="details">https://github.com/AperteDev/notav/releases/tag/v0.7.1</url>
       <description translate="no">

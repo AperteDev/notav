@@ -40,6 +40,16 @@
     <control>touch</control>
   </supports>
   <releases>
+    <release version="0.7.1" date="2026-11-15">
+      <url type="details">https://github.com/AperteDev/notav/releases/tag/v0.7.1</url>
+      <description translate="no">
+        <p>Changed</p>
+        <ul>
+          <li>On a wide screen, Android's tree pane is narrower by default (256 dp, as Todav's sidebar) with smaller type and margins, dragged by its edge to any width (kept on the device), and hidden or shown with the menu button at the top of the rail.</li>
+          <li>On a wide screen, Android's navigation rail shows a sidebar icon (filled while the sidebar shows) at its top, Notes and Recent as icons in the middle, and the add button at the bottom.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.7.0" date="2026-11-15">
       <url type="details">https://github.com/AperteDev/notav/releases/tag/v0.7.0</url>
       <description translate="no">

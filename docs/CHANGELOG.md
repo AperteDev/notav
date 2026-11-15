@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The changes not released yet are in `docs/changes/`, one file each; the Release workflow
 writes them here.
 
+## [0.7.1] - 2026-11-15
+
+### Changed
+
+- On a wide screen, Android's tree pane is narrower by default (256 dp, as Todav's sidebar) with smaller type and margins, dragged by its edge to any width (kept on the device), and hidden or shown with the menu button at the top of the rail.
+- On a wide screen, Android's navigation rail shows a sidebar icon (filled while the sidebar shows) at its top, Notes and Recent as icons in the middle, and the add button at the bottom.
+
 ## [0.7.0] - 2026-11-15
 
 ### Added
@@ -249,7 +256,8 @@ writes them here.
   and Liberapay
 - An RPM spec for Fedora, built on COPR from `.copr/Makefile`; Notav uses the system's SQLite
 
-[Unreleased]: https://github.com/AperteDev/notav/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/AperteDev/notav/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/AperteDev/notav/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/AperteDev/notav/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/AperteDev/notav/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/AperteDev/notav/compare/v0.5.0...v0.5.1

@@ -1,1 +1,0 @@
-On a wide screen, Android's tree pane is narrower by default (256 dp, as Todav's sidebar) with smaller type and margins, dragged by its edge to any width (kept on the device), and hidden or shown with the menu button at the top of the rail.

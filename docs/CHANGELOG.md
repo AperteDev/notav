@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+The changes not released yet are in `docs/changes/`, one file each; the Release workflow
+writes them here.
+
 ## [0.6.0] - 2026-11-10
 
 ### Added

@@ -73,16 +73,21 @@
 
 ## Releases
 
-- Add user-visible changes to `docs/CHANGELOG.md` under `## [Unreleased]`, in the same commit as the
-  change. Keep `docs/FEATURES.md` (what Notav does, one short line each, and what is planned)
-  in step in the same commit: a new feature goes under "Now" and leaves "Planned"; a new plan
-  in `docs/ROADMAP.md` gets its line under "Planned". It follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/): `Added`,
-  `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`.
+- A user-visible change gets its changelog note in the same commit, as a new file
+  `docs/changes/<category>-<slug>.md` holding the one bullet's text (no leading `- `; wrapped
+  lines stay unindented), e.g. `fixed-tree-scroll.md`; a fixup edits that file. The categories
+  are [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)'s: `added`, `changed`,
+  `deprecated`, `removed`, `fixed`, `security`. Never edit `docs/CHANGELOG.md` for an
+  unreleased change: only the release script writes it. Keep `docs/FEATURES.md` (what Notav
+  does, one short line each, and what is planned) in step in the same commit: a new feature
+  goes under "Now" and leaves "Planned"; a new plan in `docs/ROADMAP.md` gets its line under
+  "Planned".
 - Don't bump versions by hand: releases are cut by the manual Release workflow
   (`.github/workflows/release.yml`), as in Todav: `scripts/release.py` sets the version in
   `Cargo.toml`, `notav/ffi/Cargo.toml`, both `Cargo.lock`s, the Android version code
-  (`notav.versionCode`), the metainfo and the RPM spec and moves the `[Unreleased]` changes
-  under it; the metainfo gets them as the release's notes (untranslated). COPR (`selfref/notav`)
+  (`notav.versionCode`), the metainfo and the RPM spec, writes the `docs/changes/` notes into
+  `docs/CHANGELOG.md` under the version (grouped by category, in the order their commits added
+  them) and deletes the files; the metainfo gets them as the release's notes (untranslated). COPR (`selfref/notav`)
   builds the tag's RPMs (AperteDev secret `COPR_CONFIG`, shared with Todav, an API token that
   expires after 180 days; it ends on 2027-04-27). After publishing,
   `scripts/aur.sh` moves the AUR packages `notav` and `notav-bin` to the release, pushed by the

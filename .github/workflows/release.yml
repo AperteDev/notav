@@ -30,7 +30,10 @@ jobs:
       VERSION: ${{ inputs.version }}
     steps:
       - uses: actions/checkout@v7
-      - name: Set the version and move Unreleased changes and links under it
+        with:
+          # The notes are listed in the order their commits added them.
+          fetch-depth: 0
+      - name: Set the version, write the unreleased notes and links under it
         run: python3 scripts/release.py "$VERSION" > "$RUNNER_TEMP/notes.md"
       - name: Commit and tag the release
         run: |

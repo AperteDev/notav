@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Prepare a release: set the version in the Cargo manifests and lock files (the app's and the
 bindings'), the Android version code, the app's metainfo and the RPM
-spec (with a changelog entry), move the Unreleased changelog section under the new version, and
-print its notes for the GitHub release. The metainfo gets those notes too, and its screenshots
+spec (with a changelog entry), write the unreleased notes (`docs/changes/*.md`, one file per
+change) into the changelog under the new version, delete them, and print the notes for the GitHub
+release. The metainfo gets those notes too, and its screenshots
 (once it has some) are taken from the new tag (app stores want them from a tag, not a branch).
 The Release workflow runs it.
 
@@ -13,9 +14,13 @@ import datetime
 import html
 import pathlib
 import re
+import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+# Keep a Changelog's categories, in the order a release lists them.
+CATEGORIES = ["Added", "Changed", "Deprecated", "Removed", "Fixed", "Security"]
 
 
 def fail(message: str) -> None:
@@ -90,28 +95,60 @@ def set_release(metainfo: str, version: str, date: str, notes: str, repo: str) -
     file.write_text(text)
 
 
+def fragments() -> list[pathlib.Path]:
+    """The unreleased notes, `docs/changes/<category>-<slug>.md`, in the order their commits
+    added them (what a shallow checkout's history misses comes last, by name)."""
+    folder = ROOT / "docs" / "changes"
+    files = {f.relative_to(ROOT).as_posix(): f for f in sorted(folder.glob("*.md"))}
+    log = subprocess.run(
+        ["git", "log", "--reverse", "--diff-filter=A", "--format=", "--name-only", "--", "docs/changes"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    ).stdout.split()
+    ordered = list(dict.fromkeys(name for name in log if name in files))
+    return [files[name] for name in ordered + [name for name in files if name not in ordered]]
+
+
+def unreleased_notes(files: list[pathlib.Path]) -> str:
+    """The notes as Keep a Changelog sections, each note a bullet (its other lines indented)."""
+    groups: dict[str, list[str]] = {}
+    for file in files:
+        category = file.name.split("-", 1)[0].capitalize()
+        if category not in CATEGORIES or "-" not in file.name:
+            fail(f"{file.relative_to(ROOT)}: its name must start with a category and a dash, one of "
+                 + ", ".join(c.lower() for c in CATEGORIES))
+        note = file.read_text().strip()
+        if not note:
+            fail(f"{file.relative_to(ROOT)} is empty")
+        groups.setdefault(category, []).append("- " + note.replace("\n", "\n  "))
+    return "\n\n".join(f"### {c}\n\n" + "\n".join(groups[c]) for c in CATEGORIES if c in groups)
+
+
 def main() -> None:
     version = sys.argv[1] if len(sys.argv) > 1 else ""
     if not re.fullmatch(r"\d+\.\d+\.\d+", version):
         fail(f'Expected a version like 1.2.3, got "{version}"')
     date = datetime.date.today().isoformat()
 
-    # Keep a Changelog: `## [Unreleased]` and `## [x.y.z] - date` sections, links at the end.
+    # Keep a Changelog: `## [Unreleased]` (the unreleased notes are files, `docs/changes/`) and
+    # `## [x.y.z] - date` sections, links at the end.
     changelog = ROOT / "docs" / "CHANGELOG.md"
     text = changelog.read_text()
     if f"\n## [{version}]" in text:
         fail(f"CHANGELOG.md already has a {version} section")
+    files = fragments()
+    if not files:
+        fail("docs/changes has no notes for the release")
+    notes = unreleased_notes(files)
     heading = "## [Unreleased]\n"
     start = text.find(heading)
     if start == -1:
         fail("CHANGELOG.md has no [Unreleased] section")
     body_start = start + len(heading)
-    # The next version's section, else the link definitions, end it.
+    # The new section goes above the previous version's, else above the link definitions.
     ends = [i for i in (text.find("\n## [", body_start), text.find("\n[Unreleased]:")) if i != -1]
     body_end = min(ends) + 1 if ends else len(text)
-    notes = text[body_start:body_end].strip()
-    if not notes:
-        fail("The Unreleased section of CHANGELOG.md is empty")
     # [Unreleased] compares the last version with HEAD, and that comparison becomes the new
     # version's link; before the first release it points at the commits, and the first version
     # links to its tag.
@@ -125,7 +162,11 @@ def main() -> None:
     )
     links = f"[Unreleased]: {repo}/compare/v{version}...HEAD\n[{version}]: {this}"
     rest = link.sub(lambda _: links, text[body_end:], count=1)
-    changelog.write_text(f"{text[:body_start]}\n## [{version}] - {date}\n\n{notes}\n\n{rest}")
+    changelog.write_text(
+        f"{text[:body_end]}## [{version}] - {date}\n\n{notes}\n\n{rest}"
+    )
+    for file in files:
+        file.unlink()
 
     edit("Cargo.toml", r'(\[workspace\.package\].*?^version = )"[^"]*"', rf'\g<1>"{version}"')
     # The bindings are a workspace of their own.

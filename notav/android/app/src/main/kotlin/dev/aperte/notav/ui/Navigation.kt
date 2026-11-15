@@ -16,7 +16,6 @@ import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.automirrored.outlined.NoteAdd
 import androidx.compose.material.icons.automirrored.outlined.Notes
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.Icon
@@ -34,6 +33,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -42,6 +46,29 @@ import dev.aperte.notav.Screen
 import dev.aperte.notav.tr
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+/** The sidebar button's icon: the window's outline with a panel at its left, filled while the sidebar shows. */
+private fun sidebarIcon(shown: Boolean) = ImageVector.Builder("Sidebar", 24.dp, 24.dp, 24f, 24f).apply {
+    // The outline, 2 thick, and the line between the panel and the rest.
+    path(fill = SolidColor(Color.Black), pathFillType = PathFillType.EvenOdd) {
+        moveTo(5f, 3f); horizontalLineTo(19f); arcTo(2f, 2f, 0f, false, true, 21f, 5f)
+        verticalLineTo(19f); arcTo(2f, 2f, 0f, false, true, 19f, 21f)
+        horizontalLineTo(5f); arcTo(2f, 2f, 0f, false, true, 3f, 19f)
+        verticalLineTo(5f); arcTo(2f, 2f, 0f, false, true, 5f, 3f); close()
+        moveTo(5f, 5f); verticalLineTo(19f); horizontalLineTo(19f); verticalLineTo(5f); close()
+    }
+    path(fill = SolidColor(Color.Black)) {
+        moveTo(8f, 5f); horizontalLineTo(10f); verticalLineTo(19f); horizontalLineTo(8f); close()
+    }
+    if (shown) {
+        path(fill = SolidColor(Color.Black)) {
+            moveTo(5f, 5f); horizontalLineTo(8f); verticalLineTo(19f); horizontalLineTo(5f); close()
+        }
+    }
+}.build()
+
+private val SidebarShown = sidebarIcon(true)
+private val SidebarHidden = sidebarIcon(false)
 
 /** A navigation rail's width. */
 private val RAIL_WIDTH = 80.dp
@@ -97,7 +124,10 @@ private fun Bar(model: Main, screen: Screen, recent: Boolean, onList: (Boolean) 
     }
 }
 
-/** Notes and Recent, the add button at the bottom. */
+/**
+ * The sidebar button at the top (the tree's pane shown or hidden), Notes and Recent as icons in the
+ * middle, the add button at the bottom.
+ */
 @Composable
 private fun Rail(
     model: Main,
@@ -107,28 +137,32 @@ private fun Rail(
     onPane: () -> Unit,
     onList: (Boolean) -> Unit,
 ) {
-    // The menu button at the top shows and hides the tree's pane, as Todav's.
     NavigationRail(
         header = {
             Tip(tr("Toggle Sidebar")) {
-                IconToggleButton(checked = pane, onCheckedChange = { onPane() }) { Icon(Icons.Default.Menu, tr("Toggle Sidebar")) }
+                IconToggleButton(checked = pane, onCheckedChange = { onPane() }) {
+                    Icon(if (pane) SidebarShown else SidebarHidden, tr("Toggle Sidebar"))
+                }
             }
         },
     ) {
-        NavigationRailItem(
-            selected = !recent,
-            onClick = { onList(false) },
-            icon = { Icon(if (recent) Icons.AutoMirrored.Outlined.Notes else Icons.AutoMirrored.Filled.Notes, null) },
-            label = { Text(tr("Notes")) },
-        )
-        NavigationRailItem(
-            selected = recent,
-            onClick = { onList(true) },
-            icon = { Icon(if (recent) Icons.Filled.History else Icons.Outlined.History, null) },
-            label = { Text(tr("Recent")) },
-        )
+        Spacer(Modifier.weight(1f))
+        RailIcon(!recent, tr("Notes"), if (recent) Icons.AutoMirrored.Outlined.Notes else Icons.AutoMirrored.Filled.Notes) { onList(false) }
+        RailIcon(recent, tr("Recent"), if (recent) Icons.Filled.History else Icons.Outlined.History) { onList(true) }
         Spacer(Modifier.weight(1f))
         AddNote(model, screen, raised = true)
+    }
+}
+
+/** A rail's destination as an icon alone, its name as the tooltip and for screen readers. */
+@Composable
+private fun RailIcon(selected: Boolean, label: String, icon: ImageVector, onClick: () -> Unit) {
+    Tip(label) {
+        NavigationRailItem(
+            selected = selected,
+            onClick = onClick,
+            icon = { Icon(icon, label) },
+        )
     }
 }
 

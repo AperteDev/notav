@@ -87,6 +87,7 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -97,6 +98,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -280,7 +282,11 @@ internal fun TreePane(model: Main, screen: Screen, recent: Boolean, bar: (@Compo
     LaunchedEffect(armed) {
         if (armed && !pulling) haptics.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
     }
+    // Beside the note the pane has its own colour, as Todav's sidebar (and its edge, `Panes.kt`).
+    val bg = if (compact) MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.surface
+    val appBar = TopAppBarDefaults.topAppBarColors(containerColor = bg)
     Scaffold(
+        containerColor = bg,
         topBar = {
             val results = found
             if (results != null) {
@@ -290,6 +296,7 @@ internal fun TreePane(model: Main, screen: Screen, recent: Boolean, bar: (@Compo
                 LaunchedEffect(Unit) { focus.requestFocus() }
                 LaunchedEffect(query.text) { model.search(query.text.toString()) }
                 TopAppBar(
+                    colors = appBar,
                     navigationIcon = {
                         IconButton(onClick = { model.search(null) }) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, tr("Cancel"))
@@ -317,6 +324,7 @@ internal fun TreePane(model: Main, screen: Screen, recent: Boolean, bar: (@Compo
                 )
             } else {
                 TopAppBar(
+                    colors = appBar,
                     title = { Text(if (recent) tr("Recent") else "Notav") },
                     actions = {
                         if (sync == SyncState.Syncing && !pulling) LoadingIndicator(Modifier.padding(end = 4.dp).size(32.dp))
@@ -366,7 +374,7 @@ internal fun TreePane(model: Main, screen: Screen, recent: Boolean, bar: (@Compo
                 }
             } else {
                 LazyColumn(Modifier.fillMaxSize().padding(padding)) {
-                    items(results, key = { it.id }) { n -> NoteItem(model, screen, n, compact = compact) }
+                    items(results, key = { it.id }) { n -> NoteItem(model, screen, n, compact = compact, background = bg) }
                 }
             }
         } else {
@@ -417,7 +425,7 @@ internal fun TreePane(model: Main, screen: Screen, recent: Boolean, bar: (@Compo
                                 }
                             }
                         } else {
-                            items(shown, key = { it.id }) { n -> NoteItem(model, screen, n, selected = n.id == open, compact = compact) }
+                            items(shown, key = { it.id }) { n -> NoteItem(model, screen, n, selected = n.id == open, compact = compact, background = bg) }
                         }
                     } else if (screen.rows.isEmpty()) {
                         item {
@@ -471,6 +479,7 @@ private fun NoteItem(
     n: dev.aperte.notav.core.Note,
     selected: Boolean = false,
     compact: Boolean = false,
+    background: Color = MaterialTheme.colorScheme.surface,
 ) {
     val where = listOfNotNull(
         screen.accounts.firstOrNull { it.id == n.account }?.let(::accountName).takeIf { screen.folders.size > 1 },
@@ -490,7 +499,7 @@ private fun NoteItem(
         },
         leadingContent = { Icon(Icons.AutoMirrored.Outlined.Notes, null, Modifier.size(if (compact) 20.dp else 24.dp)) },
         modifier = Modifier.clickable { model.openNote(n) },
-        containerColor = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+        containerColor = if (selected) MaterialTheme.colorScheme.secondaryContainer else background,
     )
 }
 

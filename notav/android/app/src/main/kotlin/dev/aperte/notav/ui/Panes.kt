@@ -203,7 +203,7 @@ fun Panes(model: Main, screen: Screen, wide: Boolean, recent: Boolean, shown: Bo
 @Composable
 private fun Edge(onDrag: (Float) -> Unit, onDone: () -> Unit) {
     val density = LocalDensity.current
-    Row(Modifier.fillMaxHeight()) {
+    Row(Modifier.fillMaxHeight().background(MaterialTheme.colorScheme.surfaceContainerLow)) {
         Box(
             Modifier.width(EDGE_WIDTH - 1.dp).fillMaxHeight().draggable(
                 rememberDraggableState { px -> onDrag(with(density) { px.toDp().value }) },

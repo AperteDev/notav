@@ -16,9 +16,11 @@ import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.automirrored.outlined.NoteAdd
 import androidx.compose.material.icons.automirrored.outlined.Notes
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationRail
@@ -53,18 +55,23 @@ private val RAIL_WIDTH = 80.dp
 fun Home(model: Main, screen: Screen) {
     // Which list the tree's pane shows; kept as the device turns.
     var recent by rememberSaveable { mutableStateOf(false) }
+    // Beside the note, whether the tree's pane shows (the menu button at the rail's top).
+    var pane by rememberSaveable { mutableStateOf(true) }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val rail = maxWidth >= TWO_PANES + RAIL_WIDTH
         if (rail) {
             Row(Modifier.fillMaxSize()) {
-                Rail(model, screen, recent) { recent = it }
+                Rail(model, screen, recent, pane, { pane = !pane }) {
+                    recent = it
+                    pane = true
+                }
                 // The rail took the start inset; the panes beside it need none of their own.
                 Box(Modifier.weight(1f).consumeWindowInsets(WindowInsets.systemBars.only(WindowInsetsSides.Start))) {
-                    Panes(model, screen, wide = true, recent = recent, bar = null)
+                    Panes(model, screen, wide = true, recent = recent, shown = pane, bar = null)
                 }
             }
         } else {
-            Panes(model, screen, wide = false, recent = recent) { Bar(model, screen, recent) { recent = it } }
+            Panes(model, screen, wide = false, recent = recent, shown = true) { Bar(model, screen, recent) { recent = it } }
         }
     }
 }
@@ -92,8 +99,22 @@ private fun Bar(model: Main, screen: Screen, recent: Boolean, onList: (Boolean) 
 
 /** Notes and Recent, the add button at the bottom. */
 @Composable
-private fun Rail(model: Main, screen: Screen, recent: Boolean, onList: (Boolean) -> Unit) {
-    NavigationRail {
+private fun Rail(
+    model: Main,
+    screen: Screen,
+    recent: Boolean,
+    pane: Boolean,
+    onPane: () -> Unit,
+    onList: (Boolean) -> Unit,
+) {
+    // The menu button at the top shows and hides the tree's pane, as Todav's.
+    NavigationRail(
+        header = {
+            Tip(tr("Toggle Sidebar")) {
+                IconToggleButton(checked = pane, onCheckedChange = { onPane() }) { Icon(Icons.Default.Menu, tr("Toggle Sidebar")) }
+            }
+        },
+    ) {
         NavigationRailItem(
             selected = !recent,
             onClick = { onList(false) },

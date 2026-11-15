@@ -88,7 +88,8 @@ What Notav can do, in short. The details of each release are in the
   time on a phone, two side by side on a wide screen.
 - A bottom bar (a rail at the left on a wide screen) switching the tree between Notes and
   Recent, the notes opened last; its add button makes a note in the default folder, or offers
-  it next to the open note.
+  it next to the open note. On a wide screen the tree's pane is dragged to any width and hidden
+  with the rail's menu button.
 - Editor mode's styles, ticking tasks, continuing lists, tables kept aligned, links followed;
   tables and code blocks unwrapped, each scrolled sideways on its own, shaded at the edge where
   more is hidden (a tap edits it).

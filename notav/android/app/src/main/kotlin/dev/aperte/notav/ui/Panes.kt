@@ -1,9 +1,18 @@
 package dev.aperte.notav.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.exponentialDecay
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.layout.requiredWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.gestures.AnchoredDraggableState
 import androidx.compose.foundation.gestures.DraggableAnchors
 import androidx.compose.foundation.gestures.Orientation
@@ -64,8 +73,15 @@ import kotlinx.coroutines.withTimeoutOrNull
 /** The narrowest width that shows the tree and the note side by side (beside the rail). */
 internal val TWO_PANES = 600.dp
 
-/** The tree's width beside the note, and the side panel's. */
+/** The outline panel's width beside the note. */
 private val SIDE_WIDTH = 360.dp
+
+/** The tree pane's edge, with the handle that drags its width. */
+private val EDGE_WIDTH = 13.dp
+
+/** The tree pane's narrowest width beside the note, and the room the note keeps at least. */
+private const val MIN_TREE = 200f
+private const val MIN_NOTE = 320f
 
 /** Where the panes rest: the tree, the note, the side panel (the outline). */
 private enum class Pane { Tree, Note, Side }
@@ -75,15 +91,27 @@ private enum class Pane { Tree, Note, Side }
  * each the screen's width; on a wider screen (`wide`, as `Home` decides) the tree and the note,
  * or the note and the side panel. Opening a note slides to it; Back goes one pane left. The tree
  * shows the notes or the recent ones (`recent`), `bar` (the navigation bar, on a phone) under it.
+ * Beside the note it is a pane of its own width, dragged by its edge (kept on this device, as
+ * Todav's sidebar), and hidden with `shown` false.
  */
 @Composable
-fun Panes(model: Main, screen: Screen, wide: Boolean, recent: Boolean, bar: (@Composable () -> Unit)?) {
+fun Panes(model: Main, screen: Screen, wide: Boolean, recent: Boolean, shown: Boolean, bar: (@Composable () -> Unit)?) {
     val open by model.open.collectAsStateWithLifecycle()
     val note = screen.notes.firstOrNull { it.id == open }
     BoxWithConstraints(Modifier.fillMaxSize().clipToBounds()) {
         val width = maxWidth
-        val side = if (wide) SIDE_WIDTH else width
-        val noteWidth = if (wide) width - SIDE_WIDTH else width
+        // The tree's width as dragged, from 200 dp up to what leaves the note 320 dp; its pane
+        // slides away and back as `shown` changes.
+        val saved by model.sidebarWidth.collectAsStateWithLifecycle()
+        var dragged by remember(saved) { mutableFloatStateOf(saved) }
+        val most = (width.value - MIN_NOTE - EDGE_WIDTH.value).coerceAtLeast(MIN_TREE)
+        val tree = dragged.coerceIn(MIN_TREE, most).dp
+        val slide by animateFloatAsState(if (shown) 1f else 0f)
+        val lead = if (wide) (tree + EDGE_WIDTH) * slide else 0.dp
+        // What the outline's pane (and so the swipe) moves by: no less than the tree's pane, which
+        // it covers.
+        val side = if (wide) maxOf(SIDE_WIDTH, lead) else width
+        val noteWidth = if (wide) width - lead else width
         val px = with(LocalDensity.current) { side.toPx() }
         val drag = remember {
             @Suppress("DEPRECATION")
@@ -124,13 +152,28 @@ fun Panes(model: Main, screen: Screen, wide: Boolean, recent: Boolean, bar: (@Co
         LaunchedEffect(drag.settledValue) { focus.clearFocus() }
         Row(
             Modifier.wrapContentWidth(Alignment.Start, unbounded = true)
-                .width(if (wide) SIDE_WIDTH + noteWidth + SIDE_WIDTH else width * 3)
+                .width(if (wide) lead + noteWidth + side else width * 3)
                 .fillMaxHeight()
                 .offset { IntOffset(drag.offset.takeIf { !it.isNaN() }?.roundToInt() ?: 0, 0) }
                 .anchoredDraggable(drag, Orientation.Horizontal, enabled = note != null),
         ) {
-            Box(Modifier.width(side).fillMaxHeight()) { TreePane(model, screen, recent, bar) }
-            if (wide) VerticalDivider()
+            if (wide) {
+                // Its own width whatever the room shown, so it slides away without squeezing.
+                Box(Modifier.width(lead).fillMaxHeight().clipToBounds()) {
+                    Row(Modifier.requiredWidth(tree + EDGE_WIDTH).fillMaxHeight()) {
+                        Box(Modifier.width(tree).fillMaxHeight()) { TreePane(model, screen, recent, bar, compact = true) }
+                        Edge(
+                            onDrag = {
+                                val was = dragged.coerceIn(MIN_TREE, most)
+                                dragged = (was + it).coerceIn(MIN_TREE, most)
+                            },
+                            onDone = { model.setSidebarWidth(dragged.coerceIn(MIN_TREE, most)) },
+                        )
+                    }
+                }
+            } else {
+                Box(Modifier.width(side).fillMaxHeight()) { TreePane(model, screen, recent, bar, compact = false) }
+            }
             Box(Modifier.width(noteWidth).fillMaxHeight()) {
                 if (note != null) {
                     NotePane(model, note, onBack = if (wide) null else ({ go(Pane.Tree) })) { go(Pane.Side) }
@@ -150,6 +193,28 @@ fun Panes(model: Main, screen: Screen, wide: Boolean, recent: Boolean, bar: (@Co
                 go(if (drag.settledValue == Pane.Side && !wide) Pane.Note else Pane.Tree)
             }
         }
+    }
+}
+
+/**
+ * The tree pane's edge: a handle in its middle drags it wider or narrower (`onDrag` by dp,
+ * `onDone` when let go), with the line beside the note, as Todav's sidebar.
+ */
+@Composable
+private fun Edge(onDrag: (Float) -> Unit, onDone: () -> Unit) {
+    val density = LocalDensity.current
+    Row(Modifier.fillMaxHeight()) {
+        Box(
+            Modifier.width(EDGE_WIDTH - 1.dp).fillMaxHeight().draggable(
+                rememberDraggableState { px -> onDrag(with(density) { px.toDp().value }) },
+                Orientation.Horizontal,
+                onDragStopped = { onDone() },
+            ),
+            Alignment.Center,
+        ) {
+            Box(Modifier.size(4.dp, 32.dp).background(MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), CircleShape))
+        }
+        VerticalDivider()
     }
 }
 

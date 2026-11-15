@@ -111,6 +111,15 @@ class Main(app: Application) : AndroidViewModel(app) {
     /** The note shown. */
     val open = MutableStateFlow<Long?>(null)
 
+    /** The tree pane's width beside the note on wide screens, in dp, as last dragged here (the
+     * device-only `sidebar_width`; 256 as Todav's sidebar). */
+    val sidebarWidth = MutableStateFlow(256f)
+
+    fun setSidebarWidth(dp: Float) {
+        sidebarWidth.value = dp
+        act { core.setSetting("sidebar_width", "${dp.toInt()}") }
+    }
+
     /** The notes opened last, newest first (the device-only `recent_notes`, note ids), for the
      * Recent list. */
     val recents = MutableStateFlow<List<Long>>(emptyList())
@@ -708,6 +717,7 @@ class Main(app: Application) : AndroidViewModel(app) {
     init {
         act {
             notav.awaitReady()
+            core.setting("sidebar_width")?.toFloatOrNull()?.let { sidebarWidth.value = it }
             recents.value = core.setting("recent_notes").orEmpty().split(',').mapNotNull { it.toLongOrNull() }
             expanded.value = core.setting("expanded_folders").orEmpty().lines().filter { it.isNotEmpty() }.toSet()
             sourceMode.value = core.setting("source_mode") == "true"

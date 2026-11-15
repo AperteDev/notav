@@ -38,6 +38,8 @@ pub const DEVICE_ONLY: &[&str] = &[
     "recent_notes",
     "expanded_folders",
     "show_outline",
+    // Android: the tree pane's width beside the note, as dragged on this screen.
+    "sidebar_width",
     "window_size",
     "window_maximized",
     // Android: a sync now and then while Notav is closed; a phone's battery, a device's choice.

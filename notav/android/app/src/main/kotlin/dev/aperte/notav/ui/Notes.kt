@@ -75,6 +75,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -236,17 +237,20 @@ private sealed interface Ask {
 
 /**
  * The notes as a tree, or the notes opened last (`recent`, newest first) as a list; with `bar` (the
- * navigation bar, on a phone) under it, but for a search.
+ * navigation bar, on a phone) under it, but for a search. `compact` (beside the note, in a narrow
+ * pane) sets smaller type and margins.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-internal fun TreePane(model: Main, screen: Screen, recent: Boolean, bar: (@Composable () -> Unit)?) {
+internal fun TreePane(model: Main, screen: Screen, recent: Boolean, bar: (@Composable () -> Unit)?, compact: Boolean) {
     val sync by model.notav.syncState.collectAsStateWithLifecycle()
     val found by model.found.collectAsStateWithLifecycle()
     var ask by remember { mutableStateOf<Ask?>(null) }
     val changes by model.notav.changes.collectAsStateWithLifecycle()
     val look by produceState(TreeLook(), changes) {
-        value = withContext(Dispatchers.IO) { TreeLook(model.core.setting("dense_tree") == "true", model.core.setting("tree_icons")) }
+        value = withContext(Dispatchers.IO) {
+            TreeLook(model.core.setting("dense_tree") == "true", model.core.setting("tree_icons"), compact)
+        }
     }
     // Pulled to refresh (as Todav's list): shown until the sync it asked for has run, once,
     // without dropping in between (the sync starts a moment after the pull ends).
@@ -362,7 +366,7 @@ internal fun TreePane(model: Main, screen: Screen, recent: Boolean, bar: (@Compo
                 }
             } else {
                 LazyColumn(Modifier.fillMaxSize().padding(padding)) {
-                    items(results, key = { it.id }) { n -> NoteItem(model, screen, n) }
+                    items(results, key = { it.id }) { n -> NoteItem(model, screen, n, compact = compact) }
                 }
             }
         } else {
@@ -413,7 +417,7 @@ internal fun TreePane(model: Main, screen: Screen, recent: Boolean, bar: (@Compo
                                 }
                             }
                         } else {
-                            items(shown, key = { it.id }) { n -> NoteItem(model, screen, n, selected = n.id == open) }
+                            items(shown, key = { it.id }) { n -> NoteItem(model, screen, n, selected = n.id == open, compact = compact) }
                         }
                     } else if (screen.rows.isEmpty()) {
                         item {
@@ -461,15 +465,30 @@ internal fun TreePane(model: Main, screen: Screen, recent: Boolean, bar: (@Compo
 /** A note as a list row (a search result, a recent note): its title over its folder, and its
  * account's name with more than one; a tap opens it. */
 @Composable
-private fun NoteItem(model: Main, screen: Screen, n: dev.aperte.notav.core.Note, selected: Boolean = false) {
+private fun NoteItem(
+    model: Main,
+    screen: Screen,
+    n: dev.aperte.notav.core.Note,
+    selected: Boolean = false,
+    compact: Boolean = false,
+) {
     val where = listOfNotNull(
         screen.accounts.firstOrNull { it.id == n.account }?.let(::accountName).takeIf { screen.folders.size > 1 },
         n.folder.takeIf { it.isNotEmpty() },
     ).joinToString(" · ")
     Item(
-        headlineContent = { Text(n.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        supportingContent = where.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
-        leadingContent = { Icon(Icons.AutoMirrored.Outlined.Notes, null) },
+        headlineContent = {
+            Text(
+                n.title,
+                style = if (compact) MaterialTheme.typography.bodyMedium else LocalTextStyle.current,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        supportingContent = where.takeIf { it.isNotEmpty() }?.let {
+            { Text(it, style = if (compact) MaterialTheme.typography.bodySmall else LocalTextStyle.current) }
+        },
+        leadingContent = { Icon(Icons.AutoMirrored.Outlined.Notes, null, Modifier.size(if (compact) 20.dp else 24.dp)) },
         modifier = Modifier.clickable { model.openNote(n) },
         containerColor = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
     )
@@ -479,7 +498,7 @@ private fun NoteItem(model: Main, screen: Screen, n: dev.aperte.notav.core.Note,
  * How the tree looks, as the Linux app's: shorter rows with the device-only `dense_tree`; the
  * synced `tree_icons`, "all" (folders too), "notes" (the default) or "none".
  */
-private data class TreeLook(val dense: Boolean = false, val icons: String? = null) {
+private data class TreeLook(val dense: Boolean = false, val icons: String? = null, val compact: Boolean = false) {
     val folderIcons get() = icons == "all"
     val noteIcons get() = icons != "none"
 }
@@ -501,19 +520,23 @@ private fun TreeRow(model: Main, screen: Screen, look: TreeLook, depth: Int, ite
     val selected = item is Item.NoteRow && item.note.id == open
     Box {
         Row(
-            Modifier.fillMaxWidth().heightIn(min = if (look.dense) 40.dp else 52.dp)
-                .padding(horizontal = 8.dp)
+            Modifier.fillMaxWidth()
+                .heightIn(min = if (look.compact) (if (look.dense) 34.dp else 42.dp) else if (look.dense) 40.dp else 52.dp)
+                .padding(horizontal = if (look.compact) 4.dp else 8.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .then(if (selected) Modifier.background(MaterialTheme.colorScheme.secondaryContainer) else Modifier)
                 .combinedClickable(
                     onClick = { if (item is Item.NoteRow) model.openNote(item.note) else model.toggle(item) },
                     onLongClick = { menu = true },
                 )
-                .padding(start = 8.dp + 20.dp * depth, end = 8.dp),
+                .padding(start = if (look.compact) 6.dp + 14.dp * depth else 8.dp + 20.dp * depth, end = if (look.compact) 6.dp else 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(if (look.compact) 8.dp else 12.dp),
         ) {
             val color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface
+            // Beside the note: smaller type and icons.
+            val icon = Modifier.size(if (look.compact) 20.dp else 24.dp)
+            val body = if (look.compact) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge
             when (item) {
                 is Item.Account, is Item.Folder -> {
                     val isOpen = when (item) {
@@ -523,8 +546,9 @@ private fun TreeRow(model: Main, screen: Screen, look: TreeLook, depth: Int, ite
                     Icon(
                         if (isOpen) Icons.Filled.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         null,
+                        icon,
                     )
-                    if (look.folderIcons && item is Item.Folder) Icon(Icons.Outlined.Folder, null)
+                    if (look.folderIcons && item is Item.Folder) Icon(Icons.Outlined.Folder, null, icon)
                     val name = when (item) {
                         is Item.Account -> screen.accounts.firstOrNull { it.id == item.id }?.let(::accountName).orEmpty()
                         else -> (item as Item.Folder).name
@@ -532,6 +556,7 @@ private fun TreeRow(model: Main, screen: Screen, look: TreeLook, depth: Int, ite
                     Text(
                         name,
                         Modifier.weight(1f),
+                        style = body,
                         fontWeight = if (item is Item.Account) FontWeight.Bold else null,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -539,12 +564,19 @@ private fun TreeRow(model: Main, screen: Screen, look: TreeLook, depth: Int, ite
                     Text(
                         notesIn(screen.notes, account, if (item is Item.Account) "" else folder).toString(),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.labelLarge,
+                        style = if (look.compact) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge,
                     )
                 }
                 is Item.NoteRow -> {
-                    if (look.noteIcons) Icon(Icons.AutoMirrored.Outlined.Notes, null, tint = color)
-                    Text(item.note.title, Modifier.weight(1f), color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (look.noteIcons) Icon(Icons.AutoMirrored.Outlined.Notes, null, icon, tint = color)
+                    Text(
+                        item.note.title,
+                        Modifier.weight(1f),
+                        color = color,
+                        style = body,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                     if (item.note.favorite) {
                         Icon(Icons.Filled.Star, tr("Favorite"), Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
                     }

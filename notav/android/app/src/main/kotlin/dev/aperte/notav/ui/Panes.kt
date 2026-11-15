@@ -108,10 +108,9 @@ fun Panes(model: Main, screen: Screen, wide: Boolean, recent: Boolean, shown: Bo
         val tree = dragged.coerceIn(MIN_TREE, most).dp
         val slide by animateFloatAsState(if (shown) 1f else 0f)
         val lead = if (wide) (tree + EDGE_WIDTH) * slide else 0.dp
-        // What the outline's pane (and so the swipe) moves by: no less than the tree's pane, which
-        // it covers.
-        val side = if (wide) maxOf(SIDE_WIDTH, lead) else width
-        val noteWidth = if (wide) width - lead else width
+        // The outline's pane: on a phone a screen of its own; beside the note it takes room from
+        // the note (which keeps 320 dp, the outline 200 dp at least), the tree staying in sight.
+        val side = if (wide) (width - lead - MIN_NOTE.dp).coerceIn(200.dp, SIDE_WIDTH) else width
         val px = with(LocalDensity.current) { side.toPx() }
         val drag = remember {
             @Suppress("DEPRECATION")
@@ -123,6 +122,10 @@ fun Panes(model: Main, screen: Screen, wide: Boolean, recent: Boolean, shown: Bo
                 decayAnimationSpec = exponentialDecay(),
             )
         }
+        // How far the outline is out, 0 to 1, as it is swiped or slid to (beside the note only).
+        val out = if (wide) (-(drag.offset.takeIf { !it.isNaN() } ?: 0f) / px).coerceIn(0f, 1f) else 0f
+        val sideWidth = if (wide) side * out else side
+        val noteWidth = if (wide) width - lead - sideWidth else width
         val scope = rememberCoroutineScope()
         // Without a note, only the tree; on a wide screen the note shows beside it.
         val anchors = DraggableAnchors {
@@ -152,9 +155,10 @@ fun Panes(model: Main, screen: Screen, wide: Boolean, recent: Boolean, shown: Bo
         LaunchedEffect(drag.settledValue) { focus.clearFocus() }
         Row(
             Modifier.wrapContentWidth(Alignment.Start, unbounded = true)
-                .width(if (wide) lead + noteWidth + side else width * 3)
+                .width(if (wide) width else width * 3)
                 .fillMaxHeight()
-                .offset { IntOffset(drag.offset.takeIf { !it.isNaN() }?.roundToInt() ?: 0, 0) }
+                // Beside the note nothing slides: the outline's column grows instead.
+                .offset { IntOffset(if (wide) 0 else drag.offset.takeIf { !it.isNaN() }?.roundToInt() ?: 0, 0) }
                 .anchoredDraggable(drag, Orientation.Horizontal, enabled = note != null),
         ) {
             if (wide) {
@@ -181,9 +185,12 @@ fun Panes(model: Main, screen: Screen, wide: Boolean, recent: Boolean, shown: Bo
                     NoNote()
                 }
             }
-            if (wide) VerticalDivider()
-            Box(Modifier.width(side).fillMaxHeight()) {
-                if (note != null) SidePane(model, note, onBack = { go(if (wide) Pane.Tree else Pane.Note) })
+            if (wide && out > 0f) VerticalDivider()
+            // Its own width whatever the room shown, so it grows without squeezing.
+            Box(Modifier.width(sideWidth).fillMaxHeight().clipToBounds()) {
+                Box(Modifier.requiredWidth(side).fillMaxHeight()) {
+                    if (note != null) SidePane(model, note, onBack = { go(if (wide) Pane.Tree else Pane.Note) })
+                }
             }
         }
         // Registered anew as the panes settle, so it comes before the search's own Back (the
